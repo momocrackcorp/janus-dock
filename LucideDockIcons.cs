@@ -83,14 +83,16 @@ internal static class LucideDockIcons
                 for (int i = 0; i < 5; i++) Line(3 + i * 4, 21 - i * 4, 3 + i * 4, 21);
                 break;
             case "power":
-                // Continuous ring; the power stem is drawn above it.
-                g.DrawArc(pen, 3, 3, 18, 18, -48, 276);
-                Line(12, 2, 12, 11);
+                // Preview style: open ring with a clean top power stem.
+                g.DrawArc(pen, 3, 3, 18, 18, -52, 284);
+                Line(12, 2, 12, 10);
                 break;
             case "restart":
-                // Continuous ring; arrow is overlaid, never a missing arc.
-                g.DrawArc(pen, 3, 3, 18, 18, -72, 300);
-                Line(20, 4, 20, 10); Line(20, 10, 14, 10);
+                // Preview style: two circulating arrowheads, not a closed ring.
+                g.DrawArc(pen, 3, 3, 18, 18, 212, 125);
+                g.DrawArc(pen, 3, 3, 18, 18, 34, 125);
+                Line(19, 4, 20, 10); Line(20, 10, 14, 9);
+                Line(5, 20, 4, 14); Line(4, 14, 10, 15);
                 break;
         }
         return bitmap;
