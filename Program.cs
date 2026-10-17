@@ -349,6 +349,9 @@ public class Dock : Form
     Image EnergyIcon(bool shutdown) => PowerImages.Load(shutdown);
     Image GetIcon(string path)
     {
+        // Fixed-proportion vector power glyphs in either icon mode prevent stretched PNGs.
+        if (path is "janus:shutdown" or "janus:restart")
+            return LucideDockIcons.Load(path, light)!;
         if (settings.IconStyle == "Lucide")
         {
             var lucide = LucideDockIcons.Load(path, light);
