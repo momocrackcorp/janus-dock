@@ -28,6 +28,7 @@ public class DockSettings
     public bool AlwaysOnTop { get; set; } = true;
     public bool AutoHide { get; set; } = false;
     public bool ShowDiskWidget { get; set; } = false;
+    public bool ShowNetworkTraffic { get; set; } = false;
     public int DiskColorArgb { get; set; } = Color.FromArgb(48, 130, 222).ToArgb();
     public int CriticalPercent { get; set; } = 90;
     public Dictionary<string,int> DiskColors { get; set; } = new(StringComparer.OrdinalIgnoreCase);
@@ -542,6 +543,19 @@ public class Dock : Form
             }
             destination.Controls.Add(btn);
         }
+        if (settings.ShowNetworkTraffic)
+        {
+            var network = new NetworkTrafficControl(Horizontal)
+            {
+                Width = Horizontal ? 275 : Math.Max(65, settings.Width - 14),
+                BackColor = BackColor,
+                ForeColor = ForeColor
+            };
+            var networkMenu = new ContextMenuStrip();
+            networkMenu.Items.Add("Opciones del monitor de red...", null, (_, _) => ShowOptions("General"));
+            network.ContextMenuStrip = networkMenu;
+            panel.Controls.Add(network);
+        }
         energyPanel.Visible = energyPanel.Controls.Count > 0;
         energyPanel.ResumeLayout();
         panel.ResumeLayout();
@@ -614,6 +628,7 @@ public class Dock : Form
         settings.NameMode = dlg.NameMode;
         settings.DockMode = dlg.DockMode;
         settings.ShowDiskWidget = dlg.ShowDiskWidget;
+        settings.ShowNetworkTraffic = dlg.ShowNetworkTraffic;
         settings.DiskColorArgb = dlg.DiskColorArgb;
         settings.CriticalPercent = dlg.CriticalPercent;
         settings.DiskColors = dlg.DiskColors;
