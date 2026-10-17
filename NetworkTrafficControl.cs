@@ -81,6 +81,7 @@ public sealed class NetworkTrafficControl : Control
         g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
         var downColor = Color.FromArgb(63, 215, 138);
         var upColor = Color.FromArgb(105, 177, 245);
+        var labelColor = ForeColor;
         using var textFont = new Font("Segoe UI", Horizontal ? 9f : 9.5f, FontStyle.Bold);
         using var smallFont = new Font("Segoe UI", 8f);
         using var signalPen = new Pen(Color.FromArgb(236, 191, 82), 2.8f);
