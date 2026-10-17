@@ -15,6 +15,7 @@ internal static class LucideDockIcons
             "janus:documents" => "folder",
             "janus:downloads" => "download",
             "janus:settings" => "settings",
+            "janus:network" => "network",
             "janus:shutdown" => "power",
             "janus:restart" => "restart",
             _ => ""
@@ -30,9 +31,18 @@ internal static class LucideDockIcons
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.TranslateTransform(0, 0);
         g.ScaleTransform(4, 4);
-        var color = type == "power" ? Color.FromArgb(220, 52, 47) :
-                    type == "restart" ? Color.FromArgb(28, 170, 75) :
-                    light ? Color.FromArgb(48, 57, 70) : Color.FromArgb(240, 242, 246);
+        // Distinctive pastel outlines, consistent on dark and light docks.
+        var color = type switch
+        {
+            "power" => Color.FromArgb(255, 98, 104),
+            "restart" => Color.FromArgb(65, 219, 145),
+            "folder" => Color.FromArgb(241, 191, 80),
+            "monitor" => Color.FromArgb(159, 196, 241),
+            "download" => Color.FromArgb(110, 183, 247),
+            "settings" => Color.FromArgb(203, 211, 224),
+            "network" => Color.FromArgb(242, 199, 79),
+            _ => light ? Color.FromArgb(83, 98, 119) : Color.FromArgb(187, 197, 212)
+        };
         using var pen = new Pen(color, 2) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round };
         void Line(float x, float y, float xx, float yy) => g.DrawLine(pen, x, y, xx, yy);
         switch (type)
@@ -69,14 +79,17 @@ internal static class LucideDockIcons
                     g.DrawEllipse(pen, 9, 9, 6, 6);
                 }
                 break;
+            case "network":
+                for (int i = 0; i < 5; i++) Line(3 + i * 4, 21 - i * 4, 3 + i * 4, 21);
+                break;
             case "power":
                 // Continuous ring; the power stem is drawn above it.
-                g.DrawEllipse(pen, 3, 3, 18, 18);
-                Line(12, 2, 12, 12);
+                g.DrawArc(pen, 3, 3, 18, 18, -48, 276);
+                Line(12, 2, 12, 11);
                 break;
             case "restart":
                 // Continuous ring; arrow is overlaid, never a missing arc.
-                g.DrawEllipse(pen, 3, 3, 18, 18);
+                g.DrawArc(pen, 3, 3, 18, 18, -72, 300);
                 Line(20, 4, 20, 10); Line(20, 10, 14, 10);
                 break;
         }
