@@ -29,6 +29,7 @@ public class DockSettings
     public bool AutoHide { get; set; } = false;
     public bool ShowDiskWidget { get; set; } = false;
     public bool ShowNetworkTraffic { get; set; } = false;
+    public bool NetworkAtEnd { get; set; } = false;
     public int DiskColorArgb { get; set; } = Color.FromArgb(48, 130, 222).ToArgb();
     public int CriticalPercent { get; set; } = 90;
     public Dictionary<string,int> DiskColors { get; set; } = new(StringComparer.OrdinalIgnoreCase);
@@ -356,7 +357,7 @@ public class Dock : Form
         if (path == "janus:shutdown") return EnergyIcon(true);
         if (path == "janus:restart") return EnergyIcon(false);
         if (path == "janus:documents") return ShellFolderIcon(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments));
-        if (path == "janus:settings") return SystemIcons.Application.ToBitmap();
+        if (path == "janus:settings") return LucideDockIcons.Load(path, light)!; // Consistent gear fallback, not generic application icon.
         if (path == "janus:downloads") return ShellFolderIcon(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"));
         // Resolve the underlying target/icon of .lnk rather than asking the shell for
         // the shortcut composite (which contains the arrow overlay).
@@ -442,8 +443,8 @@ public class Dock : Form
         }
         int width = Horizontal ? Math.Max(60, (int)Math.Ceiling(settings.IconSize * (settings.HoverAnimation ? 1.8 : 1.0)) + 12) : Math.Max(55, settings.Width - 18);
         int energySlot = Math.Max(settings.IconSize + 12, (int)Math.Ceiling(settings.IconSize * (settings.HoverAnimation ? 1.8 : 1.0)) + 8);
-        energyPanel.Width = Horizontal ? (energySlot + 4) * 2 + 12 : Math.Max(55, settings.Width - 10);
-        energyPanel.Height = Horizontal ? Math.Max(48, settings.IconSize + 20) : (energySlot + 4) * 2 + 12;
+        energyPanel.Width = Horizontal ? (energySlot + 4) * 2 + 12 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 292 : 0) : Math.Max(55, settings.Width - 10);
+        energyPanel.Height = Horizontal ? Math.Max(48, settings.IconSize + 20) : (energySlot + 4) * 2 + 12 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 184 : 0);
         foreach (var item in settings.Items.ToList())
         {
             bool isEnergy = item.Path is "janus:shutdown" or "janus:restart";
@@ -537,6 +538,8 @@ public class Dock : Form
             btn.DragDrop += DropFiles;
             if (isEnergy)
             {
+                // Keep the native/lucide bitmap square; button dimensions need not be.
+                btn.ImageAlign = ContentAlignment.MiddleCenter;
                 btn.Width = Horizontal ? energySlot : Math.Max(42, settings.Width - 20);
                 btn.Height = Horizontal ? Math.Max(40, settings.IconSize + 14) : energySlot;
                 btn.Margin = new Padding(2);
@@ -547,14 +550,21 @@ public class Dock : Form
         {
             var network = new NetworkTrafficControl(Horizontal)
             {
-                Width = Horizontal ? 275 : Math.Max(65, settings.Width - 14),
+                Width = Horizontal ? 285 : Math.Max(65, settings.Width - 14),
                 BackColor = BackColor,
                 ForeColor = ForeColor
             };
             var networkMenu = new ContextMenuStrip();
             networkMenu.Items.Add("Opciones del monitor de red...", null, (_, _) => ShowOptions("General"));
             network.ContextMenuStrip = networkMenu;
-            panel.Controls.Add(network);
+            if (settings.NetworkAtEnd)
+            {
+                // In WinForms docking the trailing section is independent of the
+                // scrolling shortcuts. Place network first, then power commands.
+                energyPanel.Controls.Add(network);
+                energyPanel.Controls.SetChildIndex(network, 0);
+            }
+            else panel.Controls.Add(network);
         }
         energyPanel.Visible = energyPanel.Controls.Count > 0;
         energyPanel.ResumeLayout();
@@ -629,6 +639,7 @@ public class Dock : Form
         settings.DockMode = dlg.DockMode;
         settings.ShowDiskWidget = dlg.ShowDiskWidget;
         settings.ShowNetworkTraffic = dlg.ShowNetworkTraffic;
+        settings.NetworkAtEnd = dlg.NetworkAtEnd;
         settings.DiskColorArgb = dlg.DiskColorArgb;
         settings.CriticalPercent = dlg.CriticalPercent;
         settings.DiskColors = dlg.DiskColors;
