@@ -349,9 +349,8 @@ public class Dock : Form
     Image EnergyIcon(bool shutdown) => PowerImages.Load(shutdown);
     Image GetIcon(string path)
     {
-        // Keep the original owner-selected PNG artwork for the power buttons.
-        if (path == "janus:shutdown") return EnergyIcon(true);
-        if (path == "janus:restart") return EnergyIcon(false);
+        // Colored preview-style power icons are consistent in both appearance modes.
+        if (path is "janus:shutdown" or "janus:restart") return LucideDockIcons.Load(path, light)!;
         if (settings.IconStyle == "Lucide")
         {
             var lucide = LucideDockIcons.Load(path, light);
