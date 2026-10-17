@@ -4,6 +4,26 @@ JANUS Dock es una barra independiente para Windows 10/11 que organiza accesos a 
 
 **Publicación:** el repositorio es público, pero la versión sigue siendo **candidata en pruebas**, no una versión estable. Los últimos binarios se descargan desde [Build JANUS Dock](https://github.com/momocrackcorp/janus-dock/actions/workflows/build-janus-dock.yml) → ejecución verde → **Artifacts**. Los ZIP de GitHub Actions pueden requerir iniciar sesión en GitHub.
 
+## Requisitos para ejecutar JANUS Dock
+
+- **Sistema operativo:** Windows 10 o Windows 11 de **64 bits**. Probado durante el desarrollo en Windows 11 Pro y Windows 10 LTSC; aún pueden existir diferencias con la configuración de pantalla o la barra de tareas.
+- **Versión liviana:** requiere instalar **Microsoft .NET 8 Desktop Runtime (x64)**. No basta con tener únicamente el .NET Runtime general. Descarga oficial: https://dotnet.microsoft.com/download/dotnet/8.0
+- **Versión autónoma:** incluye el runtime de .NET y no requiere instalarlo por separado; su descarga es considerablemente mayor.
+- **Permisos:** normalmente basta ejecutarlo como usuario estándar; no necesita permisos de administrador para abrir accesos o guardar preferencias en el perfil. Las acciones del sistema conservan sus propias restricciones.
+- **Instalación:** descarga el ZIP correspondiente a la versión elegida, extráelo en una carpeta permanente y ejecuta `JanusDock.exe`. No lo ejecutes directamente dentro del ZIP.
+- **Primera ejecución:** Windows puede mostrar una advertencia de SmartScreen si la aplicación no está firmada digitalmente. Descarga siempre desde este repositorio y verifica su procedencia.
+
+> **Mantenimiento:** .NET 8 finaliza su soporte en noviembre de 2026. Antes de distribuir una versión estable a largo plazo, el proyecto debería migrar a un runtime LTS con soporte vigente.
+
+## Versiones y archivos de lanzamiento
+
+Consulta [Releases](https://github.com/momocrackcorp/janus-dock/releases) para las versiones públicas. En cada Release deben adjuntarse **solo los ZIP de la compilación final aprobada para esa versión**, no todos los builds previos.
+
+- `JANUS-Dock-Liviano-Windows-x64.zip`: para equipos con .NET Desktop Runtime instalado.
+- `JANUS-Dock-Autonomo-Windows-x64.zip`: ejecutable con runtime incluido.
+
+Mientras una versión siga en pruebas, los artefactos estarán en [GitHub Actions](https://github.com/momocrackcorp/janus-dock/actions/workflows/build-janus-dock.yml). Es recomendable incluir sumas SHA-256 en las publicaciones.
+
 ## Distribución de botones de energía
 Los botones Apagar y Reiniciar, cuando estén activados en General, se muestran en un grupo independiente: **derecha** para barra horizontal y **abajo** para barra vertical. Por seguridad, ambas acciones piden confirmación. Sus imágenes PNG se mantienen para el estilo Windows; el estilo Lucide usa iconos de trazo.
 
