@@ -16,7 +16,7 @@ public sealed class NetworkTrafficControl : Control
     public NetworkTrafficControl(bool horizontal)
     {
         Horizontal = horizontal;
-        Size = horizontal ? new Size(285, 58) : new Size(80, 176);
+        Size = horizontal ? new Size(340, 58) : new Size(80, 176);
         Margin = new Padding(3, 2, 3, 2);
         DoubleBuffered = true;
         timer.Tick += (_, _) => Sample();
@@ -81,7 +81,6 @@ public sealed class NetworkTrafficControl : Control
         g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
         var downColor = Color.FromArgb(63, 215, 138);
         var upColor = Color.FromArgb(105, 177, 245);
-        var labelColor = ForeColor;
         using var textFont = new Font("Segoe UI", Horizontal ? 9f : 9.5f, FontStyle.Bold);
         using var smallFont = new Font("Segoe UI", 8f);
         using var signalPen = new Pen(Color.FromArgb(236, 191, 82), 2.8f);
@@ -92,8 +91,23 @@ public sealed class NetworkTrafficControl : Control
             g.DrawLine(signalPen, left + i * 5, top + 22 - i * 4, left + i * 5, top + 24);
         if (Horizontal)
         {
-            TextRenderer.DrawText(g, "↓ " + Format(down), textFont, new Point(43, 17), downColor);
-            TextRenderer.DrawText(g, "↑ " + Format(up), textFont, new Point(165, 17), upColor);
+            // Measure each localized string and reserve independent text regions.
+            // Never draw the upload label at a fixed X that overlaps download.
+            var flags = TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine;
+            string downloadText = "↓ " + Format(down);
+            string uploadText = "↑ " + Format(up);
+            int gap = 14;
+            int startX = 43;
+            int available = Math.Max(40, Width - startX - 5);
+            var downSize = TextRenderer.MeasureText(g, downloadText, textFont, new Size(int.MaxValue, 32), flags);
+            var upSize = TextRenderer.MeasureText(g, uploadText, textFont, new Size(int.MaxValue, 32), flags);
+            int combined = downSize.Width + gap + upSize.Width;
+            float scale = combined > available ? Math.Max(0.66f, (float)available / combined) : 1f;
+            using var fitted = new Font("Segoe UI", 9f * scale, FontStyle.Bold);
+            downSize = TextRenderer.MeasureText(g, downloadText, fitted, new Size(int.MaxValue, 32), flags);
+            int uploadX = startX + downSize.Width + gap;
+            TextRenderer.DrawText(g, downloadText, fitted, new Point(startX, 17), downColor, flags);
+            TextRenderer.DrawText(g, uploadText, fitted, new Point(uploadX, 17), upColor, flags);
         }
         else
         {
