@@ -17,6 +17,7 @@ public sealed class DockOptionsForm : Form
     public int DiskColorArgb { get; private set; }
     public Dictionary<string,int> DiskColors { get; private set; } = new(StringComparer.OrdinalIgnoreCase);
     public bool HoverAnimation { get; private set; } = true;
+    public int ZoomPercent { get; private set; } = 280;
     public bool ShowShutdown { get; private set; }
     public bool ShowRestart { get; private set; }
     public int CriticalPercent { get; private set; }
@@ -29,12 +30,12 @@ public sealed class DockOptionsForm : Form
     const string RunPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
     const string RunValue = "JANUS Dock";
 
-    public DockOptionsForm(DockSettings config)
+    public DockOptionsForm(DockSettings config, string? initialTab = null)
     {
         Text = "Opciones de JANUS Dock";
         AutoScaleMode = AutoScaleMode.Font;
-        ClientSize = new Size(720, 540);
-        MinimumSize = new Size(430, 340);
+        ClientSize = new Size(860, 650);
+        MinimumSize = new Size(560, 440);
         MaximizeBox = false; MinimizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 9);
@@ -43,9 +44,9 @@ public sealed class DockOptionsForm : Form
 
         var general = new TabPage("General");
         var appearance = new TabPage("Apariencia");
-        var disks = new TabPage("Discos");
         var about = new TabPage("Acerca de");
-        tabs.TabPages.AddRange(new[] { general, appearance, disks, about });
+        tabs.TabPages.AddRange(new[] { general, appearance, about });
+        if (initialTab == "Apariencia") tabs.SelectedTab = appearance;
         appearance.Controls.Add(new Label { Text = "Estilo de los iconos:", Location = new Point(22, 32), AutoSize = true });
         var iconStyle = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(175, 28), Width = 260 };
         iconStyle.Items.AddRange(new object[] { "Iconos de Windows", "Iconos Lucide" });
@@ -134,6 +135,28 @@ public sealed class DockOptionsForm : Form
         appearance.Controls.Clear();
         var appearanceRows = PageRows(appearance);
         appearanceRows.Controls.Add(FieldRow(new Label { Text = "Estilo de los iconos:", AutoSize = true }, iconStyle));
+        // Icon size belongs with all other appearance settings.
+        var size = new NumericUpDown { Minimum = 16, Maximum = 64, Increment = 8, Value = Math.Clamp(config.IconSize, 16, 64), Width = 95 };
+        var smallIcons = new CheckBox { Text = "Iconos pequeños (24 px)", AutoSize = true, Checked = config.IconSize <= 24 };
+        smallIcons.CheckedChanged += (_, _) => { if (smallIcons.Checked) size.Value = 24; else if (size.Value == 24) size.Value = 48; };
+        appearanceRows.Controls.Add(FieldRow(new Label { Text = "Tamaño de iconos (px):", AutoSize = true }, size, smallIcons));
+        var barWidth = new NumericUpDown { Minimum = 64, Maximum = 300, Increment = 4, Width = 100, Value = Math.Clamp(config.Width, 64, 300) };
+        var barHeight = new NumericUpDown { Minimum = 48, Maximum = 160, Increment = 4, Width = 100, Value = Math.Clamp(config.HorizontalHeight, 48, 160) };
+        var animation = new CheckBox { Text = "Activar efecto lupa al pasar el mouse", AutoSize = true, Checked = config.HoverAnimation };
+        var zoomChoice = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 145 };
+        zoomChoice.Items.AddRange(new object[] { "150 %", "180 %", "205 %", "240 %", "280 %", "340 %" });
+        int[] zoomValues = { 150, 180, 205, 240, 280, 340 };
+        int chosenZoom = Math.Clamp(config.ZoomPercent, 150, 340);
+        zoomChoice.SelectedIndex = Array.IndexOf(zoomValues, chosenZoom);
+        if (zoomChoice.SelectedIndex < 0) zoomChoice.SelectedIndex = 5;
+        zoomChoice.Enabled = animation.Checked;
+        animation.CheckedChanged += (_, _) => zoomChoice.Enabled = animation.Checked;
+        appearanceRows.Controls.Add(new Label { Text = "Dimensiones de la barra", AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold) });
+        appearanceRows.Controls.Add(FieldRow(new Label { Text = "Ancho barra vertical (px):", AutoSize = true }, barWidth));
+        appearanceRows.Controls.Add(FieldRow(new Label { Text = "Alto barra horizontal (px):", AutoSize = true }, barHeight));
+        appearanceRows.Controls.Add(animation);
+        appearanceRows.Controls.Add(FieldRow(new Label { Text = "Ampliación de la lupa:", AutoSize = true }, zoomChoice));
+
         appearanceRows.Controls.Add(new Label { Text = "Windows conserva los iconos originales; Lucide usa trazos para accesos integrados.", AutoSize = true });
         appearanceRows.Controls.Add(new Label { Text = "Organizar accesos y separadores", AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold) });
         appearanceRows.Controls.Add(new Label { Text = "Arrastra filas o usa los botones. Guardar aplica los cambios.", AutoSize = true });
@@ -142,9 +165,10 @@ public sealed class DockOptionsForm : Form
         actions.FlowDirection = FlowDirection.LeftToRight;
         actions.WrapContents = true;
         actions.AutoScroll = false;
-        actions.AutoSize = true;
-        actions.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-        foreach (Control control in actions.Controls) { control.Width = 112; control.Height = 32; }
+        actions.AutoSize = false;
+        actions.AutoScroll = false;
+        actions.WrapContents = true;
+        foreach (Control control in actions.Controls) { control.Width = Math.Max(116, control.PreferredSize.Width + 16); control.Height = Math.Max(34, control.PreferredSize.Height + 7); }
         appearanceRows.Controls.Add(actions);
         appearanceRows.SizeChanged += (_, _) => FitRows(appearanceRows);
 
@@ -169,17 +193,6 @@ public sealed class DockOptionsForm : Form
         location.SelectedItem = config.Edge;
         if (location.SelectedIndex < 0) location.SelectedIndex = 0;
         general.Controls.Add(location);
-        general.Controls.Add(new Label { Text = "Tamaño iconos:", Location = new Point(18, 231), AutoSize = true });
-        var size = new NumericUpDown { Location = new Point(190, 227), Minimum = 16, Maximum = 64, Increment = 8, Value = Math.Clamp(config.IconSize, 16, 64), Width = 100 };
-        general.Controls.Add(size);
-        var animation = new CheckBox { Text = "Animar iconos al pasar el mouse", AutoSize = true, Location = new Point(18, 263), Checked = config.HoverAnimation };
-        general.Controls.Add(animation);
-        var smallIcons = new CheckBox { Text = "Iconos pequeños (24 px)", AutoSize = true, Location = new Point(310, 230), Checked = config.IconSize <= 24 };
-        general.Controls.Add(smallIcons);
-        smallIcons.CheckedChanged += (_, _) => { if (smallIcons.Checked) size.Value = 24; else if (size.Value == 24) size.Value = 48; };
-        // Explicit quick preset; manual numeric sizes remain independent.
-        general.Controls.Add(new Label { Text = "Nota: al ocultarse, queda una franja para recuperar la barra con el mouse.", Location = new Point(18, 347), AutoSize = true });
-
         var powerTitle = new Label { Text = "Botones de energía en la barra:", AutoSize = true, Location = new Point(18, 292) };
         var shutdown = new CheckBox { Text = "Apagar", AutoSize = true, Location = new Point(240, 292), Checked = config.ShowShutdown };
         var restart = new CheckBox { Text = "Reiniciar", AutoSize = true, Location = new Point(335, 292), Checked = config.ShowRestart };
@@ -194,12 +207,6 @@ public sealed class DockOptionsForm : Form
         generalRows.Controls.Add(FieldRow(names, nameMode));
         generalRows.Controls.Add(FieldRow(new Label { Text = "Modo:", AutoSize = true }, dockMode));
         generalRows.Controls.Add(FieldRow(new Label { Text = "Ubicación:", AutoSize = true }, location));
-        generalRows.Controls.Add(FieldRow(new Label { Text = "Tamaño iconos:", AutoSize = true }, size, smallIcons));
-        var barWidth = new NumericUpDown { Minimum = 64, Maximum = 300, Increment = 4, Width = 100, Value = Math.Clamp(config.Width, 64, 300) };
-        var barHeight = new NumericUpDown { Minimum = 48, Maximum = 160, Increment = 4, Width = 100, Value = Math.Clamp(config.HorizontalHeight, 48, 160) };
-        generalRows.Controls.Add(FieldRow(new Label { Text = "Ancho barra vertical (px):", AutoSize = true }, barWidth));
-        generalRows.Controls.Add(FieldRow(new Label { Text = "Alto barra horizontal (px):", AutoSize = true }, barHeight));
-        generalRows.Controls.Add(animation);
         generalRows.Controls.Add(FieldRow(powerTitle, shutdown, restart));
         generalRows.Controls.Add(new Label { Text = "Al ocultarse queda una franja para recuperar la barra con el mouse.", AutoSize = true });
         generalRows.SizeChanged += (_, _) => FitRows(generalRows);
@@ -207,13 +214,8 @@ public sealed class DockOptionsForm : Form
         var widget = new CheckBox { Text = "Mostrar indicador de uso de discos en la barra", Checked = config.ShowDiskWidget, Location = new Point(18, 20), AutoSize = true };
         var diskColors = new Dictionary<string,int>(config.DiskColors, StringComparer.OrdinalIgnoreCase);
         var widgetLabel = new Label { Text = "Cada unidad tiene su propio color. Selecciónalo con el botón de su fila.", Location = new Point(18, 54), AutoSize = true };
-        disks.Controls.Add(widget);
-        disks.Controls.Add(widgetLabel);
-        disks.Controls.Add(new Label { Text = "Avisar desde (%):", Location = new Point(18, 88), AutoSize = true });
         var critical = new NumericUpDown { Location = new Point(150, 84), Width = 80, Minimum = 70, Maximum = 99, Value = Math.Clamp(config.CriticalPercent, 70, 99) };
-        disks.Controls.Add(critical);
         var diskPanel = new FlowLayoutPanel { Location = new Point(18, 124), Size = new Size(510, 175), Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right, AutoScroll = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Padding = new Padding(2) };
-        disks.Controls.Add(diskPanel);
         foreach (var drive in DriveInfo.GetDrives())
         {
             try
@@ -240,15 +242,14 @@ public sealed class DockOptionsForm : Form
         }
 
         // Disk settings use the same scrollable stack for 200% DPI.
-        disks.Controls.Clear();
-        var diskRows = PageRows(disks);
-        diskRows.Controls.Add(widget);
-        diskRows.Controls.Add(widgetLabel);
-        diskRows.Controls.Add(FieldRow(new Label { Text = "Avisar desde (%):", AutoSize = true }, critical));
+        // Disk options now belong to General: keep disk colors and threshold intact.
+        generalRows.Controls.Add(new Label { Text = "Indicadores de discos", AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold) });
+        generalRows.Controls.Add(widget);
+        generalRows.Controls.Add(widgetLabel);
+        generalRows.Controls.Add(FieldRow(new Label { Text = "Avisar desde (%):", AutoSize = true }, critical));
         diskPanel.Height = 220;
         diskPanel.AutoScroll = true;
-        diskRows.Controls.Add(diskPanel);
-        diskRows.SizeChanged += (_, _) => FitRows(diskRows);
+        generalRows.Controls.Add(diskPanel);
 
         var info = new Label { Text = "JANUS Dock (LNK) — v5.0 (candidata)\n\nBarra de accesos rápidos para Windows 11.\nDesarrollada en C# con Windows Forms y .NET.\n\nIdeada en Pueblo Seco, Ñuble, Chile.\n16 de octubre de 2026.\n\nAutoría: Omar Aguila\nLaboratorios Momocrackcorp", Location = new Point(104, 20), Size = new Size(420, 215) };
         var appIcon = new PictureBox { Location = new Point(20, 25), Size = new Size(64, 64), SizeMode = PictureBoxSizeMode.Zoom };
@@ -280,12 +281,11 @@ public sealed class DockOptionsForm : Form
         Shown += (_, _) =>
         {
             var area = Screen.FromControl(this).WorkingArea;
-            Size = new Size(Math.Min(Width, Math.Max(420, area.Width - 24)), Math.Min(Height, Math.Max(320, area.Height - 24)));
+            Size = new Size(Math.Min(Math.Max(Width, (int)(area.Width * 0.78)), area.Width - 16), Math.Min(Math.Max(Height, (int)(area.Height * 0.80)), area.Height - 16));
             Location = new Point(area.Left + Math.Max(0, (area.Width - Width) / 2), area.Top + Math.Max(0, (area.Height - Height) / 2));
             bar.Height = Math.Max(64, apply.PreferredSize.Height + 20);
             FitRows(generalRows);
             FitRows(appearanceRows);
-            FitRows(diskRows);
             FitRows(aboutRows);
         };
         apply.Click += (_, _) =>
@@ -306,6 +306,7 @@ public sealed class DockOptionsForm : Form
             DiskColorArgb = config.DiskColorArgb;
             DiskColors = diskColors;
             HoverAnimation = animation.Checked;
+            ZoomPercent = zoomValues[Math.Max(0, zoomChoice.SelectedIndex)];
             ShowShutdown = shutdown.Checked;
             ShowRestart = restart.Checked;
             CriticalPercent = (int)critical.Value;
@@ -333,7 +334,7 @@ public sealed class DockOptionsForm : Form
             AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink,
             FlowDirection = FlowDirection.LeftToRight, WrapContents = true,
             Margin = new Padding(0, 3, 0, 8), Padding = Padding.Empty,
-            MinimumSize = new Size(250, 32)
+            MinimumSize = new Size(250, 36)
         };
         foreach (var control in controls)
         {
@@ -353,11 +354,50 @@ public sealed class DockOptionsForm : Form
         foreach (Control control in rows.Controls)
         {
             if (control is ListBox list) list.Width = Math.Max(240, width - 24);
+            if (control is FlowLayoutPanel diskFlow && diskFlow.Controls.OfType<Panel>().Any())
+            {
+                diskFlow.Width = Math.Max(250, width - 24);
+                foreach (Panel line in diskFlow.Controls.OfType<Panel>())
+                {
+                    line.Width = Math.Max(220, diskFlow.ClientSize.Width - 24);
+                    var choose = line.Controls.OfType<Button>().FirstOrDefault();
+                    if (choose != null) choose.Location = new Point(Math.Max(115, line.Width - choose.Width - 8), choose.Top);
+                    var preview = line.Controls.OfType<DiskUsageControl>().FirstOrDefault();
+                    if (preview != null) preview.Width = Math.Max(115, line.Width - (choose?.Width ?? 100) - 16);
+                }
+            }
             if (control is FlowLayoutPanel row)
+            {
                 row.Width = Math.Max(250, width - 24);
-            if (control is Label label) label.MaximumSize = new Size(Math.Max(260, width - 25), 0);
+                if (row.Controls.Count > 0 && row.Controls[0] is Button)
+                {
+                    // Button toolbar: adjust its height to the number of wrapped lines.
+                    int usable = Math.Max(160, row.ClientSize.Width - row.Padding.Horizontal - 8);
+                    int lineWidth = 0, lineHeight = 0, height = row.Padding.Vertical + 8;
+                    foreach (Control button in row.Controls)
+                    {
+                        int itemWidth = button.Width + button.Margin.Horizontal;
+                        int itemHeight = button.Height + button.Margin.Vertical;
+                        if (lineWidth > 0 && lineWidth + itemWidth > usable)
+                        {
+                            height += lineHeight;
+                            lineWidth = 0;
+                            lineHeight = 0;
+                        }
+                        lineWidth += itemWidth;
+                        lineHeight = Math.Max(lineHeight, itemHeight);
+                    }
+                    row.Height = height + lineHeight;
+                }
+            }
+            if (control is Label label) label.MaximumSize = new Size(Math.Max(230, width - 25), 0);
+            if (control is CheckBox check) check.MaximumSize = new Size(Math.Max(230, width - 25), 0);
+            if (control is FlowLayoutPanel flow && flow != rows)
+                foreach (Control child in flow.Controls)
+                    if (child is Label rowLabel) rowLabel.MaximumSize = new Size(Math.Max(225, width - 38), 0);
         }
-        rows.Height = rows.Controls.Cast<Control>().Sum(x => x.Height + x.Margin.Vertical) + rows.Padding.Vertical + 24;
+        rows.PerformLayout();
+        rows.Height = rows.Controls.Cast<Control>().Sum(x => x.Height + x.Margin.Vertical) + rows.Padding.Vertical + 36;
     }
 
     public static bool IsStartupEnabled()
