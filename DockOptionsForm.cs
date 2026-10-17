@@ -14,6 +14,7 @@ public sealed class DockOptionsForm : Form
     public string DockMode { get; private set; } = "Acoplada";
     public bool ShowDiskWidget { get; private set; }
     public bool ShowNetworkTraffic { get; private set; }
+    public bool NetworkAtEnd { get; private set; }
     public bool StartWithWindows { get; private set; }
     public int DiskColorArgb { get; private set; }
     public Dictionary<string,int> DiskColors { get; private set; } = new(StringComparer.OrdinalIgnoreCase);
@@ -215,6 +216,8 @@ public sealed class DockOptionsForm : Form
         var networkWidget = new CheckBox { Text = "Mostrar tráfico de red (conexión principal, cada segundo)", AutoSize = true, Checked = config.ShowNetworkTraffic };
         generalRows.Controls.Add(new Label { Text = "Monitor de red", AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold) });
         generalRows.Controls.Add(networkWidget);
+        var networkAtEnd = new CheckBox { Text = "Anclar tráfico junto a los botones de energía (derecha / abajo)", AutoSize = true, Checked = config.NetworkAtEnd };
+        generalRows.Controls.Add(networkAtEnd);
         var widget = new CheckBox { Text = "Mostrar indicador de uso de discos en la barra", Checked = config.ShowDiskWidget, Location = new Point(18, 20), AutoSize = true };
         var diskColors = new Dictionary<string,int>(config.DiskColors, StringComparer.OrdinalIgnoreCase);
         var widgetLabel = new Label { Text = "Cada unidad tiene su propio color. Selecciónalo con el botón de su fila.", Location = new Point(18, 54), AutoSize = true };
@@ -302,6 +305,7 @@ public sealed class DockOptionsForm : Form
             DockMode = dockMode.SelectedItem?.ToString() ?? "Acoplada";
             ShowDiskWidget = widget.Checked;
             ShowNetworkTraffic = networkWidget.Checked;
+            NetworkAtEnd = networkAtEnd.Checked;
             IconSize = (int)size.Value;
             BarWidth = (int)barWidth.Value;
             BarHeight = (int)barHeight.Value;
