@@ -16,7 +16,7 @@ public sealed class NetworkTrafficControl : Control
     public NetworkTrafficControl(bool horizontal)
     {
         Horizontal = horizontal;
-        Size = horizontal ? new Size(275, 58) : new Size(80, 176);
+        Size = horizontal ? new Size(285, 58) : new Size(80, 176);
         Margin = new Padding(3, 2, 3, 2);
         DoubleBuffered = true;
         timer.Tick += (_, _) => Sample();
@@ -73,8 +73,7 @@ public sealed class NetworkTrafficControl : Control
         catch { down = up = 0; Invalidate(); }
     }
     static string Format(double bytes) => bytes >= 1048576
-        ? $"{bytes / 1048576:0.00} MB/s" : bytes >= 1024
-        ? $"{bytes / 1024:0.0} KB/s" : $"{bytes:0} B/s";
+        ? $"{bytes / 1048576:0.00} MB/s" : $"{bytes / 1024:0.0} KB/s";
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
@@ -94,8 +93,7 @@ public sealed class NetworkTrafficControl : Control
         if (Horizontal)
         {
             TextRenderer.DrawText(g, "↓ " + Format(down), textFont, new Point(43, 17), downColor);
-            TextRenderer.DrawText(g, "|", textFont, new Point(155, 17), labelColor);
-            TextRenderer.DrawText(g, "↑ " + Format(up), textFont, new Point(169, 17), upColor);
+            TextRenderer.DrawText(g, "↑ " + Format(up), textFont, new Point(165, 17), upColor);
         }
         else
         {
