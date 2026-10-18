@@ -74,7 +74,7 @@ public sealed class SystemUsageControl : Control
         using var ramPen = new Pen(ram, 2.2f);
         void Chip(int x, int y, Pen pen)
         {
-            g.DrawRoundedRectangle(pen, x + 4, y + 4, 19, 19, 3);
+            g.DrawRectangle(pen, x + 4, y + 4, 19, 19);
             for (int k = 0; k < 3; k++)
             {
                 int q = 8 + k * 5;
@@ -86,7 +86,7 @@ public sealed class SystemUsageControl : Control
         }
         void MemoryIcon(int x, int y)
         {
-            g.DrawRoundedRectangle(ramPen, x, y + 5, 28, 17, 3);
+            g.DrawRectangle(ramPen, x, y + 5, 28, 17);
             for (int k = 0; k < 4; k++) g.DrawLine(ramPen, x + 4 + 6 * k, y + 22, x + 4 + 6 * k, y + 26);
         }
         var flags = TextFormatFlags.SingleLine | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix;
