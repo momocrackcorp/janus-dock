@@ -4,7 +4,7 @@ using System.Windows.Forms;
 
 namespace JanusDock;
 
-/// <summary>Live bytes-per-second from one active default-gateway adapter. No external service.</summary>
+/// <summary>Rolling 60-second average throughput of the selected network adapter.</summary>
 public sealed class NetworkTrafficControl : Control
 {
     readonly System.Windows.Forms.Timer timer = new() { Interval = 1000 };
@@ -12,6 +12,8 @@ public sealed class NetworkTrafficControl : Control
     long lastReceived, lastSent;
     DateTime lastSample;
     double down, up;
+    readonly Queue<(DateTime End, double Seconds, double Received, double Sent)> history = new();
+    const double WindowSeconds = 60;
     public bool Horizontal { get; }
     public NetworkTrafficControl(bool horizontal)
     {
@@ -47,7 +49,7 @@ public sealed class NetworkTrafficControl : Control
             var current = Primary();
             if (current is null)
             {
-                active = null; down = up = 0; Invalidate(); return;
+                active = null; lastSample = default; history.Clear(); down = up = 0; Invalidate(); return;
             }
             var stats = current.GetIPStatistics();
             var now = DateTime.UtcNow;
@@ -55,19 +57,42 @@ public sealed class NetworkTrafficControl : Control
             {
                 active = current;
                 lastReceived = stats.BytesReceived; lastSent = stats.BytesSent;
-                lastSample = now; down = up = 0;
+                lastSample = now; history.Clear(); down = up = 0;
             }
             else
             {
                 double seconds = (now - lastSample).TotalSeconds;
-                if (seconds > 0)
+                // Keep the sample duration so delayed UI ticks are averaged by time,
+                // not by the number of callbacks.
+                if (seconds > 0 && seconds <= WindowSeconds)
                 {
-                    down = Math.Max(0, stats.BytesReceived - lastReceived) / seconds;
-                    up = Math.Max(0, stats.BytesSent - lastSent) / seconds;
+                    long receivedDelta = stats.BytesReceived - lastReceived;
+                    long sentDelta = stats.BytesSent - lastSent;
+                    if (receivedDelta < 0 || sentDelta < 0) history.Clear(); // Counter reset.
+                    else history.Enqueue((now, seconds, receivedDelta, sentDelta));
                 }
+                else if (seconds > WindowSeconds) history.Clear();
                 lastReceived = stats.BytesReceived; lastSent = stats.BytesSent; lastSample = now;
+
+                // Remove samples that fall entirely outside the trailing 60 seconds.
+                DateTime cutoff = now.AddSeconds(-WindowSeconds);
+                while (history.Count > 0 && history.Peek().End <= cutoff)
+                    history.Dequeue();
+                double sumDown = 0, sumUp = 0, duration = 0;
+                foreach (var sample in history)
+                {
+                    double overlap = (sample.End - (sample.End.AddSeconds(-sample.Seconds) > cutoff
+                        ? sample.End.AddSeconds(-sample.Seconds) : cutoff)).TotalSeconds;
+                    if (overlap <= 0) continue;
+                    double fraction = Math.Min(1, overlap / sample.Seconds);
+                    sumDown += sample.Received * fraction;
+                    sumUp += sample.Sent * fraction;
+                    duration += overlap;
+                }
+                down = duration > 0 ? sumDown / duration : 0;
+                up = duration > 0 ? sumUp / duration : 0;
             }
-            AccessibleDescription = $"Red: descarga {Format(down)}, subida {Format(up)}";
+            AccessibleDescription = $"Promedio de red de los últimos 60 segundos: descarga {Format(down)}, subida {Format(up)}";
             Invalidate();
         }
         catch { down = up = 0; Invalidate(); }
