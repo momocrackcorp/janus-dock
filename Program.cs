@@ -29,6 +29,7 @@ public class DockSettings
     public bool AutoHide { get; set; } = false;
     public bool ShowDiskWidget { get; set; } = false;
     public bool ShowNetworkTraffic { get; set; } = false;
+    public bool ShowSystemUsage { get; set; } = false;
     public bool NetworkAtEnd { get; set; } = false;
     public int DiskColorArgb { get; set; } = Color.FromArgb(48, 130, 222).ToArgb();
     public int CriticalPercent { get; set; } = 90;
@@ -548,6 +549,19 @@ public class Dock : Form
             }
             destination.Controls.Add(btn);
         }
+        if (settings.ShowSystemUsage)
+        {
+            var usage = new SystemUsageControl(Horizontal)
+            {
+                Width = Horizontal ? 265 : Math.Max(72, settings.Width - 14),
+                BackColor = BackColor,
+                ForeColor = ForeColor
+            };
+            var usageMenu = new ContextMenuStrip();
+            usageMenu.Items.Add("Opciones de CPU y RAM...", null, (_, _) => ShowOptions("General"));
+            usage.ContextMenuStrip = usageMenu;
+            panel.Controls.Add(usage);
+        }
         if (settings.ShowNetworkTraffic)
         {
             var network = new NetworkTrafficControl(Horizontal)
@@ -641,6 +655,7 @@ public class Dock : Form
         settings.DockMode = dlg.DockMode;
         settings.ShowDiskWidget = dlg.ShowDiskWidget;
         settings.ShowNetworkTraffic = dlg.ShowNetworkTraffic;
+        settings.ShowSystemUsage = dlg.ShowSystemUsage;
         settings.NetworkAtEnd = dlg.NetworkAtEnd;
         settings.DiskColorArgb = dlg.DiskColorArgb;
         settings.CriticalPercent = dlg.CriticalPercent;
