@@ -22,6 +22,23 @@ internal static class LucideDockIcons
         };
         if (type.Length == 0)
         {
+            string? app = CommonApps.IconType(path);
+            type = app switch
+            {
+                "msedge.exe" => "browser",
+                "chrome.exe" => "browser",
+                "brave.exe" => "browser",
+                "firefox.exe" => "browser",
+                "winword.exe" => "word",
+                "excel.exe" => "excel",
+                "powerpnt.exe" => "powerpoint",
+                "outlook.exe" => "outlook",
+                "onenote.exe" => "onenote",
+                _ => ""
+            };
+        }
+        if (type.Length == 0)
+        {
             if (Directory.Exists(path)) type = "folder";
             else return null;
         }
@@ -41,12 +58,37 @@ internal static class LucideDockIcons
             "download" => Color.FromArgb(110, 183, 247),
             "settings" => Color.FromArgb(203, 211, 224),
             "network" => Color.FromArgb(242, 199, 79),
+            "browser" => Color.FromArgb(93, 188, 241),
+            "word" => Color.FromArgb(66, 145, 232),
+            "excel" => Color.FromArgb(48, 190, 126),
+            "powerpoint" => Color.FromArgb(239, 142, 77),
+            "outlook" => Color.FromArgb(91, 177, 230),
+            "onenote" => Color.FromArgb(184, 119, 228),
             _ => light ? Color.FromArgb(83, 98, 119) : Color.FromArgb(187, 197, 212)
         };
         using var pen = new Pen(color, 2) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round };
         void Line(float x, float y, float xx, float yy) => g.DrawLine(pen, x, y, xx, yy);
         switch (type)
         {
+            case "browser":
+                g.DrawEllipse(pen, 3, 3, 18, 18);
+                g.DrawEllipse(pen, 8, 3, 8, 18);
+                Line(3, 12, 21, 12);
+                break;
+            case "word":
+            case "excel":
+            case "powerpoint":
+            case "outlook":
+            case "onenote":
+                g.DrawRoundedRectangleCompat(pen, 3, 3, 18, 18, 2);
+                string letter = type switch { "word" => "W", "excel" => "X", "powerpoint" => "P", "outlook" => "O", _ => "N" };
+                using (var font = new Font("Segoe UI", 13, FontStyle.Bold, GraphicsUnit.Pixel))
+                using (var brush = new SolidBrush(color))
+                {
+                    var textSize = g.MeasureString(letter, font);
+                    g.DrawString(letter, font, brush, (24 - textSize.Width) / 2, (24 - textSize.Height) / 2);
+                }
+                break;
             case "monitor":
                 g.DrawRoundedRectangleCompat(pen, 2, 3, 20, 15, 2);
                 Line(8, 22, 16, 22); Line(12, 18, 12, 22);
