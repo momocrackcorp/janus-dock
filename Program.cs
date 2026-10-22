@@ -609,6 +609,29 @@ public class Dock : Form
             menu.Items.Clear();
             var addMenu = new ToolStripMenuItem("Agregar");
             addMenu.DropDownItems.Add("Programa o acceso directo...", null, (_, _) => AddDialog());
+            var common = new ToolStripMenuItem("Accesos comunes");
+            foreach (string category in new[] { "Navegadores", "Office" })
+            {
+                var group = new ToolStripMenuItem(category);
+                foreach (var app in CommonApps.Catalog.Where(a => a.Category == category))
+                {
+                    string? located = CommonApps.Locate(app);
+                    var shortcut = new ToolStripMenuItem(app.Name + (located is null ? " (no instalado)" : ""));
+                    shortcut.Enabled = located is not null;
+                    if (located is not null)
+                    {
+                        string target = located;
+                        shortcut.Click += (_, _) =>
+                        {
+                            if (!settings.Items.Any(i => string.Equals(i.Path, target, StringComparison.OrdinalIgnoreCase)))
+                                Add(target);
+                        };
+                    }
+                    group.DropDownItems.Add(shortcut);
+                }
+                common.DropDownItems.Add(group);
+            }
+            addMenu.DropDownItems.Add(common);
             addMenu.DropDownItems.Add(DrivesMenu());
             var sys = new ToolStripMenuItem("Carpetas del sistema");
             sys.DropDownItems.Add("Este equipo", null, (_, _) => Add("shell:MyComputerFolder"));
