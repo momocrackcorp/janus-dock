@@ -1,140 +1,99 @@
-# JANUS Dock 5.0 — candidata pública
+<div align="center">
 
-JANUS Dock es una barra independiente para Windows 10/11 que organiza accesos a programas, documentos, carpetas y unidades. Puede colocarse a los lados o arriba/abajo, con iconos de Windows o trazos tipo Lucide, e indicadores circulares por disco.
+# JANUS Dock
 
-**Publicación:** el repositorio es público, pero la versión sigue siendo **candidata en pruebas**, no una versión estable. Los últimos binarios se descargan desde [Build JANUS Dock](https://github.com/momocrackcorp/janus-dock/actions/workflows/build-janus-dock.yml) → ejecución verde → **Artifacts**. Los ZIP de GitHub Actions pueden requerir iniciar sesión en GitHub.
+### Una barra de accesos moderna y personalizable para Windows
 
-## Requisitos para ejecutar JANUS Dock
+**Windows 10 / 11 · x64 · C# / .NET 8 · Código abierto**
 
-- **Sistema operativo:** Windows 10 o Windows 11 de **64 bits**. Probado durante el desarrollo en Windows 11 Pro y Windows 10 LTSC; aún pueden existir diferencias con la configuración de pantalla o la barra de tareas.
-- **Versión liviana:** requiere instalar **Microsoft .NET 8 Desktop Runtime (x64)**. No basta con tener únicamente el .NET Runtime general. Descarga oficial: https://dotnet.microsoft.com/download/dotnet/8.0
-- **Versión autónoma:** incluye el runtime de .NET y no requiere instalarlo por separado; su descarga es considerablemente mayor.
-- **Permisos:** normalmente basta ejecutarlo como usuario estándar; no necesita permisos de administrador para abrir accesos o guardar preferencias en el perfil. Las acciones del sistema conservan sus propias restricciones.
-- **Instalación:** descarga el ZIP correspondiente a la versión elegida, extráelo en una carpeta permanente y ejecuta `JanusDock.exe`. No lo ejecutes directamente dentro del ZIP.
-- **Primera ejecución:** Windows puede mostrar una advertencia de SmartScreen si la aplicación no está firmada digitalmente. Descarga siempre desde este repositorio y verifica su procedencia.
+[![Descargar versión 5.95](https://img.shields.io/badge/Descargar-v5.95.0-2563eb?style=for-the-badge&logo=github)](https://github.com/momocrackcorp/janus-dock/releases/tag/v5.95.0)
+[![Última compilación](https://github.com/momocrackcorp/janus-dock/actions/workflows/build-janus-dock.yml/badge.svg)](https://github.com/momocrackcorp/janus-dock/actions/workflows/build-janus-dock.yml)
+[![Licencia](https://img.shields.io/github/license/momocrackcorp/janus-dock?style=flat-square)](LICENSE)
 
-> **Mantenimiento:** .NET 8 finaliza su soporte en noviembre de 2026. Antes de distribuir una versión estable a largo plazo, el proyecto debería migrar a un runtime LTS con soporte vigente.
-
-## Versiones y archivos de lanzamiento
-
-Consulta [Releases](https://github.com/momocrackcorp/janus-dock/releases) para las versiones públicas. En cada Release deben adjuntarse **solo los ZIP de la compilación final aprobada para esa versión**, no todos los builds previos.
-
-- `JANUS-Dock-Liviano-Windows-x64.zip`: para equipos con .NET Desktop Runtime instalado.
-- `JANUS-Dock-Autonomo-Windows-x64.zip`: ejecutable con runtime incluido.
-
-Mientras una versión siga en pruebas, los artefactos estarán en [GitHub Actions](https://github.com/momocrackcorp/janus-dock/actions/workflows/build-janus-dock.yml). Es recomendable incluir sumas SHA-256 en las publicaciones.
-
-## Distribución de botones de energía
-Los botones Apagar y Reiniciar, cuando estén activados en General, se muestran en un grupo independiente: **derecha** para barra horizontal y **abajo** para barra vertical. Por seguridad, ambas acciones piden confirmación. Sus imágenes PNG se mantienen para el estilo Windows; el estilo Lucide usa iconos de trazo.
-
-## Organización y privacidad
-Opciones → Apariencia permite elegir estilo, reordenar accesos con arrastrar y soltar o botones y manejar separadores. Guardar aplica los cambios; Cancelar los descarta. La configuración se guarda en `%APPDATA%\JANUS\Dock\config.json`. El Dock no necesita JANUS Plus para funcionar.
-
-## Pruebas solicitadas
-Comprobar barra derecha/izquierda/arriba/abajo, energía separada, animación, escala de Windows 100/200 %, autoocultación y persistencia de configuración. Se publica el código fuente para evaluación; no se garantiza todavía la estabilidad en todas las configuraciones.
+</div>
 
 ---
 
-# JANUS Dock — barra de accesos rápidos para Windows 10/11
+**JANUS Dock** es una barra independiente para acceder rápidamente a programas, carpetas, documentos y unidades de disco, con indicadores de rendimiento y apariencia configurable. Se ejecuta en Windows y no necesita JANUS ni JANUS Plus.
 
-Primera versión nativa experimental, **no sustituye el migrador JANUS**.
+## Descargar
 
-Barra lateral derecha integrada con Windows AppBar, que reserva espacio para las ventanas. Permite agregar programas, archivos, carpetas y accesos directos, reorganizarlos, abrirlos o quitarlos del Dock sin eliminarlos del disco. Admite arrastrar archivos desde el Explorador.
+**[Ir a la última versión pública — v5.95.0](https://github.com/momocrackcorp/janus-dock/releases/tag/v5.95.0)**
 
-## Descarga de prueba
-Ejecutar workflow **Build JANUS Dock** en GitHub Actions sobre la rama `main`, esperar compilación exitosa y descargar el artefacto `JANUS-Dock-Windows-x64`.
+| Archivo | ¿Cuál elegir? |
+| --- | --- |
+| **JANUS-Dock-Autonomo-Windows-x64.zip** | Recomendado. Incluye el entorno .NET; no requiere instalación adicional de .NET. |
+| **JANUS-Dock-Liviano-Windows-x64.zip** | Descarga más pequeña. Requiere **.NET 8 Desktop Runtime x64** instalado. |
+| **SHA256SUMS.txt** | Permite comprobar la integridad de los ZIP. |
 
-## Seguridad
-No exige permisos de administrador, no modifica otros archivos JANUS, guarda datos en `%APPDATA%\JANUS\Dock\config.json` y no elimina programas al quitar accesos. Windows SmartScreen puede advertir porque el ejecutable aún no está firmado digitalmente. No desactivar protecciones de Windows: validar el origen antes de usarlo.
+1. Descarga el ZIP que prefieras desde **Assets** de la Release.
+2. Extrae el contenido en una carpeta permanente.
+3. Ejecuta `JanusDock.exe`.
+4. Haz **clic derecho sobre el fondo del Dock** para abrir el menú de accesos y opciones.
 
-**Pendiente de prueba real en Windows 11.** No contiene aún autoocultación, monitor múltiple ni menú avanzado de configuración.
+> Windows SmartScreen puede mostrar una advertencia si el ejecutable no está firmado digitalmente. Verifica siempre que lo hayas descargado desde la página oficial del repositorio.
 
-## Apariencia (actualización de octubre de 2026)
+## Características
 
-- Detecta el tema de aplicaciones claro/oscuro de Windows y lo sigue automáticamente.
-- Omite el encabezado JANUS: presenta únicamente accesos y controles compactos al pie.
-- Obtiene los iconos desde Windows Shell para programas y accesos `.lnk`.
-- Botón de opciones ⚙ → **Mostrar nombres** (desactivado inicialmente) y **Tamaño de iconos** (24, 32, 40, 48, 56 o 64 px).
-- Redimensiona el ancho (64 a 300 px) arrastrando el borde izquierdo. El ancho se guarda en `%APPDATA%\JANUS\Dock\config.json`.
-- Los nombres completos aparecen en tooltip al pasar el mouse, incluso estando ocultos.
+- **Cuatro posiciones:** arriba, abajo, izquierda o derecha.
+- **Accesos personalizados:** agrega programas, carpetas, documentos y unidades; admite arrastrar archivos.
+- **Accesos comunes:** localización de Microsoft Edge, Chrome, Brave, Firefox, Word, Excel, PowerPoint, Outlook y OneNote cuando estén instalados.
+- **Iconos:** iconos nativos de Windows o estilo vectorial **Lucide** coloreado para funciones compatibles.
+- **Organización:** ordena accesos, agrega separadores y ajusta la apariencia del Dock.
+- **Animación:** ampliación de iconos al interactuar con el puntero.
+- **Unidades de disco:** indicadores visuales de capacidad.
+- **Tráfico de red:** muestra descarga y subida con **promedio móvil de los últimos 60 segundos**, actualizado cada segundo.
+- **CPU y RAM:** porcentaje de CPU y porcentaje/cantidad utilizada de memoria física, actualizados cada segundo.
+- **Energía:** botones de apagar y reiniciar con confirmación.
+- **Preferencias locales:** se guardan en `%APPDATA%\JANUS\Dock\config.json`.
 
-**Estado:** cambios subidos a la rama de pruebas y pendientes de validar compilación/funcionamiento en Windows 11. No es todavía una versión estable.
+> Algunas funciones y apariencias pueden variar según la configuración de Windows, la escala de pantalla y los programas instalados.
 
-## Estilo barra de acceso rápido clásica (octubre de 2026)
+## Cómo agregar accesos
 
-- Sin botones visibles para Agregar/Opciones/Cerrar. **Clic derecho en el fondo** de la barra para agregar accesos, agregar separadores, abrir opciones o salir. En cualquier icono, clic derecho → Opciones de la barra.
-- Iconos sin marcos individuales permanentes: se resalta solamente al pasar el puntero o hacer clic.
-- Separadores finos verticales u horizontales según la ubicación elegida; pueden subirse, bajarse o quitarse sin modificar los accesos.
-- Color derivado del modo claro/oscuro y del color de acento DWM de Windows, mediante mezcla aproximada; la barra de tareas de Windows 11 usa materiales/efectos que WinForms no reproduce exactamente.
-- Conserva los accesos de la configuración anterior. El comportamiento aún requiere compilación y prueba en Windows 11; no se ha validado como versión estable.
+Haz clic derecho sobre un espacio libre del Dock y selecciona **Agregar**.
 
-## Corrección de barra inferior y accesos a discos
+- **Programa o acceso directo:** elige un archivo o acceso existente.
+- **Accesos comunes → Navegadores / Office:** agrega una aplicación detectada automáticamente.
+- **Carpetas del sistema:** añade accesos como Este equipo, Documentos o Descargas.
+- **Unidades de disco:** agrega una unidad disponible.
 
-- La ubicación **Abajo** ahora utiliza una franja baja (48–100 px) limitada a la zona de trabajo **por encima de la barra de tareas**, en lugar de registrar otra AppBar sobre el borde inferior de Windows. Así no debería tapar Inicio ni el área de notificaciones. En este modo la barra no reserva espacio adicional en Windows; puede superponerse a ventanas maximizadas y habrá que afinarlo en pruebas posteriores.
-- El menú contextual incluye **Agregar Este equipo** (abre todas las unidades en el Explorador) y **Agregar unidad de disco**, enumerando C:, D: y cualquier unidad detectada con su nombre. Los iconos se obtienen desde Windows Shell.
-- Si una versión anterior se queda cubriendo la barra de tareas, vuelve temporalmente a Derecha y cierra el Dock antes de lanzar la nueva compilación.
+En **Opciones** puedes personalizar la posición, los iconos, los monitores y la disposición de la barra.
 
-**Pendiente de prueba en Windows 11 y comprobación de compilación GitHub Actions.**
+## Requisitos
 
-## Ventana de opciones
+- Windows **10 u 11, de 64 bits**.
+- Para la edición liviana: [Microsoft .NET 8 Desktop Runtime (x64)](https://dotnet.microsoft.com/download/dotnet/8.0).
+- La edición autónoma incluye el runtime necesario.
+- Habitualmente no necesita permisos de administrador para ejecutarse.
 
-Clic derecho sobre la barra o en un icono → **Opciones**. Se abre una ventana con tres pestañas:
+> .NET 8 alcanza el fin de soporte en noviembre de 2026. Está prevista la evaluación de una migración a una versión LTS posterior.
 
-- **General**: Siempre visible, ocultar automáticamente, ejecutar al inicio, mostrar nombres, ubicación y tamaño de iconos.
-- **Discos**: vista previa del uso de las unidades (indicador circular de ocupación y GB usados/libres), y casilla para incorporar indicadores a la barra.
-- **Acerca de**: finalidad del proyecto y acceso a las compilaciones para comprobar actualizaciones. No instala actualizaciones silenciosamente.
+## Desarrollo
 
-Al pulsar **Guardar** se conservan las rutas actuales en JSON, y la opción de inicio crea o elimina únicamente el valor `JANUS Dock` en la clave `HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run`. El ocultamiento conserva una franja de aproximadamente seis píxeles como zona de recuperación.
+Proyecto de escritorio escrito en **C#**, usando **Windows Forms** y **.NET 8**.
 
-**Pendiente:** validar compilación de GitHub Actions y probar en Windows 11 los cambios de AppBar, especialmente con autoocultación, ubicación inferior y varios monitores. No distribuir como versión estable hasta completar estas pruebas.
+Para compilar desde el código fuente con el SDK de .NET 8 en Windows:
 
-## Plan de versión 2.1 (en desarrollo)
+```powershell
+dotnet restore
+dotnet build JanusDock.csproj -c Release
+```
 
-Versionado acordado: **10 modificaciones funcionales revisadas por versión publicada**. Los commits de corrección internos no cuentan automáticamente como versiones. Cada publicación requiere compilación exitosa en GitHub Actions y una prueba real en Windows 11, y se documentará con un changelog.
+Las compilaciones automatizadas pueden consultarse en [GitHub Actions](https://github.com/momocrackcorp/janus-dock/actions).
 
-Lote de cambios previstos para 2.1:
+## Versiones y problemas
 
-1. Corregir solapamiento del selector de tamaño de iconos.
-2. Mantener Guardar/Cancelar visibles en el cuadro de opciones.
-3. Mostrar la letra C:, D:, etc. centrada en cada gráfico de disco.
-4. Elegir el color de las donas desde la pestaña Discos.
-5. Reutilizar el mismo color en los widgets de la barra.
-6. Ajustar el porcentaje crítico de ocupación.
-7. Mostrar exclamación pequeña en discos con ocupación crítica.
-8. Integrar el bloque de discos en el mismo orden que accesos y separadores.
-9. Mover el bloque de discos hacia arriba/abajo desde su menú contextual.
-10. Permitir insertar y desplazar separadores entre el bloque de discos y los accesos.
+- [Versiones y descargas](https://github.com/momocrackcorp/janus-dock/releases)
+- [Código fuente](https://github.com/momocrackcorp/janus-dock)
+- [Reportar un problema o sugerir una mejora](https://github.com/momocrackcorp/janus-dock/issues)
 
-**Estado:** cambios implementados en código en la rama de desarrollo. Quedan pendientes la compilación Windows, revisión de diseño con escalado de pantalla y prueba con datos reales antes de publicar la versión 2.1.
+JANUS Dock se distribuye como proyecto independiente del migrador JANUS.
 
-## Nueva tanda de ajustes (pendiente de pruebas)
+---
 
-- Ventana General: modo **Acoplada / Flotante**, iconos desde **16 px**, y tres formas de nombres (**Solo iconos**, **Al pasar el mouse**, **Iconos con nombres**).
-- Menú contextual **Refrescar barra**: vuelve a resolver iconos/rutas, refresca indicadores de discos y solicita recalcular espacio/posición sin reiniciar Explorer.
-- Modo flotante: ventana movible y redimensionable, sin registro AppBar. El modo acoplado sigue usando la lógica de bordes existente.
-- El modo de nombres y el tipo de barra se almacenan en el JSON del usuario.
+<div align="center">
 
-Estos cambios están en la rama de pruebas; **sin validación de compilación ni uso real en Windows 11**. Continuar revisando colocación, escalado, pantalla inferior y comportamiento de ocultación automática antes de declarar una release 2.1.
+**Desarrollado por Momocrackcorp · Chile 🇨🇱**
 
-## Objetivo JANUS Dock 2.6 — cierre de calidad
-
-Versión de trabajo: **2.6.0-preview**. No es una versión final certificada hasta pasar compilación y pruebas en Windows 11. El número de ejecución de GitHub Actions (#20, etc.) no es el número de versión.
-
-- Mantener la apariencia de barra de acceso rápido tradicional (sin bordes ni encabezado en modo flotante).
-- Verificar el icono de **Este equipo** y resolver los iconos de accesos .lnk sin flecha, sin alterar los accesos originales del escritorio.
-- Centrar widgets de discos y permitir asignar un color distinto a cada unidad (pendiente de implementación).
-- Corregir posicionamiento, reserva de área del escritorio y refresco sin tapar la barra de tareas.
-- Finalizar menú contextual, separadores, tres modos de nombres y escalado compacto.
-- La pestaña Acerca de identifica **JANUS Dock (LNK)**, idea desarrollada en **Pueblo Seco, Ñuble, Chile**, fecha **16 de octubre de 2026**, autoría **Omar Aguila / Laboratorios Momocrackcorp**.
-- El proyecto liviano depende de **.NET Desktop Runtime 8**; para distribución pública se evaluará una versión LTS con soporte vigente.
-- La versión final requiere validación en las cuatro ubicaciones, modo flotante y varios factores de escalado antes de integrar con JANUS Plus.
-
-## 3.3 — nueva tanda de pruebas (16 de octubre de 2026)
-
-- Color **independiente por unidad** (configurado por letra, guardado en `DiskColors` en JSON). Se usa tanto en el panel Discos como en los indicadores de la barra.
-- Panel Discos con lista desplazable, botones individuales de color, porcentaje crítico separado y sin campos montados.
-- Casilla para animar el icono bajo el mouse mediante ampliación de la imagen dentro de su espacio, sin alterar el área reservada para el escritorio; desactivable.
-- Clic derecho: carpetas especiales Documentos y Descargas, selector de carpeta personalizada y acciones Apagar/Reiniciar. **Las acciones de energía siempre solicitan confirmación**.
-- El contenido anterior de accesos y separadores se preserva; los campos nuevos del JSON usan valores predeterminados.
-
-**Pendiente de validar**: GitHub Actions, escalado de pantalla, acceso a carpetas redirigidas, iconos de energía, colocación AppBar y animación en diferentes tamaños. La denominación 3.3 sigue siendo *preview* hasta completar las pruebas en Windows 10/11.
+</div>
