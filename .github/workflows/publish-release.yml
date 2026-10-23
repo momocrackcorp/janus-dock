@@ -1,0 +1,37 @@
+name: Publicar JANUS Dock
+on:
+  release:
+    types: [published]
+permissions:
+  contents: write
+jobs:
+  publicar:
+    if: startsWith(github.event.release.tag_name, 'v')
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Generar icono de JANUS Dock
+        shell: pwsh
+        run: ./generate-icon.ps1
+      - name: Compilar version liviana
+        shell: pwsh
+        run: dotnet publish JanusDock.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o dist-compact
+      - name: Compilar version autonoma
+        shell: pwsh
+        run: dotnet publish JanusDock.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o dist-standalone
+      - name: Empaquetar y generar hashes
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist-compact/JanusDock.exe -DestinationPath JANUS-Dock-Liviano-Windows-x64.zip
+          Compress-Archive -Path dist-standalone/JanusDock.exe -DestinationPath JANUS-Dock-Autonomo-Windows-x64.zip
+          Get-FileHash *.zip -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLowerInvariant())  $(Split-Path $_.Path -Leaf)" } | Out-File -FilePath SHA256SUMS.txt -Encoding utf8
+      - name: Adjuntar archivos a la Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.event.release.tag_name }}" JANUS-Dock-Liviano-Windows-x64.zip JANUS-Dock-Autonomo-Windows-x64.zip SHA256SUMS.txt --clobber
