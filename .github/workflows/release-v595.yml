@@ -1,0 +1,59 @@
+name: Publicar JANUS Dock 5.95
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/release-v595.yml'
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Generar icono
+        shell: pwsh
+        run: ./generate-icon.ps1
+      - name: Compilar liviana
+        run: dotnet publish JanusDock.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o dist-compact
+      - name: Compilar autonoma
+        run: dotnet publish JanusDock.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o dist-standalone
+      - name: Empaquetar
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist-compact/JanusDock.exe -DestinationPath JANUS-Dock-Liviano-Windows-x64.zip
+          Compress-Archive -Path dist-standalone/JanusDock.exe -DestinationPath JANUS-Dock-Autonomo-Windows-x64.zip
+          Get-FileHash -Path *.zip -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLowerInvariant())  $(Split-Path $_.Path -Leaf)" } | Set-Content SHA256SUMS.txt
+      - name: Publicar Release v5.95.0
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          @'
+          # JANUS Dock v5.95.0
+          
+          Nueva version publica para Windows 10/11 (x64).
+          
+          ## Novedades
+          - Indicadores de CPU y RAM, porcentaje y memoria utilizada.
+          - Monitor de red: promedio movil de descarga y subida de 60 segundos.
+          - Nuevos accesos comunes a Edge, Chrome, Brave, Firefox y Microsoft Office.
+          - Iconos coloreados de estilo Lucide y mejoras visuales.
+          - Mejoras de disposicion horizontal y vertical y controles de energia.
+          
+          ## Instalacion
+          - **Autonomo:** incluye .NET; extraer ZIP y ejecutar JanusDock.exe.
+          - **Liviano:** requiere Microsoft .NET 8 Desktop Runtime (x64).
+          
+          Incluye SHA256SUMS.txt para verificar las descargas.
+          '@ | Set-Content RELEASE_NOTES.md -Encoding utf8
+          gh release view v5.95.0 --repo "${{ github.repository }}" *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create v5.95.0 --repo "${{ github.repository }}" --target "${{ github.sha }}" --title "JANUS Dock v5.95.0" --notes-file RELEASE_NOTES.md
+            if ($LASTEXITCODE -ne 0) { throw "No se pudo crear la release" }
+          }
+          gh release upload v5.95.0 --repo "${{ github.repository }}" JANUS-Dock-Liviano-Windows-x64.zip JANUS-Dock-Autonomo-Windows-x64.zip SHA256SUMS.txt --clobber
+          if ($LASTEXITCODE -ne 0) { throw "No se pudieron adjuntar los ZIP" }
