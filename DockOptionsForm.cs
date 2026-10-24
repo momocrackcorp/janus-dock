@@ -44,7 +44,7 @@ public sealed class DockOptionsForm : Form
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 9);
         StyleWindowsControls(this);
-        Shown += (_, _) => { StyleWindowsControls(this); InstallModernSelectors(this); };
+        Shown += (_, _) => { StyleWindowsControls(this); InstallModernSelectors(this); InstallModernToggles(this); };
         var tabs = new TabControl { Dock = DockStyle.Fill, Padding = new Point(18, 8), DrawMode = TabDrawMode.OwnerDrawFixed, SizeMode = TabSizeMode.Normal }; 
         tabs.DrawItem += (_, e) =>
         {
@@ -380,6 +380,29 @@ public sealed class DockOptionsForm : Form
         }
         previewButton.Click += (_, _) => { CaptureSettings(); ApplyRequested?.Invoke(this); };
         apply.Click += (_, _) => CaptureSettings();
+    }
+    private static void InstallModernToggles(Control parent)
+    {
+        foreach (Control child in parent.Controls.Cast<Control>().ToArray())
+        {
+            if (child is CheckBox check)
+            {
+                int index = parent.Controls.GetChildIndex(check);
+                var position = check.Location;
+                var anchor = check.Anchor;
+                var dock = check.Dock;
+                parent.Controls.Remove(check);
+                var toggle = new ModernToggle(check)
+                {
+                    Location = position, Anchor = anchor, Dock = dock,
+                    Margin = check.Margin, Font = check.Font,
+                    ForeColor = parent.ForeColor
+                };
+                parent.Controls.Add(toggle);
+                parent.Controls.SetChildIndex(toggle, index);
+            }
+            else InstallModernToggles(child);
+        }
     }
     private static void InstallModernSelectors(Control parent)
     {
