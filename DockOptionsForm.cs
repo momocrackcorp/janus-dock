@@ -297,7 +297,7 @@ public sealed class DockOptionsForm : Form
                 Color initialColor = Color.FromArgb(diskColors.TryGetValue(letter, out int existing) ? existing : config.DiskColorArgb);
                 // Three rows per drive: visibility, preview, palette. No absolute
                 // positions ever share the same vertical band.
-                var line = new Panel { Width = 710, Height = 174, Margin = new Padding(3, 3, 3, 12) };
+                var line = new Panel { Width = 710, Height = 105, Margin = new Padding(3, 3, 3, 12) };
                 var show = new CheckBox
                 {
                     Text = $"Mostrar unidad {letter} en el Dock",
@@ -311,12 +311,9 @@ public sealed class DockOptionsForm : Form
                     ScheduleLiveChange();
                 };
                 line.Controls.Add(show);
-                var preview = new DiskUsageControl(drive, initialColor, (int)critical.Value, false)
-                {
-                    Location = new Point(8, 45), Size = new Size(650, 61),
-                    ForeColor = SystemColors.ControlText
-                };
-                line.Controls.Add(preview);
+                // Compact color picker replaces the numerical disk-capacity preview.
+                var colorCaption = new Label { Text = "Color:", AutoSize = true, Location = new Point(12, 54) };
+                line.Controls.Add(colorCaption);
                 Color[] presets = {
                     Color.FromArgb(48, 130, 222),
                     Color.FromArgb(0, 202, 113),
@@ -326,7 +323,6 @@ public sealed class DockOptionsForm : Form
                 void SelectColor(Color selected)
                 {
                     diskColors[letter] = selected.ToArgb();
-                    preview.SetAppearance(selected, (int)critical.Value);
                     ScheduleLiveChange();
                     foreach (var chip in paletteButtons)
                     {
@@ -348,7 +344,7 @@ public sealed class DockOptionsForm : Form
                         UseVisualStyleBackColor = false,
                         Size = new Size(46, 34),
                         FlatAppearance = { BorderSize = 2 },
-                        Location = new Point(12 + index * 57, 119),
+                        Location = new Point(87 + index * 57, 46),
                         AccessibleName = index switch { 0 => "Azul", 1 => "Verde", _ => "Coral" }
                     };
                     chip.Click += (_, _) => SelectColor(preset);
@@ -360,7 +356,7 @@ public sealed class DockOptionsForm : Form
                     Name = "DiskPaletteCustom", Text = "Otro color...",
                     Font = new Font("Segoe UI", 9f),
                     FlatStyle = FlatStyle.Flat, UseVisualStyleBackColor = false,
-                    Size = new Size(145, 40), Location = new Point(190, 114),
+                    Size = new Size(145, 40), Location = new Point(266, 43),
                     AccessibleName = "Elegir color personalizado"
                 };
                 custom.Click += (_, _) =>
@@ -373,8 +369,6 @@ public sealed class DockOptionsForm : Form
                     if (picker.ShowDialog(this) == DialogResult.OK) { SelectColor(picker.Color); ScheduleLiveChange(); }
                 };
                 line.Controls.Add(custom);
-                critical.ValueChanged += (_, _) =>
-                    preview.SetAppearance(Color.FromArgb(diskColors.TryGetValue(letter, out int current) ? current : config.DiskColorArgb), (int)critical.Value);
                 SelectColor(initialColor);
                 // Theme walkers may run on Shown; preserve swatch backgrounds afterward.
                 Shown += (_, _) => { foreach (var chip in paletteButtons) chip.BackColor = (Color)chip.Tag!; };
@@ -389,7 +383,7 @@ public sealed class DockOptionsForm : Form
         generalRows.Controls.Add(widget);
         generalRows.Controls.Add(widgetLabel);
         generalRows.Controls.Add(FieldRow(new Label { Text = "Avisar desde (%):", AutoSize = true }, critical));
-        diskPanel.Height = 290;
+        diskPanel.Height = 300;
         diskPanel.AutoScroll = true;
         generalRows.Controls.Add(diskPanel);
 
