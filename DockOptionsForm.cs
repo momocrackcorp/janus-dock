@@ -45,7 +45,20 @@ public sealed class DockOptionsForm : Form
         Font = new Font("Segoe UI", 9);
         StyleWindowsControls(this);
         Shown += (_, _) => StyleWindowsControls(this);
-        var tabs = new TabControl { Dock = DockStyle.Fill, Padding = new Point(12, 6) };
+        var tabs = new TabControl { Dock = DockStyle.Fill, Padding = new Point(18, 8), DrawMode = TabDrawMode.OwnerDrawFixed, SizeMode = TabSizeMode.Normal }; 
+        tabs.DrawItem += (_, e) =>
+        {
+            var page = tabs.TabPages[e.Index];
+            bool selected = e.Index == tabs.SelectedIndex;
+            var bounds = tabs.GetTabRect(e.Index);
+            bool isDark = BackColor.GetBrightness() < 0.5f;
+            Color accent = Color.FromArgb(25, 164, 189);
+            Color fill = selected ? accent : (isDark ? Color.FromArgb(45, 52, 62) : Color.FromArgb(237, 241, 245));
+            Color ink = selected ? Color.White : ForeColor;
+            using var brush = new SolidBrush(fill);
+            e.Graphics.FillRectangle(brush, bounds);
+            TextRenderer.DrawText(e.Graphics, page.Text, Font, bounds, ink, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+        };
         Controls.Add(tabs);
 
         var general = new TabPage("General");
