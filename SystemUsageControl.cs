@@ -67,44 +67,58 @@ public sealed class SystemUsageControl : Control
         base.OnPaint(e);
         var g = e.Graphics;
         g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-        Color cpu = Color.FromArgb(248, 181, 91), ram = Color.FromArgb(121, 185, 245);
-        using var font = new Font("Segoe UI", Horizontal ? 9f : 8.5f, FontStyle.Bold);
-        using var small = new Font("Segoe UI", 8f);
+        // Draw inside a normalized coordinate system, preserving icon proportions
+        // even when Windows display scaling or dock thickness changes.
+        bool horizontal = Horizontal;
+        float virtualWidth = horizontal ? 250f : 90f;
+        float virtualHeight = horizontal ? 70f : 150f;
+        float scale = Math.Min(Width / virtualWidth, Height / virtualHeight);
+        if (scale <= 0) return;
+        g.TranslateTransform((Width - virtualWidth * scale) / 2f, (Height - virtualHeight * scale) / 2f);
+        g.ScaleTransform(scale, scale);
+        Color cpu = Color.FromArgb(248, 181, 91);
+        Color ram = Color.FromArgb(121, 185, 245);
         using var cpuPen = new Pen(cpu, 2.2f);
         using var ramPen = new Pen(ram, 2.2f);
-        void Chip(int x, int y, Pen pen)
+        using var cpuBrush = new SolidBrush(cpu);
+        using var ramBrush = new SolidBrush(ram);
+        using var infoBrush = new SolidBrush(ForeColor);
+        using var titleFont = new Font("Segoe UI", 13f, FontStyle.Bold, GraphicsUnit.Pixel);
+        using var detailFont = new Font("Segoe UI", 11f, FontStyle.Regular, GraphicsUnit.Pixel);
+        void Chip(float x, float y)
         {
-            g.DrawRectangle(pen, x + 4, y + 4, 19, 19);
+            g.DrawRectangle(cpuPen, x + 4, y + 4, 18, 18);
             for (int k = 0; k < 3; k++)
             {
-                int q = 8 + k * 5;
-                g.DrawLine(pen, x + q, y, x + q, y + 4);
-                g.DrawLine(pen, x + q, y + 23, x + q, y + 27);
-                g.DrawLine(pen, x, y + q, x + 4, y + q);
-                g.DrawLine(pen, x + 23, y + q, x + 27, y + q);
+                float q = 8 + k * 5;
+                g.DrawLine(cpuPen, x + q, y, x + q, y + 4);
+                g.DrawLine(cpuPen, x + q, y + 22, x + q, y + 26);
+                g.DrawLine(cpuPen, x, y + q, x + 4, y + q);
+                g.DrawLine(cpuPen, x + 22, y + q, x + 26, y + q);
             }
         }
-        void MemoryIcon(int x, int y)
+        void Memory(float x, float y)
         {
-            g.DrawRectangle(ramPen, x, y + 5, 28, 17);
-            for (int k = 0; k < 4; k++) g.DrawLine(ramPen, x + 4 + 6 * k, y + 22, x + 4 + 6 * k, y + 26);
+            g.DrawRectangle(ramPen, x, y + 4, 26, 16);
+            for (int k = 0; k < 4; k++)
+                g.DrawLine(ramPen, x + 4 + 6 * k, y + 20, x + 4 + 6 * k, y + 24);
         }
-        var flags = TextFormatFlags.SingleLine | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix;
-        if (Horizontal)
+        if (horizontal)
         {
-            Chip(5, 13, cpuPen);
-            TextRenderer.DrawText(g, $"CPU {cpuPercent:0}%", font, new Point(40, 17), cpu, flags);
-            MemoryIcon(120, 13);
-            TextRenderer.DrawText(g, $"RAM {memoryPercent:0}%", font, new Point(154, 8), ram, flags);
-            TextRenderer.DrawText(g, $"{usedGiB:0.0}/{totalGiB:0.0} GB", small, new Point(154, 29), ForeColor, flags);
+            // Two dedicated rows prevent CPU and RAM values overlapping.
+            Chip(8, 4);
+            g.DrawString($"CPU {cpuPercent:0}%", titleFont, cpuBrush, 47, 9);
+            Memory(8, 39);
+            g.DrawString($"RAM {memoryPercent:0}%", titleFont, ramBrush, 47, 44);
+            g.DrawString($"{usedGiB:0.0}/{totalGiB:0.0} GB", detailFont, infoBrush, 143, 46);
         }
         else
         {
-            Chip((Width - 27) / 2, 3, cpuPen);
-            TextRenderer.DrawText(g, $"CPU {cpuPercent:0}%", font, new Rectangle(0, 35, Width, 25), cpu, TextFormatFlags.HorizontalCenter | flags);
-            MemoryIcon((Width - 28) / 2, 66);
-            TextRenderer.DrawText(g, $"RAM {memoryPercent:0}%", font, new Rectangle(0, 96, Width, 22), ram, TextFormatFlags.HorizontalCenter | flags);
-            TextRenderer.DrawText(g, $"{usedGiB:0.0}/{totalGiB:0.0} GB", small, new Rectangle(0, 120, Width, 28), ForeColor, TextFormatFlags.HorizontalCenter | TextFormatFlags.WordBreak);
+            Chip(32, 4);
+            g.DrawString($"CPU {cpuPercent:0}%", titleFont, cpuBrush, 13, 38);
+            Memory(32, 71);
+            g.DrawString($"RAM {memoryPercent:0}%", titleFont, ramBrush, 12, 101);
+            g.DrawString($"{usedGiB:0.0}/{totalGiB:0.0} GB", detailFont, infoBrush, 5, 123);
         }
     }
     protected override void Dispose(bool disposing)
