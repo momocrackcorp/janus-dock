@@ -1,0 +1,40 @@
+name: Probar instalador JANUS Dock
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'installer/**'
+      - '.github/workflows/test-installer.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  installer:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Generar icono
+        shell: pwsh
+        run: ./generate-icon.ps1
+      - name: Compilar JANUS Dock autonomo
+        shell: pwsh
+        run: dotnet publish JanusDock.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o dist-standalone
+      - name: Instalar Inno Setup en el runner
+        shell: pwsh
+        run: choco install innosetup -y --no-progress
+      - name: Generar instalador
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "Inno Setup no encontrado en $iscc" }
+          & $iscc installer\JanusDock.iss
+          if ($LASTEXITCODE -ne 0) { throw "Fallo Inno Setup" }
+      - name: Subir instalador de prueba
+        uses: actions/upload-artifact@v4
+        with:
+          name: JANUS-Dock-Instalador-Prueba
+          path: installer-output/*.exe
+          if-no-files-found: error
