@@ -553,7 +553,8 @@ public class Dock : Form
         {
             var usage = new SystemUsageControl(Horizontal)
             {
-                Width = Horizontal ? 265 : Math.Max(72, settings.Width - 14),
+                Width = Horizontal ? Math.Max(170, Math.Min(245, settings.IconSize * 5 + 25)) : Math.Max(56, settings.Width - 14),
+                Height = Horizontal ? Math.Max(36, Math.Min(settings.HorizontalHeight - 8, 68)) : 148,
                 BackColor = BackColor,
                 ForeColor = ForeColor
             };
@@ -669,7 +670,11 @@ public class Dock : Form
     void ShowOptions(string? initialTab = null)
     {
         using var dlg = new DockOptionsForm(settings, initialTab);
-        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+        dlg.ApplyRequested += ApplyDockOptions;
+        if (dlg.ShowDialog(this) == DialogResult.OK) ApplyDockOptions(dlg);
+    }
+    void ApplyDockOptions(DockOptionsForm dlg)
+    {
         UnregisterBar();
         settings.AlwaysOnTop = dlg.AlwaysOnTop;
         settings.AutoHide = dlg.AutoHide;
