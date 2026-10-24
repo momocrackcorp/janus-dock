@@ -391,7 +391,28 @@ public sealed class DockOptionsForm : Form
         foreach (Control child in parent.Controls)
         {
             if (child is Button b) { b.FlatStyle = FlatStyle.System; b.UseVisualStyleBackColor = true; }
-            if (child is ComboBox cb) cb.FlatStyle = FlatStyle.System;
+            if (child is ComboBox cb)
+            {
+                cb.FlatStyle = FlatStyle.Flat;
+                cb.BackColor = background;
+                cb.ForeColor = foreground;
+                cb.IntegralHeight = false;
+                cb.ItemHeight = Math.Max(cb.ItemHeight, 24);
+                if (cb.DropDownStyle == ComboBoxStyle.DropDownList && cb.DrawMode != DrawMode.OwnerDrawFixed)
+                {
+                    cb.DrawMode = DrawMode.OwnerDrawFixed;
+                    cb.DrawItem += (_, e) =>
+                    {
+                        if (e.Index < 0) return;
+                        bool selected = (e.State & DrawItemState.Selected) != 0;
+                        using var fill = new SolidBrush(selected ? Color.FromArgb(23, 158, 185) : cb.BackColor);
+                        e.Graphics.FillRectangle(fill, e.Bounds);
+                        TextRenderer.DrawText(e.Graphics, cb.Items[e.Index]?.ToString() ?? "", cb.Font,
+                            e.Bounds, selected ? Color.White : cb.ForeColor,
+                            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+                    };
+                }
+            }
             if (child is CheckBox ch) ch.FlatStyle = FlatStyle.System;
             if (child is TabPage page) page.BackColor = background;
             StyleWindowsControls(child);
