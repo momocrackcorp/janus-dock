@@ -19,6 +19,7 @@ public sealed class DockOptionsForm : Form
     public bool StartWithWindows { get; private set; }
     public int DiskColorArgb { get; private set; }
     public Dictionary<string,int> DiskColors { get; private set; } = new(StringComparer.OrdinalIgnoreCase);
+    public List<string> HiddenDiskLetters { get; private set; } = new();
     public bool HoverAnimation { get; private set; } = true;
     public int ZoomPercent { get; private set; } = 280;
     public bool ShowShutdown { get; private set; }
@@ -276,64 +277,84 @@ public sealed class DockOptionsForm : Form
         generalRows.Controls.Add(networkAtEnd);
         var widget = new CheckBox { Text = "Mostrar indicador de uso de discos en la barra", Checked = config.ShowDiskWidget, Location = new Point(18, 20), AutoSize = true };
         var diskColors = new Dictionary<string,int>(config.DiskColors, StringComparer.OrdinalIgnoreCase);
+        var hiddenDisks = new HashSet<string>(config.HiddenDiskLetters ?? new List<string>(), StringComparer.OrdinalIgnoreCase);
         var widgetLabel = new Label { Text = "Cada unidad tiene su propio color. Selecciónalo con el botón de su fila.", Location = new Point(18, 54), AutoSize = true };
         var critical = new NumericUpDown { Location = new Point(150, 84), Width = 80, Minimum = 70, Maximum = 99, Value = Math.Clamp(config.CriticalPercent, 70, 99) };
-        var diskPanel = new FlowLayoutPanel { Location = new Point(18, 124), Size = new Size(510, 175), Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right, AutoScroll = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Padding = new Padding(2) };
+        var diskPanel = new FlowLayoutPanel
+        {
+            Width = 755, Height = 285, AutoScroll = true,
+            FlowDirection = FlowDirection.TopDown, WrapContents = false,
+            Padding = new Padding(5)
+        };
         foreach (var drive in DriveInfo.GetDrives())
         {
             try
             {
                 if (!drive.IsReady || drive.TotalSize <= 0) continue;
                 string letter = drive.Name.Substring(0, 2).ToUpperInvariant();
-                Color color = Color.FromArgb(diskColors.TryGetValue(letter, out int existing) ? existing : config.DiskColorArgb);
-                var line = new Panel { Width = 625, Height = 78, Margin = new Padding(2, 6, 2, 8) };
-                var preview = new DiskUsageControl(drive, color, (int)critical.Value, false)
-                { Location = new Point(0, 4), Size = new Size(320, 65), ForeColor = SystemColors.ControlText };
-                Color[] presetColors = {
-                    Color.FromArgb(48, 130, 222), // Azul
-                    Color.FromArgb(0, 202, 113),  // Verde
-                    Color.FromArgb(240, 105, 105) // Coral
+                Color initialColor = Color.FromArgb(diskColors.TryGetValue(letter, out int existing) ? existing : config.DiskColorArgb);
+                // Three rows per drive: visibility, preview, palette. No absolute
+                // positions ever share the same vertical band.
+                var line = new Panel { Width = 710, Height = 164, Margin = new Padding(3, 3, 3, 12) };
+                var show = new CheckBox
+                {
+                    Text = $"Mostrar unidad {letter} en el Dock",
+                    Checked = !hiddenDisks.Contains(letter),
+                    AutoSize = true, Location = new Point(8, 4)
                 };
-                var chips = new List<Button>();
+                show.CheckedChanged += (_, _) =>
+                {
+                    if (show.Checked) hiddenDisks.Remove(letter);
+                    else hiddenDisks.Add(letter);
+                };
+                line.Controls.Add(show);
+                var preview = new DiskUsageControl(drive, initialColor, (int)critical.Value, false)
+                {
+                    Location = new Point(8, 45), Size = new Size(650, 61),
+                    ForeColor = SystemColors.ControlText
+                };
+                line.Controls.Add(preview);
+                Color[] presets = {
+                    Color.FromArgb(48, 130, 222),
+                    Color.FromArgb(0, 202, 113),
+                    Color.FromArgb(240, 105, 105)
+                };
+                var paletteButtons = new List<Button>();
                 void SelectColor(Color selected)
                 {
                     diskColors[letter] = selected.ToArgb();
                     preview.SetAppearance(selected, (int)critical.Value);
-                    foreach (var chip in chips)
+                    foreach (var chip in paletteButtons)
                     {
-                        var chipColor = (Color)chip.Tag!;
-                        bool active = chipColor.ToArgb() == selected.ToArgb();
-                        chip.FlatAppearance.BorderColor = active ? Color.FromArgb(18, 165, 185) : Color.Gray;
-                        chip.FlatAppearance.BorderSize = active ? 3 : 1;
+                        if (chip.Tag is Color sample)
+                        {
+                            bool active = sample.ToArgb() == selected.ToArgb();
+                            chip.FlatAppearance.BorderColor = active ? Color.FromArgb(18, 165, 185) : Color.DimGray;
+                            chip.FlatAppearance.BorderSize = active ? 3 : 1;
+                        }
                     }
                 }
-                for (int index = 0; index < 3; index++)
+                for (int index = 0; index < presets.Length; index++)
                 {
-                    Color preset = presetColors[index];
+                    Color preset = presets[index];
                     var chip = new Button
                     {
-                        Text = "",
-                        Tag = preset,
-                        BackColor = preset,
-                        FlatStyle = FlatStyle.Flat,
+                        Name = "DiskPaletteSwatch", Tag = preset,
+                        FlatStyle = FlatStyle.Flat, BackColor = preset,
                         UseVisualStyleBackColor = false,
-                        Size = new Size(43, 35),
-                        Location = new Point(327 + index * 49, 17),
+                        Size = new Size(46, 34),
+                        Location = new Point(12 + index * 57, 119),
                         AccessibleName = index switch { 0 => "Azul", 1 => "Verde", _ => "Coral" }
                     };
                     chip.Click += (_, _) => SelectColor(preset);
-                    chips.Add(chip);
+                    paletteButtons.Add(chip);
                     line.Controls.Add(chip);
                 }
                 var custom = new Button
                 {
-                    Text = "Otro...",
-                    Tag = color,
-                    BackColor = SystemColors.Control,
-                    ForeColor = SystemColors.ControlText,
-                    FlatStyle = FlatStyle.Flat,
-                    Size = new Size(93, 35),
-                    Location = new Point(479, 17),
+                    Name = "DiskPaletteCustom", Text = "Otro color...",
+                    FlatStyle = FlatStyle.Flat, UseVisualStyleBackColor = false,
+                    Size = new Size(145, 34), Location = new Point(190, 119),
                     AccessibleName = "Elegir color personalizado"
                 };
                 custom.Click += (_, _) =>
@@ -343,18 +364,12 @@ public sealed class DockOptionsForm : Form
                         Color = Color.FromArgb(diskColors.TryGetValue(letter, out int saved) ? saved : config.DiskColorArgb),
                         FullOpen = true
                     };
-                    if (picker.ShowDialog(this) == DialogResult.OK)
-                    {
-                        custom.Tag = picker.Color;
-                        SelectColor(picker.Color);
-                    }
+                    if (picker.ShowDialog(this) == DialogResult.OK) SelectColor(picker.Color);
                 };
-                chips.Add(custom);
                 line.Controls.Add(custom);
                 critical.ValueChanged += (_, _) =>
                     preview.SetAppearance(Color.FromArgb(diskColors.TryGetValue(letter, out int current) ? current : config.DiskColorArgb), (int)critical.Value);
-                line.Controls.Add(preview);
-                SelectColor(color);
+                SelectColor(initialColor);
                 diskPanel.Controls.Add(line);
             }
             catch { }
@@ -366,7 +381,7 @@ public sealed class DockOptionsForm : Form
         generalRows.Controls.Add(widget);
         generalRows.Controls.Add(widgetLabel);
         generalRows.Controls.Add(FieldRow(new Label { Text = "Avisar desde (%):", AutoSize = true }, critical));
-        diskPanel.Height = 220;
+        diskPanel.Height = 290;
         diskPanel.AutoScroll = true;
         generalRows.Controls.Add(diskPanel);
 
@@ -428,6 +443,7 @@ public sealed class DockOptionsForm : Form
             Edge = (string)location.SelectedItem!;
             DiskColorArgb = config.DiskColorArgb;
             DiskColors = diskColors;
+            HiddenDiskLetters = hiddenDisks.OrderBy(x => x).ToList();
             HoverAnimation = animation.Checked;
             ZoomPercent = zoomValues[Math.Max(0, zoomChoice.SelectedIndex)];
             ShowShutdown = shutdown.Checked;
@@ -494,7 +510,7 @@ public sealed class DockOptionsForm : Form
         parent.ForeColor = foreground;
         foreach (Control child in parent.Controls)
         {
-            if (child is Button b) { b.FlatStyle = FlatStyle.System; b.UseVisualStyleBackColor = true; if (b.Text == "Color...") { b.UseVisualStyleBackColor = false; b.FlatStyle = FlatStyle.Flat; b.FlatAppearance.BorderSize = 1; b.AutoSize = false; b.Height = 36; } }
+            if (child is Button b && b.Name != "DiskPaletteSwatch" && b.Name != "DiskPaletteCustom") { b.FlatStyle = FlatStyle.System; b.UseVisualStyleBackColor = true; if (b.Text == "Color...") { b.UseVisualStyleBackColor = false; b.FlatStyle = FlatStyle.Flat; b.FlatAppearance.BorderSize = 1; b.AutoSize = false; b.Height = 36; } }
             if (child is ComboBox cb)
             {
                 cb.FlatStyle = FlatStyle.Flat;
