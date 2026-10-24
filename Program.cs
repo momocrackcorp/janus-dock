@@ -464,7 +464,7 @@ public class Dock : Form
                             Width = Horizontal ? 72 : Math.Max(65, settings.Width - 16), Height = 67, BackColor = BackColor, ForeColor = ForeColor,
                             Margin = new Padding(0, 1, 0, 1)
                         };
-                        var diskMenu = new ContextMenuStrip();
+                        var diskMenu = DockMenuStyle.Create(light, Color.FromArgb(58, 173, 201));
                         diskMenu.Items.Add("Mover bloque de discos hacia arriba", null, (_, _) => Move(item, -1));
                         diskMenu.Items.Add("Mover bloque de discos hacia abajo", null, (_, _) => Move(item, 1));
                         diskMenu.Items.Add("Opciones...", null, (_, _) => ShowOptions());
@@ -493,7 +493,7 @@ public class Dock : Form
                     if (Horizontal) e.Graphics.DrawLine(line, sep.Width / 2, 3, sep.Width / 2, sep.Height - 3);
                     else e.Graphics.DrawLine(line, 3, sep.Height / 2, sep.Width - 3, sep.Height / 2);
                 };
-                var separatorMenu = new ContextMenuStrip();
+                var separatorMenu = DockMenuStyle.Create(light, Color.FromArgb(58, 173, 201));
                 separatorMenu.Items.Add("Quitar separador", null, (_, _) => { settings.Items.Remove(item); Store(); Render(); });
                 separatorMenu.Items.Add("Subir", null, (_, _) => Move(item, -1));
                 separatorMenu.Items.Add("Bajar", null, (_, _) => Move(item, 1));
@@ -528,7 +528,7 @@ public class Dock : Form
 
             var tips = new ToolTip { ShowAlways = true };
             if (settings.NameMode != "None") tips.SetToolTip(btn, item.Name + "\n" + item.Path);
-            var context = new ContextMenuStrip();
+            var context = DockMenuStyle.Create(light, Color.FromArgb(58, 173, 201));
             context.Items.Add("Abrir", null, (_, _) => Open(item));
             context.Items.Add("Subir", null, (_, _) => Move(item, -1));
             context.Items.Add("Bajar", null, (_, _) => Move(item, 1));
@@ -558,7 +558,7 @@ public class Dock : Form
                 BackColor = BackColor,
                 ForeColor = ForeColor
             };
-            var usageMenu = new ContextMenuStrip();
+            var usageMenu = DockMenuStyle.Create(light, Color.FromArgb(58, 173, 201));
             usageMenu.Items.Add("Opciones de CPU y RAM...", null, (_, _) => ShowOptions("General"));
             usage.ContextMenuStrip = usageMenu;
             panel.Controls.Add(usage);
@@ -571,7 +571,7 @@ public class Dock : Form
                 BackColor = BackColor,
                 ForeColor = ForeColor
             };
-            var networkMenu = new ContextMenuStrip();
+            var networkMenu = DockMenuStyle.Create(light, Color.FromArgb(58, 173, 201));
             networkMenu.Items.Add("Opciones del monitor de red...", null, (_, _) => ShowOptions("General"));
             network.ContextMenuStrip = networkMenu;
             if (settings.NetworkAtEnd)
@@ -604,11 +604,7 @@ public class Dock : Form
     }
     ContextMenuStrip MakeDockMenu()
     {
-        var menu = new ContextMenuStrip();
-        menu.RenderMode = ToolStripRenderMode.System;
-        menu.BackColor = SystemColors.Menu;
-        menu.ForeColor = SystemColors.MenuText;
-        menu.Font = new Font("Segoe UI", 9.5f);
+        var menu = DockMenuStyle.Create(light, Color.FromArgb(58, 173, 201));
         menu.Opening += (_, _) =>
         {
             menu.Items.Clear();
@@ -717,7 +713,7 @@ public class Dock : Form
     }
     void ShowLegacyOptions()
     {
-        var menu = new ContextMenuStrip();
+        var menu = DockMenuStyle.Create(light, Color.FromArgb(58, 173, 201));
         var names = new ToolStripMenuItem("Mostrar nombres") { Checked = settings.ShowNames, CheckOnClick = true };
         names.CheckedChanged += (_, _) => { settings.ShowNames = names.Checked; Store(); Render(); };
         menu.Items.Add(names);
