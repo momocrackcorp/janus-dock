@@ -1,0 +1,62 @@
+name: Publicar JANUS Dock 6.1
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/release-v610.yml'
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Generar icono
+        shell: pwsh
+        run: ./generate-icon.ps1
+      - name: Compilar liviana
+        run: dotnet publish JanusDock.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o dist-compact
+      - name: Compilar autonoma
+        run: dotnet publish JanusDock.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o dist-standalone
+      - name: Empaquetar
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist-compact/JanusDock.exe -DestinationPath JANUS-Dock-Liviano-Windows-x64.zip
+          Compress-Archive -Path dist-standalone/JanusDock.exe -DestinationPath JANUS-Dock-Autonomo-Windows-x64.zip
+          Get-FileHash -Path *.zip -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLowerInvariant())  $(Split-Path $_.Path -Leaf)" } | Set-Content SHA256SUMS.txt
+      - name: Publicar Release v6.1.0
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          @'
+          # JANUS Dock v6.1.0
+          
+          Nueva version publica para Windows 10/11 (x64).
+          
+          ## Novedades
+          - Nueva ventana de opciones con interruptores y selectores modernos.
+          - Actualizacion de los cambios sin cerrar opciones; Cancelar restaura la configuracion previa.
+          - Ajuste del tamano de iconos entre 16 y 96 px.
+          - Configuracion por unidad: mostrar u ocultar particiones y elegir color.
+          - Informacion de capacidad, espacio usado y disponible al pasar el mouse por el disco.
+          - Mejoras de posicionamiento de la barra y de la interfaz.
+          - Monitor de CPU/RAM y promedio movil de red de 60 segundos.
+          - Accesos rapidos a navegadores y aplicaciones Office.
+
+          ## Instalacion
+          - **Autonomo:** incluye .NET; extraer ZIP y ejecutar JanusDock.exe.
+          - **Liviano:** requiere Microsoft .NET 8 Desktop Runtime (x64).
+          
+          Incluye SHA256SUMS.txt para verificar las descargas.
+          '@ | Set-Content RELEASE_NOTES.md -Encoding utf8
+          gh release view v6.1.0 --repo "${{ github.repository }}" *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create v6.1.0 --repo "${{ github.repository }}" --target "${{ github.sha }}" --title "JANUS Dock v6.1.0" --notes-file RELEASE_NOTES.md
+            if ($LASTEXITCODE -ne 0) { throw "No se pudo crear la release" }
+          }
+          gh release upload v6.1.0 --repo "${{ github.repository }}" JANUS-Dock-Liviano-Windows-x64.zip JANUS-Dock-Autonomo-Windows-x64.zip SHA256SUMS.txt --clobber
+          if ($LASTEXITCODE -ne 0) { throw "No se pudieron adjuntar los ZIP" }
