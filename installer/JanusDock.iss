@@ -21,7 +21,7 @@ DefaultGroupName=JANUS Dock
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 UninstallDisplayIcon={app}\JanusDock.exe
-OutputDir=installer-output
+OutputDir=..\installer-output
 OutputBaseFilename={#MyOutputBase}
 Compression=lzma2
 SolidCompression=yes
@@ -30,7 +30,7 @@ CloseApplications=yes
 RestartApplications=no
 
 [Files]
-Source: "{#MyBuildFolder}\JanusDock.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\{#MyBuildFolder}\JanusDock.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\JANUS Dock"; Filename: "{app}\JanusDock.exe"
