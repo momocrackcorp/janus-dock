@@ -289,8 +289,8 @@ public sealed class DockOptionsForm : Form
         Controls.Add(bar); bar.BringToFront();
         var cancel = new Button { Text = "Cancelar", AutoSize = true, MinimumSize = new Size(110, 36), DialogResult = DialogResult.Cancel };
         var apply = new Button { Text = "Guardar y cerrar", AutoSize = true, MinimumSize = new Size(150, 36), DialogResult = DialogResult.OK };
-        var preview = new Button { Text = "Aplicar", AutoSize = true, MinimumSize = new Size(110, 36) };
-        bar.Controls.AddRange(new Control[] { apply, preview, cancel });
+        var previewButton = new Button { Text = "Aplicar", AutoSize = true, MinimumSize = new Size(110, 36) };
+        bar.Controls.AddRange(new Control[] { apply, previewButton, cancel });
         AcceptButton = apply; CancelButton = cancel;
         Shown += (_, _) =>
         {
@@ -328,7 +328,7 @@ public sealed class DockOptionsForm : Form
             ShowRestart = restart.Checked;
             CriticalPercent = (int)critical.Value;
         }
-        preview.Click += (_, _) => { CaptureSettings(); ApplyRequested?.Invoke(this); };
+        previewButton.Click += (_, _) => { CaptureSettings(); ApplyRequested?.Invoke(this); };
         apply.Click += (_, _) => CaptureSettings();
     }
     private static void StyleWindowsControls(Control parent)
