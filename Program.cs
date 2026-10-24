@@ -605,6 +605,10 @@ public class Dock : Form
     ContextMenuStrip MakeDockMenu()
     {
         var menu = new ContextMenuStrip();
+        menu.RenderMode = ToolStripRenderMode.System;
+        menu.BackColor = SystemColors.Menu;
+        menu.ForeColor = SystemColors.MenuText;
+        menu.Font = new Font("Segoe UI", 9.5f);
         menu.Opening += (_, _) =>
         {
             menu.Items.Clear();
