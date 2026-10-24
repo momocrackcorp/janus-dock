@@ -708,7 +708,11 @@ public class Dock : Form
     }
     void ApplyDockOptions(DockOptionsForm dlg)
     {
-        UnregisterBar();
+        // Keep the AppBar reservation stable for ordinary visual/widget edits.
+        // Re-registering on every checkbox change can shift the bar away from its edge.
+        bool reDock = settings.DockMode != dlg.DockMode || settings.Edge != dlg.Edge ||
+            settings.Width != dlg.BarWidth || settings.HorizontalHeight != dlg.BarHeight;
+        if (reDock) UnregisterBar();
         settings.AlwaysOnTop = dlg.AlwaysOnTop;
         settings.AutoHide = dlg.AutoHide;
         settings.ShowNames = dlg.ShowNames;
@@ -739,8 +743,8 @@ public class Dock : Form
         TopMost = settings.AlwaysOnTop;
         collapsed = false;
         DockOptionsForm.SetStartup(dlg.StartWithWindows);
-        SetOrientation();
-        RegisterBar();
+        if (reDock) SetOrientation();
+        if (reDock || !registered) RegisterBar();
         Store();
         Render();
         Position();
