@@ -669,9 +669,39 @@ public class Dock : Form
     }
     void ShowOptions(string? initialTab = null)
     {
+        // Apply is a reversible preview until the user chooses Save and close.
+        string originalJson = JsonSerializer.Serialize(settings);
+        bool originalStartup = false;
+        try
+        {
+            using var runKey = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run");
+            originalStartup = runKey?.GetValue("JANUS Dock") != null;
+        }
+        catch { /* A restricted registry must not prevent opening options. */ }
         using var dlg = new DockOptionsForm(settings, initialTab);
         dlg.ApplyRequested += ApplyDockOptions;
-        if (dlg.ShowDialog(this) == DialogResult.OK) ApplyDockOptions(dlg);
+        if (dlg.ShowDialog(this) == DialogResult.OK)
+        {
+            ApplyDockOptions(dlg);
+        }
+        else
+        {
+            // Restore every setting and the dock's appearance after Apply + Cancel/X/Escape.
+            var initial = JsonSerializer.Deserialize<DockSettings>(originalJson);
+            if (initial != null)
+            {
+                UnregisterBar();
+                settings = initial;
+                TopMost = settings.AlwaysOnTop;
+                collapsed = false;
+                try { DockOptionsForm.SetStartup(originalStartup); } catch { }
+                SetOrientation();
+                RegisterBar();
+                Store();
+                Render();
+                Position();
+            }
+        }
     }
     void ApplyDockOptions(DockOptionsForm dlg)
     {
