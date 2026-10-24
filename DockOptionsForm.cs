@@ -297,7 +297,7 @@ public sealed class DockOptionsForm : Form
                 Color initialColor = Color.FromArgb(diskColors.TryGetValue(letter, out int existing) ? existing : config.DiskColorArgb);
                 // Three rows per drive: visibility, preview, palette. No absolute
                 // positions ever share the same vertical band.
-                var line = new Panel { Width = 710, Height = 164, Margin = new Padding(3, 3, 3, 12) };
+                var line = new Panel { Width = 710, Height = 174, Margin = new Padding(3, 3, 3, 12) };
                 var show = new CheckBox
                 {
                     Text = $"Mostrar unidad {letter} en el Dock",
@@ -347,6 +347,7 @@ public sealed class DockOptionsForm : Form
                         FlatStyle = FlatStyle.Flat, BackColor = preset,
                         UseVisualStyleBackColor = false,
                         Size = new Size(46, 34),
+                        FlatAppearance = { BorderSize = 2 },
                         Location = new Point(12 + index * 57, 119),
                         AccessibleName = index switch { 0 => "Azul", 1 => "Verde", _ => "Coral" }
                     };
@@ -357,8 +358,9 @@ public sealed class DockOptionsForm : Form
                 var custom = new Button
                 {
                     Name = "DiskPaletteCustom", Text = "Otro color...",
+                    Font = new Font("Segoe UI", 9f),
                     FlatStyle = FlatStyle.Flat, UseVisualStyleBackColor = false,
-                    Size = new Size(145, 34), Location = new Point(190, 119),
+                    Size = new Size(145, 40), Location = new Point(190, 114),
                     AccessibleName = "Elegir color personalizado"
                 };
                 custom.Click += (_, _) =>
@@ -374,6 +376,8 @@ public sealed class DockOptionsForm : Form
                 critical.ValueChanged += (_, _) =>
                     preview.SetAppearance(Color.FromArgb(diskColors.TryGetValue(letter, out int current) ? current : config.DiskColorArgb), (int)critical.Value);
                 SelectColor(initialColor);
+                // Theme walkers may run on Shown; preserve swatch backgrounds afterward.
+                Shown += (_, _) => { foreach (var chip in paletteButtons) chip.BackColor = (Color)chip.Tag!; };
                 diskPanel.Controls.Add(line);
             }
             catch { }
@@ -540,8 +544,8 @@ public sealed class DockOptionsForm : Form
         bool light = SystemColors.Window.GetBrightness() >= 0.5f;
         Color background = SystemColors.Control;
         Color foreground = SystemColors.ControlText;
-        parent.BackColor = background;
-        parent.ForeColor = foreground;
+        if (parent.Name != "DiskPaletteSwatch") parent.BackColor = background;
+        if (parent.Name != "DiskPaletteSwatch") parent.ForeColor = foreground;
         foreach (Control child in parent.Controls)
         {
             if (child is Button b && b.Name != "DiskPaletteSwatch" && b.Name != "DiskPaletteCustom") { b.FlatStyle = FlatStyle.System; b.UseVisualStyleBackColor = true; if (b.Text == "Color...") { b.UseVisualStyleBackColor = false; b.FlatStyle = FlatStyle.Flat; b.FlatAppearance.BorderSize = 1; b.AutoSize = false; b.Height = 36; } }
@@ -624,7 +628,7 @@ public sealed class DockOptionsForm : Form
                     // Never relocate the first swatch to the far right or stretch
                     // the preview underneath the palette.
                     var preview = line.Controls.OfType<DiskUsageControl>().FirstOrDefault();
-                    if (preview != null) preview.Width = Math.Min(420, Math.Max(290, line.Width - 28));
+                    if (preview != null) preview.Width = Math.Max(330, line.Width - 28);
                 }
             }
             if (control is FlowLayoutPanel row)
