@@ -286,9 +286,9 @@ public sealed class DockOptionsForm : Form
                 if (!drive.IsReady || drive.TotalSize <= 0) continue;
                 string letter = drive.Name.Substring(0, 2).ToUpperInvariant();
                 Color color = Color.FromArgb(diskColors.TryGetValue(letter, out int existing) ? existing : config.DiskColorArgb);
-                var line = new Panel { Width = 476, Height = 69 };
+                var line = new Panel { Width = 560, Height = 76, Margin = new Padding(2, 6, 2, 8) };
                 var preview = new DiskUsageControl(drive, color, (int)critical.Value, false) { Location = new Point(0, 0), Size = new Size(335, 65), ForeColor = SystemColors.ControlText };
-                var choose = new Button { Text = "Color...", Location = new Point(355, 16), Size = new Size(95, 30), BackColor = color, UseVisualStyleBackColor = false };
+                var choose = new Button { Text = "Color...", Location = new Point(385, 17), Size = new Size(126, 36), BackColor = color, UseVisualStyleBackColor = false, AutoEllipsis = false };
                 choose.Click += (_, _) =>
                 {
                     using var picker = new ColorDialog { Color = choose.BackColor, FullOpen = true };
@@ -438,7 +438,7 @@ public sealed class DockOptionsForm : Form
         parent.ForeColor = foreground;
         foreach (Control child in parent.Controls)
         {
-            if (child is Button b) { b.FlatStyle = FlatStyle.System; b.UseVisualStyleBackColor = true; }
+            if (child is Button b) { b.FlatStyle = FlatStyle.System; b.UseVisualStyleBackColor = true; if (b.Text == "Color...") { b.UseVisualStyleBackColor = false; b.FlatStyle = FlatStyle.Flat; b.FlatAppearance.BorderSize = 1; b.AutoSize = false; b.Height = 36; } }
             if (child is ComboBox cb)
             {
                 cb.FlatStyle = FlatStyle.Flat;
