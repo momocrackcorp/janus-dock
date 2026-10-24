@@ -34,6 +34,7 @@ public class DockSettings
     public int DiskColorArgb { get; set; } = Color.FromArgb(48, 130, 222).ToArgb();
     public int CriticalPercent { get; set; } = 90;
     public Dictionary<string,int> DiskColors { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public List<string> HiddenDiskLetters { get; set; } = new();
     public bool HoverAnimation { get; set; } = true;
     public int ZoomPercent { get; set; } = 280;
     public bool ShowShutdown { get; set; } = false;
@@ -163,6 +164,7 @@ public class Dock : Form
         if (settings.DockMode != "Flotante") settings.DockMode = "Acoplada";
         settings.CriticalPercent = Math.Clamp(settings.CriticalPercent, 70, 99);
         settings.DiskColors ??= new(StringComparer.OrdinalIgnoreCase);
+        settings.HiddenDiskLetters ??= new();
         // Migrate old disk widget into the reorderable item list once.
         if (settings.ShowDiskWidget && !settings.Items.Any(x => x.IsDiskWidget))
             settings.Items.Insert(0, new DockItem { Name = "Discos", IsDiskWidget = true });
@@ -459,6 +461,7 @@ public class Dock : Form
                     try
                     {
                         if (!drive.IsReady || drive.TotalSize <= 0) continue;
+                        if (settings.HiddenDiskLetters.Contains(drive.Name.Substring(0, 2), StringComparer.OrdinalIgnoreCase)) continue;
                         var view = new DiskUsageControl(drive, Color.FromArgb(settings.DiskColors.TryGetValue(drive.Name.Substring(0,2).ToUpperInvariant(), out int individual) ? individual : settings.DiskColorArgb), settings.CriticalPercent, true)
                         {
                             Width = Horizontal ? 72 : Math.Max(65, settings.Width - 16), Height = 67, BackColor = BackColor, ForeColor = ForeColor,
@@ -718,6 +721,7 @@ public class Dock : Form
         settings.DiskColorArgb = dlg.DiskColorArgb;
         settings.CriticalPercent = dlg.CriticalPercent;
         settings.DiskColors = dlg.DiskColors;
+        settings.HiddenDiskLetters = dlg.HiddenDiskLetters;
         settings.HoverAnimation = dlg.HoverAnimation;
         settings.ZoomPercent = dlg.ZoomPercent;
         settings.ShowShutdown = dlg.ShowShutdown;
