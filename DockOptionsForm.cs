@@ -264,7 +264,7 @@ public sealed class DockOptionsForm : Form
                 Color initialColor = Color.FromArgb(diskColors.TryGetValue(letter, out int existing) ? existing : config.DiskColorArgb);
                 // Three rows per drive: visibility, preview, palette. No absolute
                 // positions ever share the same vertical band.
-                var line = new Panel { Width = 710, Height = 66, Margin = new Padding(3, 3, 3, 12) };
+                var line = new Panel { Width = 850, Height = 66, Margin = new Padding(3, 3, 3, 12) };
                 var show = new CheckBox
                 {
                     Text = $"Mostrar unidad {letter}",
@@ -309,7 +309,7 @@ public sealed class DockOptionsForm : Form
                         UseVisualStyleBackColor = false,
                         Size = new Size(52, 42),
                         FlatAppearance = { BorderSize = 2 },
-                        Location = new Point(325 + index * 62, 10),
+                        Location = new Point(385 + index * 65, 10),
                         AccessibleName = index switch { 0 => "Azul", 1 => "Verde", _ => "Coral" }
                     };
                     chip.Click += (_, _) => SelectColor(preset);
@@ -321,7 +321,7 @@ public sealed class DockOptionsForm : Form
                     Name = "DiskPaletteCustom", Text = "Otro color...",
                     Font = new Font("Segoe UI", 9f),
                     FlatStyle = FlatStyle.Flat, UseVisualStyleBackColor = false,
-                    Size = new Size(152, 44), Location = new Point(518, 9),
+                    Size = new Size(152, 44), Location = new Point(590, 9),
                     AccessibleName = "Elegir color personalizado"
                 };
                 custom.Click += (_, _) =>
@@ -582,7 +582,7 @@ public sealed class DockOptionsForm : Form
                 diskFlow.Width = Math.Max(250, width - 24);
                 foreach (Panel line in diskFlow.Controls.OfType<Panel>())
                 {
-                    line.Width = Math.Max(220, diskFlow.ClientSize.Width - 24);
+                    line.Width = Math.Max(850, diskFlow.ClientSize.Width - 24);
                     // Disk palette controls manage their own independent positions.
                     // Never relocate the first swatch to the far right or stretch
                     // the preview underneath the palette.
