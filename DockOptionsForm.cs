@@ -297,10 +297,10 @@ public sealed class DockOptionsForm : Form
                 Color initialColor = Color.FromArgb(diskColors.TryGetValue(letter, out int existing) ? existing : config.DiskColorArgb);
                 // Three rows per drive: visibility, preview, palette. No absolute
                 // positions ever share the same vertical band.
-                var line = new Panel { Width = 710, Height = 105, Margin = new Padding(3, 3, 3, 12) };
+                var line = new Panel { Width = 710, Height = 132, Margin = new Padding(3, 3, 3, 12) };
                 var show = new CheckBox
                 {
-                    Text = $"Mostrar unidad {letter} en el Dock",
+                    Text = $"Mostrar unidad {letter}",
                     Checked = !hiddenDisks.Contains(letter),
                     AutoSize = true, Location = new Point(8, 4)
                 };
@@ -312,8 +312,6 @@ public sealed class DockOptionsForm : Form
                 };
                 line.Controls.Add(show);
                 // Compact color picker replaces the numerical disk-capacity preview.
-                var colorCaption = new Label { Text = "Color:", AutoSize = true, Location = new Point(12, 54) };
-                line.Controls.Add(colorCaption);
                 Color[] presets = {
                     Color.FromArgb(48, 130, 222),
                     Color.FromArgb(0, 202, 113),
@@ -344,7 +342,7 @@ public sealed class DockOptionsForm : Form
                         UseVisualStyleBackColor = false,
                         Size = new Size(46, 34),
                         FlatAppearance = { BorderSize = 2 },
-                        Location = new Point(87 + index * 57, 46),
+                        Location = new Point(16 + index * 58, 60),
                         AccessibleName = index switch { 0 => "Azul", 1 => "Verde", _ => "Coral" }
                     };
                     chip.Click += (_, _) => SelectColor(preset);
@@ -356,7 +354,7 @@ public sealed class DockOptionsForm : Form
                     Name = "DiskPaletteCustom", Text = "Otro color...",
                     Font = new Font("Segoe UI", 9f),
                     FlatStyle = FlatStyle.Flat, UseVisualStyleBackColor = false,
-                    Size = new Size(145, 40), Location = new Point(266, 43),
+                    Size = new Size(126, 36), Location = new Point(196, 59),
                     AccessibleName = "Elegir color personalizado"
                 };
                 custom.Click += (_, _) =>
