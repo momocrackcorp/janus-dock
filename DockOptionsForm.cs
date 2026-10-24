@@ -44,7 +44,7 @@ public sealed class DockOptionsForm : Form
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 9);
         StyleWindowsControls(this);
-        Shown += (_, _) => StyleWindowsControls(this);
+        Shown += (_, _) => { StyleWindowsControls(this); InstallModernSelectors(this); };
         var tabs = new TabControl { Dock = DockStyle.Fill, Padding = new Point(18, 8), DrawMode = TabDrawMode.OwnerDrawFixed, SizeMode = TabSizeMode.Normal }; 
         tabs.DrawItem += (_, e) =>
         {
@@ -380,6 +380,31 @@ public sealed class DockOptionsForm : Form
         }
         previewButton.Click += (_, _) => { CaptureSettings(); ApplyRequested?.Invoke(this); };
         apply.Click += (_, _) => CaptureSettings();
+    }
+    private static void InstallModernSelectors(Control parent)
+    {
+        foreach (Control child in parent.Controls.Cast<Control>().ToArray())
+        {
+            if (child is ComboBox combo)
+            {
+                int index = parent.Controls.GetChildIndex(combo);
+                Point position = combo.Location;
+                AnchorStyles anchor = combo.Anchor;
+                DockStyle dock = combo.Dock;
+                parent.Controls.Remove(combo);
+                var styled = new ModernSelector(combo)
+                {
+                    Location = position,
+                    Anchor = anchor,
+                    Dock = dock,
+                    Font = combo.Font,
+                    Margin = combo.Margin
+                };
+                parent.Controls.Add(styled);
+                parent.Controls.SetChildIndex(styled, index);
+            }
+            else InstallModernSelectors(child);
+        }
     }
     private static void StyleWindowsControls(Control parent)
     {
