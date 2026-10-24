@@ -35,6 +35,8 @@ public sealed class DockOptionsForm : Form
     const string RunValue = "JANUS Dock";
 
     public event Action<DockOptionsForm>? ApplyRequested;
+    private Action? liveChange;
+    private void ScheduleLiveChange() => liveChange?.Invoke();
     public DockOptionsForm(DockSettings config, string? initialTab = null)
     {
         Text = "Opciones de JANUS Dock";
@@ -306,6 +308,7 @@ public sealed class DockOptionsForm : Form
                 {
                     if (show.Checked) hiddenDisks.Remove(letter);
                     else hiddenDisks.Add(letter);
+                    ScheduleLiveChange();
                 };
                 line.Controls.Add(show);
                 var preview = new DiskUsageControl(drive, initialColor, (int)critical.Value, false)
@@ -324,6 +327,7 @@ public sealed class DockOptionsForm : Form
                 {
                     diskColors[letter] = selected.ToArgb();
                     preview.SetAppearance(selected, (int)critical.Value);
+                    ScheduleLiveChange();
                     foreach (var chip in paletteButtons)
                     {
                         if (chip.Tag is Color sample)
@@ -364,7 +368,7 @@ public sealed class DockOptionsForm : Form
                         Color = Color.FromArgb(diskColors.TryGetValue(letter, out int saved) ? saved : config.DiskColorArgb),
                         FullOpen = true
                     };
-                    if (picker.ShowDialog(this) == DialogResult.OK) SelectColor(picker.Color);
+                    if (picker.ShowDialog(this) == DialogResult.OK) { SelectColor(picker.Color); ScheduleLiveChange(); }
                 };
                 line.Controls.Add(custom);
                 critical.ValueChanged += (_, _) =>
@@ -450,6 +454,36 @@ public sealed class DockOptionsForm : Form
             ShowRestart = restart.Checked;
             CriticalPercent = (int)critical.Value;
         }
+        // Debounced live Apply: user never has to manually refresh the dock.
+        // Cancel restores the original snapshot in Program.ShowOptions.
+        var liveTimer = new System.Windows.Forms.Timer { Interval = 300 };
+        liveTimer.Tick += (_, _) =>
+        {
+            liveTimer.Stop();
+            if (IsDisposed || Disposing) return;
+            CaptureSettings();
+            ApplyRequested?.Invoke(this);
+        };
+        void SchedulePreview()
+        {
+            if (!IsHandleCreated || IsDisposed) return;
+            liveTimer.Stop();
+            liveTimer.Start();
+        }
+        void WatchControls(Control parent)
+        {
+            foreach (Control control in parent.Controls)
+            {
+                if (control is CheckBox check) check.CheckedChanged += (_, _) => SchedulePreview();
+                if (control is ComboBox choice) choice.SelectedIndexChanged += (_, _) => SchedulePreview();
+                if (control is NumericUpDown number) number.ValueChanged += (_, _) => SchedulePreview();
+                if (control is TrackBar track) track.ValueChanged += (_, _) => SchedulePreview();
+                WatchControls(control);
+            }
+        }
+        liveChange = SchedulePreview;
+        WatchControls(this);
+        FormClosed += (_, _) => liveTimer.Dispose();
         previewButton.Click += (_, _) => { CaptureSettings(); ApplyRequested?.Invoke(this); };
         apply.Click += (_, _) => CaptureSettings();
     }
@@ -586,10 +620,11 @@ public sealed class DockOptionsForm : Form
                 foreach (Panel line in diskFlow.Controls.OfType<Panel>())
                 {
                     line.Width = Math.Max(220, diskFlow.ClientSize.Width - 24);
-                    var choose = line.Controls.OfType<Button>().FirstOrDefault();
-                    if (choose != null) choose.Location = new Point(Math.Max(115, line.Width - choose.Width - 8), choose.Top);
+                    // Disk palette controls manage their own independent positions.
+                    // Never relocate the first swatch to the far right or stretch
+                    // the preview underneath the palette.
                     var preview = line.Controls.OfType<DiskUsageControl>().FirstOrDefault();
-                    if (preview != null) preview.Width = Math.Max(115, line.Width - (choose?.Width ?? 100) - 16);
+                    if (preview != null) preview.Width = Math.Min(420, Math.Max(290, line.Width - 28));
                 }
             }
             if (control is FlowLayoutPanel row)
