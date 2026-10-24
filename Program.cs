@@ -144,6 +144,7 @@ public class Dock : Form
     int dragX, dragWidth;
     readonly System.Windows.Forms.Timer themeTimer = new() { Interval = 3000 };
     readonly System.Windows.Forms.Timer hideTimer = new() { Interval = 400 };
+    readonly ToolTip diskInfoTip = new() { AutomaticDelay = 250, AutoPopDelay = 12000 };
     bool collapsed;
     const int RevealStrip = 6;
 
@@ -472,6 +473,7 @@ public class Dock : Form
                         diskMenu.Items.Add("Mover bloque de discos hacia abajo", null, (_, _) => Move(item, 1));
                         diskMenu.Items.Add("Opciones...", null, (_, _) => ShowOptions());
                         view.ContextMenuStrip = diskMenu;
+                        diskInfoTip.SetToolTip(view, $"Unidad {drive.Name.TrimEnd('\\')}\nCapacidad: {drive.TotalSize / 1073741824d:N1} GB\nUsado: {(drive.TotalSize - drive.TotalFreeSpace) / 1073741824d:N1} GB\nDisponible: {drive.TotalFreeSpace / 1073741824d:N1} GB");
                         view.Margin = Horizontal ? new Padding(2, 1, 2, 1) : new Padding(Math.Max(0, (settings.Width - 16 - view.Width) / 2), 1, 0, 1);
                         panel.Controls.Add(view);
                     }
@@ -693,16 +695,20 @@ public class Dock : Form
             var initial = JsonSerializer.Deserialize<DockSettings>(originalJson);
             if (initial != null)
             {
-                UnregisterBar();
+                bool geometryChanged = settings.Edge != initial.Edge ||
+                    settings.DockMode != initial.DockMode ||
+                    settings.Width != initial.Width ||
+                    settings.HorizontalHeight != initial.HorizontalHeight;
+                if (geometryChanged) UnregisterBar();
                 settings = initial;
                 TopMost = settings.AlwaysOnTop;
                 collapsed = false;
                 try { DockOptionsForm.SetStartup(originalStartup); } catch { }
-                SetOrientation();
-                RegisterBar();
+                if (geometryChanged) SetOrientation();
+                if (geometryChanged || !registered) RegisterBar();
                 Store();
                 Render();
-                Position();
+                if (geometryChanged || !registered) Position();
             }
         }
     }
@@ -747,7 +753,7 @@ public class Dock : Form
         if (reDock || !registered) RegisterBar();
         Store();
         Render();
-        Position();
+        if (reDock || !registered) Position();
     }
     void ShowLegacyOptions()
     {
