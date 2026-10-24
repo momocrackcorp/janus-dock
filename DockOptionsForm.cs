@@ -286,19 +286,75 @@ public sealed class DockOptionsForm : Form
                 if (!drive.IsReady || drive.TotalSize <= 0) continue;
                 string letter = drive.Name.Substring(0, 2).ToUpperInvariant();
                 Color color = Color.FromArgb(diskColors.TryGetValue(letter, out int existing) ? existing : config.DiskColorArgb);
-                var line = new Panel { Width = 560, Height = 76, Margin = new Padding(2, 6, 2, 8) };
-                var preview = new DiskUsageControl(drive, color, (int)critical.Value, false) { Location = new Point(0, 0), Size = new Size(335, 65), ForeColor = SystemColors.ControlText };
-                var choose = new Button { Text = "Color...", Location = new Point(385, 17), Size = new Size(126, 36), BackColor = color, UseVisualStyleBackColor = false, AutoEllipsis = false };
-                choose.Click += (_, _) =>
-                {
-                    using var picker = new ColorDialog { Color = choose.BackColor, FullOpen = true };
-                    if (picker.ShowDialog(this) != DialogResult.OK) return;
-                    diskColors[letter] = picker.Color.ToArgb();
-                    choose.BackColor = picker.Color;
-                    preview.SetAppearance(picker.Color, (int)critical.Value);
+                var line = new Panel { Width = 625, Height = 78, Margin = new Padding(2, 6, 2, 8) };
+                var preview = new DiskUsageControl(drive, color, (int)critical.Value, false)
+                { Location = new Point(0, 4), Size = new Size(320, 65), ForeColor = SystemColors.ControlText };
+                Color[] presetColors = {
+                    Color.FromArgb(48, 130, 222), // Azul
+                    Color.FromArgb(0, 202, 113),  // Verde
+                    Color.FromArgb(240, 105, 105) // Coral
                 };
-                critical.ValueChanged += (_, _) => preview.SetAppearance(choose.BackColor, (int)critical.Value);
-                line.Controls.Add(preview); line.Controls.Add(choose);
+                var chips = new List<Button>();
+                void SelectColor(Color selected)
+                {
+                    diskColors[letter] = selected.ToArgb();
+                    preview.SetAppearance(selected, (int)critical.Value);
+                    foreach (var chip in chips)
+                    {
+                        var chipColor = (Color)chip.Tag!;
+                        bool active = chipColor.ToArgb() == selected.ToArgb();
+                        chip.FlatAppearance.BorderColor = active ? Color.FromArgb(18, 165, 185) : Color.Gray;
+                        chip.FlatAppearance.BorderSize = active ? 3 : 1;
+                    }
+                }
+                for (int index = 0; index < 3; index++)
+                {
+                    Color preset = presetColors[index];
+                    var chip = new Button
+                    {
+                        Text = "",
+                        Tag = preset,
+                        BackColor = preset,
+                        FlatStyle = FlatStyle.Flat,
+                        UseVisualStyleBackColor = false,
+                        Size = new Size(43, 35),
+                        Location = new Point(327 + index * 49, 17),
+                        AccessibleName = index switch { 0 => "Azul", 1 => "Verde", _ => "Coral" }
+                    };
+                    chip.Click += (_, _) => SelectColor(preset);
+                    chips.Add(chip);
+                    line.Controls.Add(chip);
+                }
+                var custom = new Button
+                {
+                    Text = "Otro...",
+                    Tag = color,
+                    BackColor = SystemColors.Control,
+                    ForeColor = SystemColors.ControlText,
+                    FlatStyle = FlatStyle.Flat,
+                    Size = new Size(93, 35),
+                    Location = new Point(479, 17),
+                    AccessibleName = "Elegir color personalizado"
+                };
+                custom.Click += (_, _) =>
+                {
+                    using var picker = new ColorDialog
+                    {
+                        Color = Color.FromArgb(diskColors.TryGetValue(letter, out int saved) ? saved : config.DiskColorArgb),
+                        FullOpen = true
+                    };
+                    if (picker.ShowDialog(this) == DialogResult.OK)
+                    {
+                        custom.Tag = picker.Color;
+                        SelectColor(picker.Color);
+                    }
+                };
+                chips.Add(custom);
+                line.Controls.Add(custom);
+                critical.ValueChanged += (_, _) =>
+                    preview.SetAppearance(Color.FromArgb(diskColors.TryGetValue(letter, out int current) ? current : config.DiskColorArgb), (int)critical.Value);
+                line.Controls.Add(preview);
+                SelectColor(color);
                 diskPanel.Controls.Add(line);
             }
             catch { }
