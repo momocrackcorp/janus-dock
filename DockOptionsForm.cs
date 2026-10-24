@@ -33,6 +33,7 @@ public sealed class DockOptionsForm : Form
     const string RunPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
     const string RunValue = "JANUS Dock";
 
+    public event Action<DockOptionsForm>? ApplyRequested;
     public DockOptionsForm(DockSettings config, string? initialTab = null)
     {
         Text = "Opciones de JANUS Dock";
@@ -42,6 +43,8 @@ public sealed class DockOptionsForm : Form
         MaximizeBox = false; MinimizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 9);
+        StyleWindowsControls(this);
+        Shown += (_, _) => StyleWindowsControls(this);
         var tabs = new TabControl { Dock = DockStyle.Fill, Padding = new Point(12, 6) };
         Controls.Add(tabs);
 
@@ -285,8 +288,9 @@ public sealed class DockOptionsForm : Form
         var bar = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 64, FlowDirection = FlowDirection.RightToLeft, WrapContents = false, Padding = new Padding(8), AutoScroll = false };
         Controls.Add(bar); bar.BringToFront();
         var cancel = new Button { Text = "Cancelar", AutoSize = true, MinimumSize = new Size(110, 36), DialogResult = DialogResult.Cancel };
-        var apply = new Button { Text = "Guardar cambios", AutoSize = true, MinimumSize = new Size(150, 36), DialogResult = DialogResult.OK };
-        bar.Controls.AddRange(new Control[] { apply, cancel });
+        var apply = new Button { Text = "Guardar y cerrar", AutoSize = true, MinimumSize = new Size(150, 36), DialogResult = DialogResult.OK };
+        var preview = new Button { Text = "Aplicar", AutoSize = true, MinimumSize = new Size(110, 36) };
+        bar.Controls.AddRange(new Control[] { apply, preview, cancel });
         AcceptButton = apply; CancelButton = cancel;
         Shown += (_, _) =>
         {
@@ -298,7 +302,7 @@ public sealed class DockOptionsForm : Form
             FitRows(appearanceRows);
             FitRows(aboutRows);
         };
-        apply.Click += (_, _) =>
+        void CaptureSettings()
         {
             AlwaysOnTop = top.Checked;
             AutoHide = hide.Checked;
@@ -323,7 +327,25 @@ public sealed class DockOptionsForm : Form
             ShowShutdown = shutdown.Checked;
             ShowRestart = restart.Checked;
             CriticalPercent = (int)critical.Value;
-        };
+        }
+        preview.Click += (_, _) => { CaptureSettings(); ApplyRequested?.Invoke(this); };
+        apply.Click += (_, _) => CaptureSettings();
+    }
+    private static void StyleWindowsControls(Control parent)
+    {
+        bool light = SystemColors.Window.GetBrightness() >= 0.5f;
+        Color background = SystemColors.Control;
+        Color foreground = SystemColors.ControlText;
+        parent.BackColor = background;
+        parent.ForeColor = foreground;
+        foreach (Control child in parent.Controls)
+        {
+            if (child is Button b) { b.FlatStyle = FlatStyle.System; b.UseVisualStyleBackColor = true; }
+            if (child is ComboBox cb) cb.FlatStyle = FlatStyle.System;
+            if (child is CheckBox ch) ch.FlatStyle = FlatStyle.System;
+            if (child is TabPage page) page.BackColor = background;
+            StyleWindowsControls(child);
+        }
     }
     private static FlowLayoutPanel PageRows(TabPage page)
     {
