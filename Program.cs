@@ -159,7 +159,7 @@ public class Dock : Form
         catch { }
         settings.Width = Math.Clamp(settings.Width, 64, 300);
         settings.HorizontalHeight = Math.Clamp(settings.HorizontalHeight, 48, 160);
-        settings.IconSize = Math.Clamp(settings.IconSize, 16, 64);
+        settings.IconSize = Math.Clamp(settings.IconSize, 16, 96);
         settings.ZoomPercent = Math.Clamp(settings.ZoomPercent, 150, 340);
         if (settings.ShowNames && settings.NameMode == "Tooltip") settings.NameMode = "Written";
         if (settings.DockMode != "Flotante") settings.DockMode = "Acoplada";
@@ -772,7 +772,7 @@ public class Dock : Form
         }
         menu.Items.Add(locations);
         var sizes = new ToolStripMenuItem("Tamaño de iconos");
-        foreach (int size in new[] { 24, 32, 40, 48, 56, 64 })
+        foreach (int size in new[] { 24, 32, 40, 48, 56, 64, 72, 80, 88, 96 })
         {
             var option = new ToolStripMenuItem(size + " px") { Checked = settings.IconSize == size };
             option.Click += (_, _) => { settings.IconSize = size; Store(); Render(); };
