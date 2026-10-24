@@ -158,10 +158,10 @@ public sealed class DockOptionsForm : Form
         var appearanceRows = PageRows(appearance);
         appearanceRows.Controls.Add(FieldRow(new Label { Text = "Estilo de los iconos:", AutoSize = true }, iconStyle));
         // Icon size belongs with all other appearance settings.
-        var size = new NumericUpDown { Minimum = 16, Maximum = 64, Increment = 8, Value = Math.Clamp(config.IconSize, 16, 64), Width = 95 };
+        var size = new NumericUpDown { Minimum = 16, Maximum = 96, Increment = 8, Value = Math.Clamp(config.IconSize, 16, 96), Width = 95 };
         var smallIcons = new CheckBox { Text = "Iconos pequeños (24 px)", AutoSize = true, Checked = config.IconSize <= 24 };
         smallIcons.CheckedChanged += (_, _) => { if (smallIcons.Checked) size.Value = 24; else if (size.Value == 24) size.Value = 48; };
-        var iconSlider = new TrackBar { Minimum = 16, Maximum = 64, TickFrequency = 8, SmallChange = 1, LargeChange = 8, Value = (int)size.Value, Width = 280, Height = 48, AutoSize = false };
+        var iconSlider = new TrackBar { Minimum = 16, Maximum = 96, TickFrequency = 8, SmallChange = 1, LargeChange = 8, Value = (int)size.Value, Width = 280, Height = 48, AutoSize = false };
         var iconSizeLabel = new Label { Text = $"{size.Value} px", AutoSize = true, ForeColor = Color.FromArgb(16, 157, 178), Font = new Font("Segoe UI", 10f, FontStyle.Bold) };
         iconSlider.ValueChanged += (_, _) => { size.Value = iconSlider.Value; iconSizeLabel.Text = $"{iconSlider.Value} px"; };
         size.ValueChanged += (_, _) => { if (iconSlider.Value != (int)size.Value) iconSlider.Value = (int)size.Value; };
@@ -183,39 +183,6 @@ public sealed class DockOptionsForm : Form
         appearanceRows.Controls.Add(animation);
         appearanceRows.Controls.Add(FieldRow(new Label { Text = "Ampliación de la lupa:", AutoSize = true }, zoomChoice));
 
-        // Live preview only: it never writes config until Apply or Save is pressed.
-        var previewBox = new PictureBox { Width = 450, Height = 106, BackColor = Color.FromArgb(26, 51, 60), Margin = new Padding(6, 8, 6, 9) };
-        void PaintPreview(object? sender, PaintEventArgs pe)
-        {
-            var g = pe.Graphics;
-            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-            g.Clear(previewBox.BackColor);
-            float sz = Math.Min(65f, iconSlider.Value * 0.78f);
-            int x = 26, y = (previewBox.Height - (int)sz) / 2;
-            Color[] colors = { Color.FromArgb(158, 197, 241), Color.FromArgb(241, 191, 80), Color.FromArgb(110, 183, 247), Color.FromArgb(203, 211, 224) };
-            for (int i = 0; i < 4; i++)
-            {
-                var r = new RectangleF(x + i * 99, y, sz, sz);
-                using var pen = new Pen(colors[i], Math.Max(2, sz * .085f));
-                if (i == 1) g.DrawRectangle(pen, r.X, r.Y + sz * .22f, r.Width, r.Height * .65f);
-                else if (i == 2)
-                {
-                    g.DrawRectangle(pen, r.X, r.Y, r.Width, r.Height);
-                    g.DrawLine(pen, r.X + sz*.5f, r.Y + sz*.2f, r.X + sz*.5f, r.Y + sz*.8f);
-                }
-                else if (i == 3) g.DrawEllipse(pen, r);
-                else
-                {
-                    g.DrawRectangle(pen, r);
-                    g.DrawLine(pen, r.X + sz*.5f, r.Bottom, r.X + sz*.5f, r.Bottom + 6);
-                }
-            }
-        }
-        previewBox.Paint += PaintPreview;
-        iconSlider.ValueChanged += (_, _) => previewBox.Invalidate();
-        iconStyle.SelectedIndexChanged += (_, _) => previewBox.Invalidate();
-        appearanceRows.Controls.Add(new Label { Text = "Vista previa del tamaño de iconos", AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold) });
-        appearanceRows.Controls.Add(previewBox);
         appearanceRows.Controls.Add(new Label { Text = "Windows conserva los iconos originales; Lucide usa trazos para accesos integrados.", AutoSize = true });
         appearanceRows.Controls.Add(new Label { Text = "Organizar accesos y separadores", AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold) });
         appearanceRows.Controls.Add(new Label { Text = "Arrastra filas o usa los botones. Guardar aplica los cambios.", AutoSize = true });
@@ -297,12 +264,12 @@ public sealed class DockOptionsForm : Form
                 Color initialColor = Color.FromArgb(diskColors.TryGetValue(letter, out int existing) ? existing : config.DiskColorArgb);
                 // Three rows per drive: visibility, preview, palette. No absolute
                 // positions ever share the same vertical band.
-                var line = new Panel { Width = 710, Height = 132, Margin = new Padding(3, 3, 3, 12) };
+                var line = new Panel { Width = 710, Height = 66, Margin = new Padding(3, 3, 3, 12) };
                 var show = new CheckBox
                 {
                     Text = $"Mostrar unidad {letter}",
                     Checked = !hiddenDisks.Contains(letter),
-                    AutoSize = true, Location = new Point(8, 4)
+                    AutoSize = true, Location = new Point(8, 14)
                 };
                 show.CheckedChanged += (_, _) =>
                 {
@@ -340,9 +307,9 @@ public sealed class DockOptionsForm : Form
                         Name = "DiskPaletteSwatch", Tag = preset,
                         FlatStyle = FlatStyle.Flat, BackColor = preset,
                         UseVisualStyleBackColor = false,
-                        Size = new Size(46, 34),
+                        Size = new Size(52, 42),
                         FlatAppearance = { BorderSize = 2 },
-                        Location = new Point(16 + index * 58, 60),
+                        Location = new Point(325 + index * 62, 10),
                         AccessibleName = index switch { 0 => "Azul", 1 => "Verde", _ => "Coral" }
                     };
                     chip.Click += (_, _) => SelectColor(preset);
@@ -354,7 +321,7 @@ public sealed class DockOptionsForm : Form
                     Name = "DiskPaletteCustom", Text = "Otro color...",
                     Font = new Font("Segoe UI", 9f),
                     FlatStyle = FlatStyle.Flat, UseVisualStyleBackColor = false,
-                    Size = new Size(126, 36), Location = new Point(196, 59),
+                    Size = new Size(152, 44), Location = new Point(518, 9),
                     AccessibleName = "Elegir color personalizado"
                 };
                 custom.Click += (_, _) =>
