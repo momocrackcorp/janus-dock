@@ -456,6 +456,12 @@ public sealed class DockOptionsForm : Form
         WatchControls(this);
         FormClosed += (_, _) => liveTimer.Dispose();
         DockLanguage.TranslateControls(this, config.Language);
+        languageChoice.SelectedIndexChanged += (_, _) =>
+        {
+            string selected = languageChoice.SelectedIndex switch { 1 => "en", 2 => "pt", _ => "es" };
+            DockLanguage.TranslateControls(this, selected);
+            Text = DockLanguage.Translate("Opciones de JANUS Dock", selected);
+        };
         previewButton.Click += (_, _) => { CaptureSettings(); ApplyRequested?.Invoke(this); };
         apply.Click += (_, _) => CaptureSettings();
     }
