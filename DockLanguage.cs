@@ -52,6 +52,15 @@ internal static class DockLanguage
     public static string Translate(string original, string? language)
     {
         language = Normalize(language);
+        // Resolve text translated by a previous selection back to its Spanish key.
+        foreach (var pair in Strings)
+            if (string.Equals(original, pair.Value.en, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(original, pair.Value.pt, StringComparison.OrdinalIgnoreCase))
+            { original = pair.Key; break; }
+        if (original.StartsWith("Show drive ", StringComparison.OrdinalIgnoreCase))
+            original = "Mostrar unidad " + original["Show drive ".Length..];
+        if (original.StartsWith("Mostrar unidade ", StringComparison.OrdinalIgnoreCase))
+            original = "Mostrar unidad " + original["Mostrar unidade ".Length..];
         if (language == "es") return original;
         if (Strings.TryGetValue(original, out var entry))
             return language == "pt" ? entry.pt : entry.en;
