@@ -7,6 +7,7 @@ namespace JanusDock;
 
 public sealed class DockOptionsForm : Form
 {
+    public string Language { get; private set; } = "es";
     public bool AlwaysOnTop { get; private set; }
     public bool AutoHide { get; private set; }
     public bool ShowNames { get; private set; }
@@ -227,6 +228,10 @@ public sealed class DockOptionsForm : Form
         // at 200% DPI cannot make them overlap. The page scrolls if necessary.
         general.Controls.Clear();
         var generalRows = PageRows(general);
+        var languageChoice = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 230 };
+        languageChoice.Items.AddRange(new object[] { "Español", "English", "Português" });
+        languageChoice.SelectedIndex = DockLanguage.Normalize(config.Language) switch { "en" => 1, "pt" => 2, _ => 0 };
+        generalRows.Controls.Add(FieldRow(new Label { Text = "Idioma / Language:", AutoSize = true }, languageChoice));
         generalRows.Controls.Add(top);
         generalRows.Controls.Add(hide);
         generalRows.Controls.Add(startup);
@@ -394,6 +399,7 @@ public sealed class DockOptionsForm : Form
         };
         void CaptureSettings()
         {
+            Language = languageChoice.SelectedIndex switch { 1 => "en", 2 => "pt", _ => "es" };
             AlwaysOnTop = top.Checked;
             AutoHide = hide.Checked;
             StartWithWindows = startup.Checked;
@@ -449,6 +455,7 @@ public sealed class DockOptionsForm : Form
         liveChange = SchedulePreview;
         WatchControls(this);
         FormClosed += (_, _) => liveTimer.Dispose();
+        DockLanguage.TranslateControls(this, config.Language);
         previewButton.Click += (_, _) => { CaptureSettings(); ApplyRequested?.Invoke(this); };
         apply.Click += (_, _) => CaptureSettings();
     }
