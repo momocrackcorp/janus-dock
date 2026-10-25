@@ -228,8 +228,8 @@ public sealed class DockOptionsForm : Form
         // at 200% DPI cannot make them overlap. The page scrolls if necessary.
         general.Controls.Clear();
         var generalRows = PageRows(general);
-        var languageChoice = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 230 };
-        languageChoice.Items.AddRange(new object[] { "🇨🇱 Español (Chile)", "🇺🇸 English", "🇧🇷 Português (Brasil)" });
+        var languageChoice = new ComboBox { Name = "LanguageChoice", DropDownStyle = ComboBoxStyle.DropDownList, Width = 270 };
+        languageChoice.Items.AddRange(new object[] { "Español (Chile)", "English", "Português (Brasil)" });
         languageChoice.SelectedIndex = DockLanguage.Normalize(config.Language) switch { "en" => 1, "pt" => 2, _ => 0 };
         generalRows.Controls.Add(FieldRow(new Label { Text = "Idioma / Language:", AutoSize = true }, languageChoice));
         generalRows.Controls.Add(top);
