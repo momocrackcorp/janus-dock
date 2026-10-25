@@ -229,7 +229,7 @@ public sealed class DockOptionsForm : Form
         general.Controls.Clear();
         var generalRows = PageRows(general);
         var languageChoice = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 230 };
-        languageChoice.Items.AddRange(new object[] { "Español", "English", "Português" });
+        languageChoice.Items.AddRange(new object[] { "🇨🇱 Español (Chile)", "🇺🇸 English", "🇧🇷 Português (Brasil)" });
         languageChoice.SelectedIndex = DockLanguage.Normalize(config.Language) switch { "en" => 1, "pt" => 2, _ => 0 };
         generalRows.Controls.Add(FieldRow(new Label { Text = "Idioma / Language:", AutoSize = true }, languageChoice));
         generalRows.Controls.Add(top);
