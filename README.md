@@ -6,7 +6,7 @@
 
 **Windows 10 / 11 · x64 · C# / .NET 8 · Código abierto**
 
-[![Descargar versión 5.95](https://img.shields.io/badge/Descargar-v5.95.0-2563eb?style=for-the-badge&logo=github)](https://github.com/momocrackcorp/janus-dock/releases/tag/v5.95.0)
+[![Descargar versión 6.2](https://img.shields.io/badge/Descargar-v6.2.0-2563eb?style=for-the-badge&logo=github)](https://github.com/momocrackcorp/janus-dock/releases/tag/v6.2.0)
 [![Última compilación](https://github.com/momocrackcorp/janus-dock/actions/workflows/build-janus-dock.yml/badge.svg)](https://github.com/momocrackcorp/janus-dock/actions/workflows/build-janus-dock.yml)
 [![Licencia](https://img.shields.io/github/license/momocrackcorp/janus-dock?style=flat-square)](LICENSE)
 
@@ -18,17 +18,21 @@
 
 ## Descargar
 
-**[Ir a la última versión pública — v5.95.0](https://github.com/momocrackcorp/janus-dock/releases/tag/v5.95.0)**
+**Recomendado: instalador autónomo para Windows x64.** Instala JANUS Dock en una carpeta fija, crea el acceso del menú Inicio y permite activar el arranque con Windows. También puedes usar la edición portátil.
+
+
+**[Ir a la última versión pública — v6.2.0](https://github.com/momocrackcorp/janus-dock/releases/tag/v6.2.0)**
 
 | Archivo | ¿Cuál elegir? |
 | --- | --- |
+| **JANUS-Dock-Setup-6.2-Autonomo.exe** | Instalador recomendado: incorpora .NET y permite el inicio automático con Windows. | 
 | **JANUS-Dock-Autonomo-Windows-x64.zip** | Recomendado. Incluye el entorno .NET; no requiere instalación adicional de .NET. |
 | **JANUS-Dock-Liviano-Windows-x64.zip** | Descarga más pequeña. Requiere **.NET 8 Desktop Runtime x64** instalado. |
 | **SHA256SUMS.txt** | Permite comprobar la integridad de los ZIP. |
 
-1. Descarga el ZIP que prefieras desde **Assets** de la Release.
-2. Extrae el contenido en una carpeta permanente.
-3. Ejecuta `JanusDock.exe`.
+1. Descarga el instalador recomendado o el ZIP que prefieras desde **Assets** de la Release.
+2. Con el instalador, sigue el asistente. Con un ZIP, extrae el contenido en una carpeta permanente.
+3. Ejecuta JANUS Dock desde el menú Inicio o, en el modo portátil, `JanusDock.exe`.
 4. Haz **clic derecho sobre el fondo del Dock** para abrir el menú de accesos y opciones.
 
 > Windows SmartScreen puede mostrar una advertencia si el ejecutable no está firmado digitalmente. Verifica siempre que lo hayas descargado desde la página oficial del repositorio.
@@ -45,11 +49,11 @@
 - **Tráfico de red:** muestra descarga y subida con **promedio móvil de los últimos 60 segundos**, actualizado cada segundo.
 - **CPU y RAM:** porcentaje de CPU y porcentaje/cantidad utilizada de memoria física, actualizados cada segundo.
 - **Energía:** botones de apagar y reiniciar con confirmación.
-- **Preferencias locales:** se guardan en `%APPDATA%\JANUS\Dock\config.json`.
+- **Idioma:** español de Chile, inglés y portugués de Brasil (traducción inicial en desarrollo).\n- **Inicio automático:** configurable desde Opciones y desde el instalador.\n- **Apariencia:** tamaño de iconos hasta 96 px, selectores modernos y aplicación de ajustes desde Opciones.\n- **Preferencias locales:** se guardan en `%APPDATA%\JANUS\Dock\config.json`.
 
 > Algunas funciones y apariencias pueden variar según la configuración de Windows, la escala de pantalla y los programas instalados.
 
-## Cómo agregar accesos
+## Actualizaciones\n\nConsulta [Releases](https://github.com/momocrackcorp/janus-dock/releases) y selecciona versiones estables para uso habitual. El botón de actualizaciones de la aplicación abre GitHub; la descarga e instalación directa desde Opciones aún no está implementada.\n\n## Cómo agregar accesos
 
 Haz clic derecho sobre un espacio libre del Dock y selecciona **Agregar**.
 
