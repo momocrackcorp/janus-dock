@@ -17,6 +17,7 @@ public class DockItem
 public class DockSettings
 {
     public List<DockItem> Items { get; set; } = new();
+    public string Language { get; set; } = "es";
     public int Width { get; set; } = 88;
     public int HorizontalHeight { get; set; } = 64;
     public int IconSize { get; set; } = 40;
@@ -157,6 +158,7 @@ public class Dock : Form
     {
         try { settings = JsonSerializer.Deserialize<DockSettings>(File.ReadAllText(config)) ?? new(); }
         catch { }
+        settings.Language = DockLanguage.Normalize(settings.Language);
         settings.Width = Math.Clamp(settings.Width, 64, 300);
         settings.HorizontalHeight = Math.Clamp(settings.HorizontalHeight, 48, 160);
         settings.IconSize = Math.Clamp(settings.IconSize, 16, 96);
@@ -719,6 +721,7 @@ public class Dock : Form
         bool reDock = settings.DockMode != dlg.DockMode || settings.Edge != dlg.Edge ||
             settings.Width != dlg.BarWidth || settings.HorizontalHeight != dlg.BarHeight;
         if (reDock) UnregisterBar();
+        settings.Language = dlg.Language;
         settings.AlwaysOnTop = dlg.AlwaysOnTop;
         settings.AutoHide = dlg.AutoHide;
         settings.ShowNames = dlg.ShowNames;
