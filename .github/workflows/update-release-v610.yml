@@ -1,0 +1,75 @@
+name: Actualizar Release JANUS Dock 6.1
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/update-release-v610.yml']
+permissions:
+  contents: write
+jobs:
+  update-release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Icono de JANUS Dock
+        shell: pwsh
+        run: ./generate-icon.ps1
+      - name: Compilar version liviana 6.1
+        shell: pwsh
+        run: dotnet publish JanusDock.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o dist-compact
+      - name: Compilar version autonoma 6.1
+        shell: pwsh
+        run: dotnet publish JanusDock.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o dist-standalone
+      - name: Instalar Inno Setup
+        shell: pwsh
+        run: choco install innosetup -y --no-progress
+      - name: Crear instalador autonomo
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "Inno Setup no encontrado" }
+          & $iscc installer\JanusDock.iss
+          if ($LASTEXITCODE -ne 0) { throw "Error al generar instalador" }
+      - name: Empaquetar y comprobar los archivos
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist-compact/JanusDock.exe -DestinationPath JANUS-Dock-Liviano-Windows-x64.zip
+          Compress-Archive -Path dist-standalone/JanusDock.exe -DestinationPath JANUS-Dock-Autonomo-Windows-x64.zip
+          $files = @("JANUS-Dock-Liviano-Windows-x64.zip", "JANUS-Dock-Autonomo-Windows-x64.zip", "installer-output/JANUS-Dock-Setup-6.1-Autonomo.exe")
+          foreach ($file in $files) { if (-not (Test-Path $file)) { throw "Falta $file" } }
+          $files | ForEach-Object { Get-FileHash $_ -Algorithm SHA256 } | ForEach-Object { "$($_.Hash.ToLowerInvariant())  $(Split-Path $_.Path -Leaf)" } | Set-Content SHA256SUMS.txt
+      - name: Actualizar archivos y notas de Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          @'
+          # JANUS Dock 6.1.0
+          
+          Barra de accesos para Windows 10/11 x64, con instalador.
+          
+          ## Descargas
+          - **JANUS-Dock-Setup-6.1-Autonomo.exe**: instalador recomendado. Instala la aplicación para tu usuario, crea acceso en Inicio y permite iniciar JANUS Dock con Windows. Incluye .NET.
+          - **JANUS-Dock-Autonomo-Windows-x64.zip**: versión portátil sin requerir .NET instalado.
+          - **JANUS-Dock-Liviano-Windows-x64.zip**: versión portátil que requiere .NET 8 Desktop Runtime x64.
+          - **SHA256SUMS.txt**: integridad de los tres archivos.
+          
+          ## Novedades
+          - Configuración moderna con interruptores y selectores.
+          - Cambios de apariencia sin cerrar opciones y opción Cancelar.
+          - Tamaño de iconos de 16 a 96 px.
+          - Elegir qué particiones mostrar y sus colores.
+          - Capacidad, espacio usado y libre al pasar el puntero por los discos.
+          - Indicadores de CPU, RAM y tráfico medio de red.
+          - Información Acerca de y metadatos de versión corregidos a 6.1.0.
+          
+          Para actualizar una instalación, cierra JANUS Dock antes de ejecutar el instalador. Las preferencias personales se guardan aparte.
+          '@ | Set-Content RELEASE_NOTES.md -Encoding utf8
+          gh release view v6.1.0 --repo "${{ github.repository }}" | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "Release v6.1.0 no existe" }
+          gh release edit v6.1.0 --repo "${{ github.repository }}" --notes-file RELEASE_NOTES.md
+          if ($LASTEXITCODE -ne 0) { throw "No se pudieron actualizar las notas" }
+          gh release upload v6.1.0 --repo "${{ github.repository }}" JANUS-Dock-Liviano-Windows-x64.zip JANUS-Dock-Autonomo-Windows-x64.zip installer-output/JANUS-Dock-Setup-6.1-Autonomo.exe SHA256SUMS.txt --clobber
+          if ($LASTEXITCODE -ne 0) { throw "No se pudieron subir los archivos" }
