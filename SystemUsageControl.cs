@@ -84,7 +84,7 @@ public sealed class SystemUsageControl : Control
         using var ramBrush = new SolidBrush(ram);
         using var infoBrush = new SolidBrush(ForeColor);
         using var titleFont = new Font("Segoe UI", 13f, FontStyle.Bold, GraphicsUnit.Pixel);
-        using var detailFont = new Font("Segoe UI", 11f, FontStyle.Regular, GraphicsUnit.Pixel);
+        using var memoryNumberFont = new Font("Segoe UI", 11f, FontStyle.Bold, GraphicsUnit.Pixel);
         void Chip(float x, float y)
         {
             g.DrawRectangle(cpuPen, x + 4, y + 4, 18, 18);
@@ -102,6 +102,9 @@ public sealed class SystemUsageControl : Control
             g.DrawRectangle(ramPen, x, y + 4, 26, 16);
             for (int k = 0; k < 4; k++)
                 g.DrawLine(ramPen, x + 4 + 6 * k, y + 20, x + 4 + 6 * k, y + 24);
+            string capacity = Math.Round(totalGiB).ToString("0");
+            using var center = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+            g.DrawString(capacity, memoryNumberFont, ramBrush, new RectangleF(x + 1, y + 4, 24, 16), center);
         }
         if (horizontal)
         {
@@ -110,7 +113,7 @@ public sealed class SystemUsageControl : Control
             g.DrawString($"CPU {cpuPercent:0}%", titleFont, cpuBrush, 47, 9);
             Memory(8, 39);
             g.DrawString($"RAM {memoryPercent:0}%", titleFont, ramBrush, 47, 44);
-            g.DrawString($"{usedGiB:0.0}/{totalGiB:0.0} GB", detailFont, infoBrush, 143, 46);
+
         }
         else
         {
@@ -118,7 +121,7 @@ public sealed class SystemUsageControl : Control
             g.DrawString($"CPU {cpuPercent:0}%", titleFont, cpuBrush, 13, 38);
             Memory(32, 71);
             g.DrawString($"RAM {memoryPercent:0}%", titleFont, ramBrush, 12, 101);
-            g.DrawString($"{usedGiB:0.0}/{totalGiB:0.0} GB", detailFont, infoBrush, 5, 123);
+
         }
     }
     protected override void Dispose(bool disposing)
