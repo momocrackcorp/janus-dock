@@ -51,7 +51,7 @@ internal static class Program
         Application.Run(new Dock());
     }
 }
-public class Dock : Form
+public class Dock : Form, IMessageFilter
 {
     const int ABM_NEW = 0, ABM_REMOVE = 1, ABM_QUERYPOS = 2, ABM_SETPOS = 3;
     const int ABE_LEFT = 0, ABE_TOP = 1, ABE_RIGHT = 2, ABE_BOTTOM = 3;
@@ -156,6 +156,7 @@ public class Dock : Form
     };
     public Dock()
     {
+        Application.AddMessageFilter(this);
         try { settings = JsonSerializer.Deserialize<DockSettings>(File.ReadAllText(config)) ?? new(); }
         catch { }
         settings.Language = DockLanguage.Normalize(settings.Language);
@@ -975,6 +976,29 @@ public class Dock : Form
         }
         finally { repositioning = false; }
     }
+    // Ctrl + mouse wheel over the dock adjusts icons without opening Options.
+    // The message filter also sees wheel events sent to shortcut/disk child controls.
+    public bool PreFilterMessage(ref Message m)
+    {
+        const int WM_MOUSEWHEEL = 0x020A;
+        if (m.Msg != WM_MOUSEWHEEL || IsDisposed || !Visible ||
+            (Control.ModifierKeys & Keys.Control) == 0 ||
+            (Control.ModifierKeys & (Keys.Shift | Keys.Alt)) != 0 ||
+            !Bounds.Contains(Cursor.Position)) return false;
+        int delta = unchecked((short)((m.WParam.ToInt64() >> 16) & 0xFFFF));
+        if (delta == 0) return false;
+        int updated = Math.Clamp(settings.IconSize + (delta > 0 ? 4 : -4), 16, 96);
+        if (updated != settings.IconSize)
+        {
+            settings.IconSize = updated;
+            Store();
+            Render();
+            // Keep AppBar registration intact: only visual/icon dimensions change.
+            Position();
+        }
+        return true;
+    }
+
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
@@ -988,6 +1012,7 @@ public class Dock : Form
     }
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
+        Application.RemoveMessageFilter(this);
         themeTimer.Stop();
         hideTimer.Stop();
         UnregisterBar();
