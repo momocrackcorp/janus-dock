@@ -752,12 +752,6 @@ public sealed class DiskUsageControl : Control
         using var fill = new SolidBrush(UseLucide ? BackColor : Color.FromArgb(70, 91, 108));
         using var face = new SolidBrush(UseLucide ? BackColor : Color.FromArgb(48, 62, 75));
         using var progress = new SolidBrush(accent);
-        // 64x64 virtual geometry. Letter sits at upper-left of the drive.
-        using var labelFont = new Font("Segoe UI", 17, FontStyle.Bold, GraphicsUnit.Pixel);
-        using var labelBackground = new SolidBrush(Color.FromArgb(28, 46, 62));
-        using var labelForeground = new SolidBrush(Color.White);
-        g.FillRectangle(labelBackground, 0, 0, 31, 21);
-        g.DrawString(name, labelFont, labelForeground, 1, 0);
         PointF[] shell = { new(14,21), new(47,21), new(55,43), new(55,55), new(8,55), new(8,43) };
         g.FillPolygon(fill, shell);
         g.DrawPolygon(outline, shell);
@@ -773,6 +767,16 @@ public sealed class DiskUsageControl : Control
             using var highlight = new Pen(Color.FromArgb(215, 226, 237), 1.5f);
             g.DrawLine(highlight, 16, 24, 44, 24);
         }
+        // User-approved design: small translucent circular letter badge overlaps
+        // the drive's upper edge, while leaving the progress bar unobstructed.
+        using (var circle = new SolidBrush(Color.FromArgb(175, 17, 32, 44)))
+            g.FillEllipse(circle, 15, 6, 27, 27);
+        using (var halo = new Pen(Color.FromArgb(165, 217, 230, 240), 1.2f))
+            g.DrawEllipse(halo, 15, 6, 27, 27);
+        using (var letterFont = new Font("Segoe UI", 13.5f, FontStyle.Bold, GraphicsUnit.Pixel))
+        using (var letterBrush = new SolidBrush(Color.White))
+        using (var letterLayout = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
+            g.DrawString(name, letterFont, letterBrush, new RectangleF(15, 6, 27, 27), letterLayout);
         if (ratio * 100 >= threshold)
         {
             using var warning = new SolidBrush(Color.OrangeRed);
