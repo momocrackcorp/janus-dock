@@ -658,6 +658,8 @@ public sealed class DiskUsageControl : Control
     readonly string rootPath;
     readonly double ratio;
     string mediaType = "";
+    public bool UseLucide { get; set; }
+    public int IconPixels { get; set; } = 40;
     static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Task<string>> MediaCache = new();
     readonly string details;
     readonly bool compact;
@@ -720,56 +722,59 @@ public sealed class DiskUsageControl : Control
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
-        e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-        int ringX = compact ? Math.Max(9, (Width - 48) / 2) : 9;
-        var rect = new Rectangle(ringX, 9, 46, 46);
-        using var back = new Pen(Color.FromArgb(190, 197, 207), 8);
-        using var front = new Pen(accent, 8);
-        e.Graphics.DrawEllipse(back, rect);
-        e.Graphics.DrawArc(front, rect, -90, (float)(ratio * 360));
-        using var title = new Font("Segoe UI", 10, FontStyle.Bold);
-        using var centered = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
-        using var textBrush = new SolidBrush(ForeColor);
-        e.Graphics.DrawString(name, title, textBrush, new RectangleF(ringX + 3, 14, 42, 38), centered);
+        var g = e.Graphics;
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        using var ink = new SolidBrush(ForeColor);
+        if (!compact)
+        {
+            using var ringBack = new Pen(Color.FromArgb(190,197,207), 8);
+            using var ringFill = new Pen(accent, 8);
+            var ring = new Rectangle(9, 9, 46, 46);
+            g.DrawEllipse(ringBack, ring);
+            g.DrawArc(ringFill, ring, -90, (float)(ratio * 360));
+            using var title = new Font("Segoe UI", 10, FontStyle.Bold);
+            using var fmt = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+            g.DrawString(name, title, ink, new RectangleF(12, 14, 42, 38), fmt);
+            using var sub = new Font("Segoe UI", 9);
+            g.DrawString(details, sub, 80, 28);
+            return;
+        }
+
+        // The disk itself is the usage indicator: Windows is a shaded device,
+        // Lucide is an outline device. Both scale with IconPixels.
+        float baseSize = Math.Min(Math.Min(IconPixels, Width - 8), Height - 7);
+        float sz = Math.Max(15f, baseSize);
+        float x = (Width - sz) / 2f, y = (Height - sz) / 2f;
+        g.TranslateTransform(x, y);
+        g.ScaleTransform(sz / 64f, sz / 64f);
+        using var outline = new Pen(UseLucide ? ForeColor : Color.FromArgb(170, 191, 208), UseLucide ? 3.8f : 2.2f);
+        outline.LineJoin = System.Drawing.Drawing2D.LineJoin.Round;
+        using var fill = new SolidBrush(UseLucide ? BackColor : Color.FromArgb(70, 91, 108));
+        using var face = new SolidBrush(UseLucide ? BackColor : Color.FromArgb(48, 62, 75));
+        using var progress = new SolidBrush(accent);
+        // 64x64 virtual geometry. Letter sits at upper-left of the drive.
+        using var labelFont = new Font("Segoe UI", 11, FontStyle.Bold, GraphicsUnit.Pixel);
+        g.DrawString(name, labelFont, ink, 1, 0);
+        PointF[] shell = { new(14,21), new(47,21), new(55,43), new(55,55), new(8,55), new(8,43) };
+        g.FillPolygon(fill, shell);
+        g.DrawPolygon(outline, shell);
+        g.FillRectangle(face, 11, 43, 41, 9);
+        g.DrawLine(outline, 10, 42, 53, 42);
+        // Coloured progress rail fills left-to-right as occupied space grows.
+        using var rail = new SolidBrush(Color.FromArgb(105, 118, 130));
+        g.FillRectangle(rail, 13, 47, 33, 5);
+        g.FillRectangle(progress, 13, 47, (float)(33 * ratio), 5);
+        g.FillEllipse(Brushes.LightGreen, 49, 47, 3, 3);
+        if (!UseLucide)
+        {
+            using var highlight = new Pen(Color.FromArgb(215, 226, 237), 1.5f);
+            g.DrawLine(highlight, 16, 24, 44, 24);
+        }
         if (ratio * 100 >= threshold)
         {
             using var warning = new SolidBrush(Color.OrangeRed);
-            e.Graphics.FillEllipse(warning, ringX + 39, 5, 15, 15);
-            using var symbol = new Font("Segoe UI", 9, FontStyle.Bold);
-            e.Graphics.DrawString("!", symbol, Brushes.White, new RectangleF(ringX + 39, 4, 15, 16), centered);
+            g.FillEllipse(warning, 52, 11, 9, 9);
         }
-        if (compact)
-        {
-            // Recognizable graphic badge, no tiny text or "DISK" label.
-            // Draw entirely in the bottom-right corner of the circular indicator.
-            float bx = ringX + 30, by = 46;
-            using var bg = new SolidBrush(BackColor);
-            using var line = new Pen(Color.FromArgb(211, 224, 235), 1.65f);
-            using var detailPen = new Pen(Color.FromArgb(116, 177, 220), 1.2f);
-            e.Graphics.FillRectangle(bg, bx - 3, by - 3, 27, 22);
-            if (mediaType == "SSD")
-            {
-                // Flat SSD enclosure with connector and status LEDs.
-                e.Graphics.DrawRectangle(line, bx, by + 3, 20, 12);
-                e.Graphics.DrawLine(detailPen, bx + 4, by + 6, bx + 16, by + 6);
-                e.Graphics.DrawLine(detailPen, bx + 4, by + 9, bx + 13, by + 9);
-                e.Graphics.FillEllipse(Brushes.MediumSpringGreen, bx + 15, by + 11, 2.5f, 2.5f);
-                e.Graphics.DrawLine(line, bx + 6, by + 15, bx + 14, by + 15);
-            }
-            else
-            {
-                // Mechanical drive silhouette: platter and read arm.
-                e.Graphics.DrawRectangle(line, bx, by + 1, 20, 16);
-                e.Graphics.DrawEllipse(detailPen, bx + 4, by + 3, 11, 11);
-                e.Graphics.FillEllipse(Brushes.LightSteelBlue, bx + 8.5f, by + 7.5f, 2, 2);
-                e.Graphics.DrawLine(line, bx + 16, by + 14, bx + 12, by + 10);
-                e.Graphics.FillEllipse(Brushes.MediumSpringGreen, bx + 2, by + 14, 2, 2);
-            }
-        }
-        if (!compact)
-        {
-            using var sub = new Font("Segoe UI", 9);
-            e.Graphics.DrawString(details, sub, textBrush, 80, 28);
-        }
+        g.ResetTransform();
     }
 }
