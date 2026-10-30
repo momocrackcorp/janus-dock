@@ -454,7 +454,7 @@ public class Dock : Form, IMessageFilter
         }
         int width = Horizontal ? Math.Max(60, (int)Math.Ceiling(settings.IconSize * (settings.HoverAnimation ? 1.8 : 1.0)) + 12) : Math.Max(55, settings.Width - 18);
         int energySlot = Math.Max(settings.IconSize + 12, (int)Math.Ceiling(settings.IconSize * (settings.HoverAnimation ? 1.8 : 1.0)) + 8);
-        energyPanel.Width = Horizontal ? (energySlot + 4) * 2 + 12 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 350 : 0) : Math.Max(55, settings.Width - 10);
+        energyPanel.Width = Horizontal ? (energySlot + 4) * 2 + 12 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 185 : 0) : Math.Max(55, settings.Width - 10);
         energyPanel.Height = Horizontal ? Math.Max(48, settings.IconSize + 20) : (energySlot + 4) * 2 + 12 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 184 : 0);
         foreach (var item in settings.Items.ToList())
         {
@@ -580,7 +580,7 @@ public class Dock : Form, IMessageFilter
         {
             var network = new NetworkTrafficControl(Horizontal)
             {
-                Width = Horizontal ? 340 : Math.Max(65, settings.Width - 14),
+                Width = Horizontal ? 170 : Math.Max(65, settings.Width - 14),
                 BackColor = BackColor,
                 ForeColor = ForeColor
             };
