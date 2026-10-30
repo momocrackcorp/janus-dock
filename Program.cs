@@ -467,7 +467,10 @@ public class Dock : Form
                         if (settings.HiddenDiskLetters.Contains(drive.Name.Substring(0, 2), StringComparer.OrdinalIgnoreCase)) continue;
                         var view = new DiskUsageControl(drive, Color.FromArgb(settings.DiskColors.TryGetValue(drive.Name.Substring(0,2).ToUpperInvariant(), out int individual) ? individual : settings.DiskColorArgb), settings.CriticalPercent, true)
                         {
-                            Width = Horizontal ? 72 : Math.Max(65, settings.Width - 16), Height = 67, BackColor = BackColor, ForeColor = ForeColor,
+                            Width = Horizontal ? Math.Max(36, settings.IconSize + 12) : Math.Max(36, settings.Width - 16),
+                            Height = Math.Max(34, Math.Min(settings.IconSize + 12, Horizontal ? settings.HorizontalHeight - 4 : settings.Width - 8)),
+                            IconPixels = settings.IconSize, UseLucide = settings.IconStyle == "Lucide",
+                            BackColor = BackColor, ForeColor = ForeColor,
                             Margin = new Padding(0, 1, 0, 1)
                         };
                         var diskMenu = DockMenuStyle.Create(light, Color.FromArgb(58, 173, 201));
