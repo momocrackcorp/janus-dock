@@ -753,8 +753,11 @@ public sealed class DiskUsageControl : Control
         using var face = new SolidBrush(UseLucide ? BackColor : Color.FromArgb(48, 62, 75));
         using var progress = new SolidBrush(accent);
         // 64x64 virtual geometry. Letter sits at upper-left of the drive.
-        using var labelFont = new Font("Segoe UI", 11, FontStyle.Bold, GraphicsUnit.Pixel);
-        g.DrawString(name, labelFont, ink, 1, 0);
+        using var labelFont = new Font("Segoe UI", 17, FontStyle.Bold, GraphicsUnit.Pixel);
+        using var labelBackground = new SolidBrush(Color.FromArgb(28, 46, 62));
+        using var labelForeground = new SolidBrush(Color.White);
+        g.FillRectangle(labelBackground, 0, 0, 31, 21);
+        g.DrawString(name, labelFont, labelForeground, 1, 0);
         PointF[] shell = { new(14,21), new(47,21), new(55,43), new(55,55), new(8,55), new(8,43) };
         g.FillPolygon(fill, shell);
         g.DrawPolygon(outline, shell);
