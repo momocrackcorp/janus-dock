@@ -18,7 +18,7 @@ public sealed class NetworkTrafficControl : Control
     public NetworkTrafficControl(bool horizontal)
     {
         Horizontal = horizontal;
-        Size = horizontal ? new Size(340, 58) : new Size(80, 176);
+        Size = horizontal ? new Size(170, 58) : new Size(80, 176);
         Margin = new Padding(3, 2, 3, 2);
         DoubleBuffered = true;
         timer.Tick += (_, _) => Sample();
@@ -117,23 +117,12 @@ public sealed class NetworkTrafficControl : Control
             g.DrawLine(signalPen, left + i * 5, top + 22 - i * 4, left + i * 5, top + 24);
         if (Horizontal)
         {
-            // Measure each localized string and reserve independent text regions.
-            // Never draw the upload label at a fixed X that overlaps download.
-            var flags = TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine;
-            string downloadText = "↓ " + Format(down);
-            string uploadText = "↑ " + Format(up);
-            int gap = 14;
-            int startX = 43;
-            int available = Math.Max(40, Width - startX - 5);
-            var downSize = TextRenderer.MeasureText(g, downloadText, textFont, new Size(int.MaxValue, 32), flags);
-            var upSize = TextRenderer.MeasureText(g, uploadText, textFont, new Size(int.MaxValue, 32), flags);
-            int combined = downSize.Width + gap + upSize.Width;
-            float scale = combined > available ? Math.Max(0.66f, (float)available / combined) : 1f;
-            using var fitted = new Font("Segoe UI", 9f * scale, FontStyle.Bold);
-            downSize = TextRenderer.MeasureText(g, downloadText, fitted, new Size(int.MaxValue, 32), flags);
-            int uploadX = startX + downSize.Width + gap;
-            TextRenderer.DrawText(g, downloadText, fitted, new Point(startX, 17), downColor, flags);
-            TextRenderer.DrawText(g, uploadText, fitted, new Point(uploadX, 17), upColor, flags);
+            var flags = TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis | TextFormatFlags.VerticalCenter;
+            int textX = 42;
+            int lineHeight = Math.Max(16, Height / 2);
+            int textWidth = Math.Max(40, Width - textX - 4);
+            TextRenderer.DrawText(g, "↑ " + Format(up), textFont, new Rectangle(textX, 0, textWidth, lineHeight), upColor, flags);
+            TextRenderer.DrawText(g, "↓ " + Format(down), textFont, new Rectangle(textX, lineHeight, textWidth, lineHeight), downColor, flags);
         }
         else
         {
