@@ -655,7 +655,10 @@ public sealed class DockOptionsForm : Form
 public sealed class DiskUsageControl : Control
 {
     readonly string name;
+    readonly string rootPath;
     readonly double ratio;
+    string mediaType = "";
+    static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Task<string>> MediaCache = new();
     readonly string details;
     readonly bool compact;
     Color accent;
@@ -663,12 +666,55 @@ public sealed class DiskUsageControl : Control
     public DiskUsageControl(DriveInfo drive, Color color, int criticalPercent, bool compactMode = false)
     {
         name = drive.Name.TrimEnd('\\');
+        rootPath = drive.RootDirectory.FullName;
+        if (compactMode)
+        {
+            Cursor = Cursors.Hand;
+            Click += (_, _) =>
+            {
+                try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", rootPath) { UseShellExecute = true }); }
+                catch (Exception ex) { MessageBox.Show("No se pudo abrir la unidad: " + ex.Message, "JANUS Dock", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+            };
+            var lookup = MediaCache.GetOrAdd(rootPath, p => Task.Run(() => DetectMediaType(p)));
+            _ = lookup.ContinueWith(t =>
+            {
+                if (IsDisposed || t.IsFaulted || t.IsCanceled || !IsHandleCreated) return;
+                try { BeginInvoke(new Action(() => { mediaType = t.Result; Invalidate(); })); } catch { }
+            });
+        }
         ratio = Math.Clamp((double)(drive.TotalSize - drive.TotalFreeSpace) / drive.TotalSize, 0, 1);
         details = $"{(drive.TotalSize - drive.TotalFreeSpace) / 1073741824.0:F1} GB usados · {drive.TotalFreeSpace / 1073741824.0:F1} GB libres";
         accent = color;
         threshold = criticalPercent;
         compact = compactMode;
         DoubleBuffered = true;
+    }
+    static string DetectMediaType(string root)
+    {
+        try
+        {
+            char letter = char.ToUpperInvariant(root[0]);
+            if (letter < 'A' || letter > 'Z') return "";
+            // Windows storage cmdlets; unknown/virtual media is intentionally not labelled HDD.
+            string command = "$p=Get-Partition -DriveLetter " + letter + " -ErrorAction Stop; " +
+                "$d=$p | Get-Disk -ErrorAction Stop; " +
+                "$physical=$d | Get-PhysicalDisk -ErrorAction SilentlyContinue; " +
+                "if($physical){$physical | Select-Object -First 1 -ExpandProperty MediaType}";
+            using var process = new System.Diagnostics.Process();
+            process.StartInfo = new System.Diagnostics.ProcessStartInfo("powershell.exe")
+            {
+                Arguments = "-NoProfile -NonInteractive -Command \"" + command + "\"",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true
+            };
+            process.Start();
+            if (!process.WaitForExit(4000)) { try { process.Kill(); } catch { } return ""; }
+            string result = process.StandardOutput.ReadToEnd().Trim();
+            return result.Equals("SSD", StringComparison.OrdinalIgnoreCase) ? "SSD" :
+                result.Equals("HDD", StringComparison.OrdinalIgnoreCase) ? "HDD" : "";
+        }
+        catch { return ""; }
     }
     public void SetAppearance(Color color, int criticalPercent) { accent = color; threshold = criticalPercent; Invalidate(); }
     protected override void OnPaint(PaintEventArgs e)
@@ -691,6 +737,20 @@ public sealed class DiskUsageControl : Control
             e.Graphics.FillEllipse(warning, ringX + 39, 5, 15, 15);
             using var symbol = new Font("Segoe UI", 9, FontStyle.Bold);
             e.Graphics.DrawString("!", symbol, Brushes.White, new RectangleF(ringX + 39, 4, 15, 16), centered);
+        }
+        if (compact)
+        {
+            // Small overlay on the ring, analogous to a shortcut badge.
+            int bx = ringX + 29, by = 48;
+            using var plate = new SolidBrush(BackColor);
+            using var outline = new Pen(ForeColor, 1.2f);
+            e.Graphics.FillRectangle(plate, bx - 2, by - 2, 25, 17);
+            e.Graphics.DrawRectangle(outline, bx, by, 21, 13);
+            using var font = new Font("Segoe UI", 5.8f, FontStyle.Bold);
+            using var brush = new SolidBrush(ForeColor);
+            using var centeredBadge = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+            e.Graphics.DrawString(mediaType.Length == 0 ? "DISK" : mediaType, font, brush,
+                new RectangleF(bx, by, 21, 13), centeredBadge);
         }
         if (!compact)
         {
