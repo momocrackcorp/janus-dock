@@ -740,17 +740,31 @@ public sealed class DiskUsageControl : Control
         }
         if (compact)
         {
-            // Small overlay on the ring, analogous to a shortcut badge.
-            int bx = ringX + 29, by = 48;
-            using var plate = new SolidBrush(BackColor);
-            using var outline = new Pen(ForeColor, 1.2f);
-            e.Graphics.FillRectangle(plate, bx - 2, by - 2, 25, 17);
-            e.Graphics.DrawRectangle(outline, bx, by, 21, 13);
-            using var font = new Font("Segoe UI", 5.8f, FontStyle.Bold);
-            using var brush = new SolidBrush(ForeColor);
-            using var centeredBadge = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
-            e.Graphics.DrawString(mediaType.Length == 0 ? "DISK" : mediaType, font, brush,
-                new RectangleF(bx, by, 21, 13), centeredBadge);
+            // Recognizable graphic badge, no tiny text or "DISK" label.
+            // Draw entirely in the bottom-right corner of the circular indicator.
+            float bx = ringX + 30, by = 46;
+            using var bg = new SolidBrush(BackColor);
+            using var line = new Pen(Color.FromArgb(211, 224, 235), 1.65f);
+            using var detailPen = new Pen(Color.FromArgb(116, 177, 220), 1.2f);
+            e.Graphics.FillRectangle(bg, bx - 3, by - 3, 27, 22);
+            if (mediaType == "SSD")
+            {
+                // Flat SSD enclosure with connector and status LEDs.
+                e.Graphics.DrawRectangle(line, bx, by + 3, 20, 12);
+                e.Graphics.DrawLine(detailPen, bx + 4, by + 6, bx + 16, by + 6);
+                e.Graphics.DrawLine(detailPen, bx + 4, by + 9, bx + 13, by + 9);
+                e.Graphics.FillEllipse(Brushes.MediumSpringGreen, bx + 15, by + 11, 2.5f, 2.5f);
+                e.Graphics.DrawLine(line, bx + 6, by + 15, bx + 14, by + 15);
+            }
+            else
+            {
+                // Mechanical drive silhouette: platter and read arm.
+                e.Graphics.DrawRectangle(line, bx, by + 1, 20, 16);
+                e.Graphics.DrawEllipse(detailPen, bx + 4, by + 3, 11, 11);
+                e.Graphics.FillEllipse(Brushes.LightSteelBlue, bx + 8.5f, by + 7.5f, 2, 2);
+                e.Graphics.DrawLine(line, bx + 16, by + 14, bx + 12, by + 10);
+                e.Graphics.FillEllipse(Brushes.MediumSpringGreen, bx + 2, by + 14, 2, 2);
+            }
         }
         if (!compact)
         {
