@@ -21,14 +21,17 @@ public sealed class SystemUsageControl : Control
     [DllImport("kernel32.dll", SetLastError = true)]
     static extern bool GlobalMemoryStatusEx(ref MemoryStatus status);
     readonly System.Windows.Forms.Timer timer = new() { Interval = 1000 };
+    readonly ToolTip infoTip = new() { InitialDelay = 350, AutoPopDelay = 12000 };
     ulong lastIdle, lastTotal;
     bool initialized;
     double cpuPercent, memoryPercent, usedGiB, totalGiB;
     public bool Horizontal { get; }
-    public SystemUsageControl(bool horizontal)
+    readonly bool showCpu, showRam;
+    public SystemUsageControl(bool horizontal, bool cpuVisible = true, bool ramVisible = true)
     {
         Horizontal = horizontal;
-        Size = horizontal ? new Size(265, 56) : new Size(88, 150);
+        showCpu = cpuVisible; showRam = ramVisible;
+        Size = horizontal ? new Size(120, showCpu && showRam ? 56 : 36) : new Size(88, showCpu && showRam ? 150 : 82);
         Margin = new Padding(4, 2, 4, 2);
         DoubleBuffered = true;
         timer.Tick += (_, _) => Sample();
@@ -58,6 +61,7 @@ public sealed class SystemUsageControl : Control
                 memoryPercent = 100d * usedGiB / totalGiB;
             }
             AccessibleDescription = $"CPU {cpuPercent:0}% | RAM {memoryPercent:0}% ({usedGiB:0.0} de {totalGiB:0.0} GB)";
+            infoTip.SetToolTip(this, $"CPU: {cpuPercent:0}%\nRAM usada: {usedGiB:0.0} GB\nRAM total: {totalGiB:0.0} GB\nRAM disponible: {totalGiB - usedGiB:0.0} GB");
             Invalidate();
         }
         catch { /* Keep last valid sample. */ }
@@ -70,8 +74,8 @@ public sealed class SystemUsageControl : Control
         // Draw inside a normalized coordinate system, preserving icon proportions
         // even when Windows display scaling or dock thickness changes.
         bool horizontal = Horizontal;
-        float virtualWidth = horizontal ? 250f : 90f;
-        float virtualHeight = horizontal ? 70f : 150f;
+        float virtualWidth = horizontal ? 120f : 90f;
+        float virtualHeight = horizontal ? (showCpu && showRam ? 70f : 36f) : (showCpu && showRam ? 150f : 82f);
         float scale = Math.Min(Width / virtualWidth, Height / virtualHeight);
         if (scale <= 0) return;
         g.TranslateTransform((Width - virtualWidth * scale) / 2f, (Height - virtualHeight * scale) / 2f);
@@ -108,25 +112,28 @@ public sealed class SystemUsageControl : Control
         }
         if (horizontal)
         {
-            // Two dedicated rows prevent CPU and RAM values overlapping.
-            Chip(8, 4);
-            g.DrawString($"CPU {cpuPercent:0}%", titleFont, cpuBrush, 47, 9);
-            Memory(8, 39);
-            g.DrawString($"RAM {memoryPercent:0}%", titleFont, ramBrush, 47, 44);
-
+            if (showCpu) { Chip(8, 4); g.DrawString($"{cpuPercent:0}%", titleFont, cpuBrush, 47, 9); }
+            if (showRam)
+            {
+                float row = showCpu ? 39 : 4;
+                Memory(8, row);
+                g.DrawString($"{memoryPercent:0}%", titleFont, ramBrush, 47, row + 5);
+            }
         }
         else
         {
-            Chip(32, 4);
-            g.DrawString($"CPU {cpuPercent:0}%", titleFont, cpuBrush, 13, 38);
-            Memory(32, 71);
-            g.DrawString($"RAM {memoryPercent:0}%", titleFont, ramBrush, 12, 101);
-
+            if (showCpu) { Chip(32, 4); g.DrawString($"{cpuPercent:0}%", titleFont, cpuBrush, 18, 38); }
+            if (showRam)
+            {
+                float row = showCpu ? 71 : 4;
+                Memory(32, row);
+                g.DrawString($"{memoryPercent:0}%", titleFont, ramBrush, 18, row + 30);
+            }
         }
     }
     protected override void Dispose(bool disposing)
     {
-        if (disposing) { timer.Stop(); timer.Dispose(); }
+        if (disposing) { timer.Stop(); timer.Dispose(); infoTip.Dispose(); }
         base.Dispose(disposing);
     }
 }
