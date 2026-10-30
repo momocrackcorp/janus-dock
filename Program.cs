@@ -982,9 +982,11 @@ public class Dock : Form, IMessageFilter
     {
         const int WM_MOUSEWHEEL = 0x020A;
         if (m.Msg != WM_MOUSEWHEEL || IsDisposed || !Visible ||
-            (Control.ModifierKeys & Keys.Control) == 0 ||
-            (Control.ModifierKeys & (Keys.Shift | Keys.Alt)) != 0 ||
             !Bounds.Contains(Cursor.Position)) return false;
+        // Suppress WinForms' unexpected horizontal dock scrolling.
+        // Ctrl+wheel remains reserved for icon size changes.
+        if ((Control.ModifierKeys & Keys.Control) == 0) return true;
+        if ((Control.ModifierKeys & (Keys.Shift | Keys.Alt)) != 0) return true;
         int delta = unchecked((short)((m.WParam.ToInt64() >> 16) & 0xFFFF));
         if (delta == 0) return false;
         int updated = Math.Clamp(settings.IconSize + (delta > 0 ? 4 : -4), 16, 96);
