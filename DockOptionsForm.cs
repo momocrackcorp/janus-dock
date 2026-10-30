@@ -736,7 +736,7 @@ public sealed class DiskUsageControl : Control
             using var fmt = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
             g.DrawString(name, title, ink, new RectangleF(12, 14, 42, 38), fmt);
             using var sub = new Font("Segoe UI", 9);
-            g.DrawString(details, sub, 80, 28);
+            g.DrawString(details, sub, ink, 80, 28);
             return;
         }
 
