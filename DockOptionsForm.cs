@@ -767,16 +767,17 @@ public sealed class DiskUsageControl : Control
             using var highlight = new Pen(Color.FromArgb(215, 226, 237), 1.5f);
             g.DrawLine(highlight, 16, 24, 44, 24);
         }
-        // User-approved design: small translucent circular letter badge overlaps
-        // the drive's upper edge, while leaving the progress bar unobstructed.
-        using (var circle = new SolidBrush(Color.FromArgb(175, 17, 32, 44)))
-            g.FillEllipse(circle, 15, 6, 27, 27);
-        using (var halo = new Pen(Color.FromArgb(165, 217, 230, 240), 1.2f))
-            g.DrawEllipse(halo, 15, 6, 27, 27);
-        using (var letterFont = new Font("Segoe UI", 13.5f, FontStyle.Bold, GraphicsUnit.Pixel))
+        // Centered and prominent, as in the approved mockup.
+        // Keep the badge large enough relative to the drive at every scale.
+        const float badgeX = 14f, badgeY = 4f, badgeDiameter = 36f;
+        using (var circle = new SolidBrush(Color.FromArgb(204, 13, 31, 43)))
+            g.FillEllipse(circle, badgeX, badgeY, badgeDiameter, badgeDiameter);
+        using (var halo = new Pen(Color.FromArgb(190, 190, 221, 237), 1.6f))
+            g.DrawEllipse(halo, badgeX, badgeY, badgeDiameter, badgeDiameter);
+        using (var letterFont = new Font("Segoe UI", 21f, FontStyle.Bold, GraphicsUnit.Pixel))
         using (var letterBrush = new SolidBrush(Color.White))
         using (var letterLayout = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
-            g.DrawString(name, letterFont, letterBrush, new RectangleF(15, 6, 27, 27), letterLayout);
+            g.DrawString(name, letterFont, letterBrush, new RectangleF(badgeX, badgeY, badgeDiameter, badgeDiameter), letterLayout);
         if (ratio * 100 >= threshold)
         {
             using var warning = new SolidBrush(Color.OrangeRed);
