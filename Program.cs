@@ -95,6 +95,8 @@ public class Dock : Form, IMessageFilter
     static extern int SHGetStockIconInfo(int id, uint flags, ref SHSTOCKICONINFO info);
     const int SIID_DESKTOPPC = 94;
     const uint SHGSI_ICON = 0x100, SHGSI_LARGEICON = 0;
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    static extern uint ExtractIconEx(string fileName, int iconIndex, IntPtr[]? largeIcons, IntPtr[]? smallIcons, uint icons);
     [DllImport("user32.dll")] static extern bool DestroyIcon(IntPtr hIcon);
     [DllImport("user32.dll")] static extern bool ReleaseCapture();
     [DllImport("user32.dll")] static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
@@ -374,6 +376,19 @@ public class Dock : Form, IMessageFilter
         // the shortcut composite (which contains the arrow overlay).
         if (Path.GetExtension(path).Equals(".lnk", StringComparison.OrdinalIgnoreCase))
         {
+            // Ask Windows Shell to resolve the actual shortcut icon, including
+            // packaged applications and shortcuts whose targets are not plain EXEs.
+            try
+            {
+                IntPtr status = SHGetFileInfo(path, 0, out var shortcutInfo,
+                    (uint)Marshal.SizeOf<SHFILEINFO>(), SHGFI_ICON | SHGFI_LARGEICON);
+                if (status != IntPtr.Zero && shortcutInfo.hIcon != IntPtr.Zero)
+                {
+                    try { using var icon = (Icon)Icon.FromHandle(shortcutInfo.hIcon).Clone(); return icon.ToBitmap(); }
+                    finally { DestroyIcon(shortcutInfo.hIcon); }
+                }
+            }
+            catch { }
             try
             {
                 var obj = new ShellLink();
@@ -383,10 +398,25 @@ public class Dock : Form, IMessageFilter
                     var link = (IShellLinkW)obj;
                     var iconPath = new System.Text.StringBuilder(1024);
                     link.GetIconLocation(iconPath, iconPath.Capacity, out int iconIndex);
-                    if (iconPath.Length > 0 && File.Exists(Environment.ExpandEnvironmentVariables(iconPath.ToString())))
+                    if (iconPath.Length > 0)
                     {
-                        using var ico = Icon.ExtractAssociatedIcon(Environment.ExpandEnvironmentVariables(iconPath.ToString()));
-                        if (ico != null) return ico.ToBitmap();
+                        string specifiedIcon = Environment.ExpandEnvironmentVariables(iconPath.ToString().Trim('"'));
+                        if (File.Exists(specifiedIcon))
+                        {
+                            // Shell links may point to indexed icons in DLL/EXE files.
+                            // ExtractAssociatedIcon ignores this index and often produces
+                            // the same tiny generic executable icon for multiple apps.
+                            var handles = new IntPtr[1];
+                            try
+                            {
+                                if (ExtractIconEx(specifiedIcon, iconIndex, handles, null, 1) > 0 && handles[0] != IntPtr.Zero)
+                                {
+                                    using var original = (Icon)Icon.FromHandle(handles[0]).Clone();
+                                    return original.ToBitmap();
+                                }
+                            }
+                            finally { if (handles[0] != IntPtr.Zero) DestroyIcon(handles[0]); }
+                        }
                     }
                     var target = new System.Text.StringBuilder(1024);
                     link.GetPath(target, target.Capacity, IntPtr.Zero, 0);
