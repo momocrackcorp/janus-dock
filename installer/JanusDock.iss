@@ -1,12 +1,12 @@
 #define MyAppName "JANUS Dock"
 #ifndef MyAppVersion
-  #define MyAppVersion "6.2.0"
+  #define MyAppVersion "6.3.97"
 #endif
 #ifndef MyBuildFolder
   #define MyBuildFolder "dist-standalone"
 #endif
 #ifndef MyOutputBase
-  #define MyOutputBase "JANUS-Dock-Setup-6.2-Autonomo"
+  #define MyOutputBase "JANUS-Dock-Setup-6.3.97-Autonomo"
 #endif
 
 [Setup]
@@ -31,11 +31,13 @@ Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 CloseApplications=yes
+CloseApplicationsFilter=*.exe
+AppMutex=JANUS-Dock-SingleInstance
 RestartApplications=no
 
 [Messages]
-WelcomeLabel1=Bienvenido a JANUS Dock 6.2
-WelcomeLabel2=Instala una barra de accesos personalizable con monitores de CPU, RAM, discos y red. Al finalizar puedes iniciar JANUS Dock y elegir si arranca con Windows.
+WelcomeLabel1=Bienvenido a JANUS Dock 6.3.97
+WelcomeLabel2=Actualiza o instala JANUS Dock: accesos y unidades de disco, monitores CPU/RAM, tráfico de red, idiomas y efecto lupa. Conserva las preferencias personales. Puedes iniciarlo con Windows.
 
 [Files]
 Source: "..\{#MyBuildFolder}\JanusDock.exe"; DestDir: "{app}"; Flags: ignoreversion
