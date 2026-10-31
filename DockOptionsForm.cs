@@ -49,27 +49,32 @@ public sealed class DockOptionsForm : Form
     {
         Text = "Opciones de JANUS Dock";
         AutoScaleMode = AutoScaleMode.Font;
-        ClientSize = new Size(860, 650);
-        MinimumSize = new Size(560, 440);
+        ClientSize = new Size(1080, 720);
+        MinimumSize = new Size(790, 550);
         MaximizeBox = false; MinimizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 9);
         StyleWindowsControls(this);
         Shown += (_, _) => { InstallModernSelectors(this); InstallModernToggles(this); };
         // Fluent-style navigation: real pages, no legacy tab headers.
-        ClientSize = new Size(990, 740);
-        MinimumSize = new Size(770, 570);
+        ClientSize = new Size(1080, 720);
+        MinimumSize = new Size(790, 550);
         BackColor = Color.FromArgb(246, 249, 253);
-        var root = new Panel { Dock = DockStyle.Fill, BackColor = BackColor };
+        var root = new TableLayoutPanel {
+            Dock = DockStyle.Fill, BackColor = BackColor,
+            ColumnCount = 2, RowCount = 1, Margin = Padding.Empty, Padding = Padding.Empty
+        };
+        root.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 190f));
+        root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         Controls.Add(root);
         var sidebar = new Panel {
-            Name = "SettingsSidebar", Dock = DockStyle.Left, Width = 198,
+            Name = "SettingsSidebar", Dock = DockStyle.Fill, Width = 190,
             BackColor = Color.FromArgb(235, 243, 251)
         };
         var pageHost = new Panel { Dock = DockStyle.Fill, BackColor = BackColor };
-        root.Controls.Add(pageHost);
-        root.Controls.Add(sidebar);
-        sidebar.BringToFront();
+        root.Controls.Add(sidebar, 0, 0);
+        root.Controls.Add(pageHost, 1, 0);
         var general = new Panel { Name = "General", Dock = DockStyle.Fill, BackColor = BackColor };
         var appearance = new Panel { Name = "Apariencia", Dock = DockStyle.Fill, BackColor = BackColor };
         var accessPage = new Panel { Name = "Accesos", Dock = DockStyle.Fill, BackColor = BackColor };
@@ -88,7 +93,7 @@ public sealed class DockOptionsForm : Form
             AutoSize = true
         });
         var navigation = new FlowLayoutPanel {
-            Name = "SettingsNavigation", Location = new Point(8, 93), Width = 180,
+            Name = "SettingsNavigation", Location = new Point(8, 93), Width = 174,
             Height = 330, FlowDirection = FlowDirection.TopDown, WrapContents = false,
             AutoScroll = false, BackColor = sidebar.BackColor
         };
@@ -117,7 +122,7 @@ public sealed class DockOptionsForm : Form
             var button = new SettingsNavButton {
                 Text = $"{navSymbols[index]}   {navNames[index]}",
                 TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Segoe UI", 10f), Width = 176, Height = 49,
+                Font = new Font("Segoe UI", 10f), Width = 170, Height = 46,
                 Margin = new Padding(2, 0, 2, 5),
                 BackColor = sidebar.BackColor, ForeColor = Color.FromArgb(40, 58, 78),
                 FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand
@@ -575,7 +580,7 @@ public sealed class DockOptionsForm : Form
         Shown += (_, _) =>
         {
             var area = Screen.FromControl(this).WorkingArea;
-            Size = new Size(Math.Min(Math.Max(Width, (int)(area.Width * 0.78)), area.Width - 16), Math.Min(Math.Max(Height, (int)(area.Height * 0.80)), area.Height - 16));
+            Size = new Size(Math.Min(1100, area.Width - 16), Math.Min(760, area.Height - 16));
             Location = new Point(area.Left + Math.Max(0, (area.Width - Width) / 2), area.Top + Math.Max(0, (area.Height - Height) / 2));
             bar.Height = Math.Max(64, apply.PreferredSize.Height + 20);
             FitRows(generalRows);
@@ -898,7 +903,7 @@ public sealed class DockOptionsForm : Form
     {
         var page = rows.Parent;
         if (page == null) return;
-        int width = Math.Max(290, page.ClientSize.Width - 28);
+        int width = Math.Max(290, Math.Min(820, page.ClientSize.Width - 28));
         rows.Width = width;
         foreach (Control control in rows.Controls)
         {
