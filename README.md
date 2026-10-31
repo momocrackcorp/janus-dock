@@ -86,14 +86,9 @@ dotnet build JanusDock.csproj -c Release
 
 Las compilaciones automatizadas pueden consultarse en [GitHub Actions](https://github.com/momocrackcorp/janus-dock/actions).
 
-## Créditos y atribuciones de iconos
+## Iconos de las acciones del sistema
 
-Los siguientes iconos se atribuyen a sus autores originales en **[Flaticon](https://www.flaticon.com/)**:
-
-- **Reiniciar / Reset:** [Roundicons](https://www.flaticon.com/authors/roundicons) — Flaticon.
-- **Apagar / Encendido:** [Uniconlabs](https://www.flaticon.com/authors/uniconlabs) — Flaticon.
-
-Los derechos de cada icono corresponden a sus respectivos autores. Su inclusión en JANUS Dock no implica autoría por parte de Momocrackcorp.
+Los botones Bloquear, Reiniciar y Apagar utilizan los símbolos incorporados en Windows mediante la fuente Segoe MDL2 Assets; no se distribuyen los antiguos PNG de Flaticon.
 
 ## Versiones y problemas
 
