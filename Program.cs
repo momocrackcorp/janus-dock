@@ -40,6 +40,7 @@ public class DockSettings
     public Dictionary<string,int> DiskColors { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public List<string> HiddenDiskLetters { get; set; } = new();
     public bool HoverAnimation { get; set; } = true;
+    public string HoverEffect { get; set; } = "Lupa";
     public int ZoomPercent { get; set; } = 280;
     public bool ShowShutdown { get; set; } = false;
     public bool ShowRestart { get; set; } = false;
@@ -573,7 +574,8 @@ public class Dock : Form, IMessageFilter
                 Height = settings.IconSize + (settings.NameMode == "Written" ? 40 : 12),
                 SourceIcon = GetIcon(item.Path),
                 BaseIconSize = settings.IconSize,
-                ZoomEnabled = settings.HoverAnimation,
+                ZoomEnabled = settings.HoverEffect == "Lupa",
+                FocusEnabled = settings.HoverEffect == "Foco",
                 ZoomFactor = settings.ZoomPercent / 100f,
                 ShowCaption = settings.NameMode == "Written",
                 ImageAlign = settings.NameMode == "Written" ? ContentAlignment.TopCenter : ContentAlignment.MiddleCenter,
@@ -796,7 +798,8 @@ public class Dock : Form, IMessageFilter
         settings.CriticalPercent = dlg.CriticalPercent;
         settings.DiskColors = dlg.DiskColors;
         settings.HiddenDiskLetters = dlg.HiddenDiskLetters;
-        settings.HoverAnimation = dlg.HoverAnimation;
+        settings.HoverEffect = dlg.HoverEffect;
+        settings.HoverAnimation = dlg.HoverEffect == "Lupa";
         settings.ZoomPercent = dlg.ZoomPercent;
         settings.ShowShutdown = dlg.ShowShutdown;
         settings.ShowRestart = dlg.ShowRestart;
