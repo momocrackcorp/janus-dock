@@ -36,6 +36,7 @@ public class DockSettings
     public bool ShowSystemUsage { get; set; } = false;
     public bool ShowCpu { get; set; } = true;
     public bool ShowRam { get; set; } = true;
+    public string UsageLayout { get; set; } = "Vertical";
     public bool NetworkAtEnd { get; set; } = false;
     public int DiskColorArgb { get; set; } = Color.FromArgb(48, 130, 222).ToArgb();
     public int CriticalPercent { get; set; } = 90;
@@ -181,6 +182,7 @@ public class Dock : Form, IMessageFilter
         settings.CriticalPercent = Math.Clamp(settings.CriticalPercent, 70, 99);
         settings.DiskColors ??= new(StringComparer.OrdinalIgnoreCase);
         settings.HiddenDiskLetters ??= new();
+        settings.UsageLayout = settings.UsageLayout == "Horizontal" ? "Horizontal" : "Vertical";
         // Migrate old disk widget into the reorderable item list once.
         if (settings.ShowDiskWidget && !settings.Items.Any(x => x.IsDiskWidget))
             settings.Items.Insert(0, new DockItem { Name = "Discos", IsDiskWidget = true });
@@ -692,15 +694,43 @@ public class Dock : Form, IMessageFilter
         }
         if (settings.ShowSystemUsage)
         {
-            var usage = new SystemUsageControl(Horizontal, settings.ShowCpu, settings.ShowRam)
+            // The display direction is independent of the dock's position.
+            // On narrow vertical docks, stack the readings to avoid clipping.
+            bool sideBySide = settings.UsageLayout == "Horizontal" && settings.ShowCpu && settings.ShowRam;
+            int usageWidth = Horizontal
+                ? (sideBySide ? 214 : Math.Max(170, Math.Min(245, settings.IconSize * 5 + 25)))
+                : Math.Max(56, settings.Width - 14);
+            bool showSideBySide = sideBySide && usageWidth >= 200;
+            var usage = new SystemUsageControl(Horizontal, settings.ShowCpu, settings.ShowRam, showSideBySide)
             {
-                Width = Horizontal ? Math.Max(170, Math.Min(245, settings.IconSize * 5 + 25)) : Math.Max(56, settings.Width - 14),
-                Height = Horizontal ? Math.Max(36, Math.Min(settings.HorizontalHeight - 8, 68)) : 148,
+                Width = usageWidth,
+                Height = Horizontal
+                    ? Math.Max(36, Math.Min(settings.HorizontalHeight - 8, 68))
+                    : showSideBySide ? 44 : settings.ShowCpu && settings.ShowRam ? 148 : 82,
                 BackColor = BackColor,
                 ForeColor = ForeColor
             };
             var usageMenu = DockMenuStyle.Create(light, Color.FromArgb(58, 173, 201));
-            usageMenu.Items.Add("Opciones de CPU y RAM...", null, (_, _) => ShowOptions("General"));
+            var layoutMenu = new ToolStripMenuItem("Distribución CPU / RAM");
+            foreach (string layout in new[] { "Vertical", "Horizontal" })
+            {
+                var choice = new ToolStripMenuItem(layout == "Horizontal"
+                    ? "Horizontal (lado a lado)" : "Vertical (uno sobre otro)")
+                {
+                    Checked = settings.UsageLayout == layout
+                };
+                choice.Click += (_, _) =>
+                {
+                    if (settings.UsageLayout == layout) return;
+                    settings.UsageLayout = layout;
+                    Store();
+                    Render();
+                };
+                layoutMenu.DropDownItems.Add(choice);
+            }
+            usageMenu.Items.Add(layoutMenu);
+            usageMenu.Items.Add(new ToolStripSeparator());
+            usageMenu.Items.Add("Opciones de CPU y RAM...", null, (_, _) => ShowOptions("Sistema"));
             usage.ContextMenuStrip = usageMenu;
             panel.Controls.Add(usage);
         }
@@ -866,6 +896,7 @@ public class Dock : Form, IMessageFilter
         settings.ShowSystemUsage = dlg.ShowSystemUsage;
         settings.ShowCpu = dlg.ShowCpu;
         settings.ShowRam = dlg.ShowRam;
+        settings.UsageLayout = dlg.UsageLayout;
         settings.NetworkAtEnd = dlg.NetworkAtEnd;
         settings.DiskColorArgb = dlg.DiskColorArgb;
         settings.CriticalPercent = dlg.CriticalPercent;

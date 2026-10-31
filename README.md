@@ -47,7 +47,7 @@
 - **Animación:** efecto lupa para accesos y discos, y **Ctrl + rueda** sobre el Dock para ajustar el tamaño de iconos (16–96 px).
 - **Unidades de disco:** iconos tipo Windows/Lucide con barra de ocupación, letra de unidad destacada, elección de colores y particiones; clic para abrir la unidad en el Explorador y detalles al pasar el mouse.
 - **Tráfico de red:** subida sobre descarga en un bloque compacto, con **promedio móvil de los últimos 60 segundos**, actualizado cada segundo.
-- **CPU y RAM:** indicadores independientes, porcentajes sin textos redundantes, RAM total dentro del icono y detalle de uso al pasar el mouse.
+- **CPU y RAM:** indicadores independientes, con distribución vertical (uno sobre otro) u horizontal (lado a lado) configurable en **Opciones → Sistema** o con clic derecho sobre el indicador. Porcentajes actualizados cada segundo, RAM total dentro del icono y detalle de uso al pasar el mouse.
 - **Energía:** botones de apagar y reiniciar con confirmación.
 - **Idioma:** español de Chile, inglés y portugués de Brasil (traducción inicial en desarrollo).\n- **Inicio automático:** configurable desde Opciones y desde el instalador.\n- **Apariencia:** tamaño de iconos hasta 96 px, selectores modernos y aplicación de ajustes desde Opciones.\n- **Preferencias locales:** se guardan en `%APPDATA%\JANUS\Dock\config.json`.
 

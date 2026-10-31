@@ -18,6 +18,7 @@ public sealed class DockOptionsForm : Form
     public bool ShowSystemUsage { get; private set; }
     public bool ShowCpu { get; private set; } = true;
     public bool ShowRam { get; private set; } = true;
+    public string UsageLayout { get; private set; } = "Vertical";
     public bool NetworkAtEnd { get; private set; }
     public bool StartWithWindows { get; private set; }
     public int DiskColorArgb { get; private set; }
@@ -132,7 +133,7 @@ public sealed class DockOptionsForm : Form
             navigation.Controls.Add(button);
             navButtons.Add(button);
         }
-        ShowPage(initialTab == "Apariencia" ? 1 : initialTab == "Acerca de" ? 4 : 0);
+        ShowPage(initialTab == "Apariencia" ? 1 : initialTab == "Accesos" ? 2 : initialTab == "Sistema" ? 3 : initialTab == "Acerca de" ? 4 : 0);
         appearance.Controls.Add(new Label { Text = "Estilo de los iconos:", Location = new Point(22, 32), AutoSize = true });
         var iconStyle = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(175, 28), Width = 260 };
         iconStyle.Items.AddRange(new object[] { "Iconos de Windows", "Iconos Lucide" });
@@ -385,6 +386,11 @@ public sealed class DockOptionsForm : Form
         var ramWidget = new CheckBox { Text = "Mostrar uso de memoria RAM", AutoSize = true, Checked = config.ShowSystemUsage && config.ShowRam };
         generalRows.Controls.Add(cpuWidget);
         generalRows.Controls.Add(ramWidget);
+        var usageLayout = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 185 };
+        usageLayout.Items.AddRange(new object[] { "Vertical", "Horizontal" });
+        usageLayout.SelectedIndex = config.UsageLayout == "Horizontal" ? 1 : 0;
+        generalRows.Controls.Add(FieldRow(
+            new Label { Text = "Distribución CPU / RAM:", AutoSize = true }, usageLayout));
         var networkAtEnd = new CheckBox { Text = "Anclar tráfico junto a los botones de energía (derecha / abajo)", AutoSize = true, Checked = config.NetworkAtEnd };
         generalRows.Controls.Add(networkAtEnd);
         var widget = new CheckBox { Text = "Mostrar indicador de uso de discos en la barra", Checked = config.ShowDiskWidget, Location = new Point(18, 20), AutoSize = true };
@@ -673,7 +679,7 @@ public sealed class DockOptionsForm : Form
             FitRows(accessRows);
             FitRows(systemRows);
             FitRows(aboutRows);
-            ShowPage(initialTab == "Apariencia" ? 1 : initialTab == "Acerca de" ? 4 : 0);
+            ShowPage(initialTab == "Apariencia" ? 1 : initialTab == "Accesos" ? 2 : initialTab == "Sistema" ? 3 : initialTab == "Acerca de" ? 4 : 0);
         };
         void CaptureSettings()
         {
@@ -688,6 +694,7 @@ public sealed class DockOptionsForm : Form
             ShowNetworkTraffic = networkWidget.Checked;
             ShowCpu = cpuWidget.Checked;
             ShowRam = ramWidget.Checked;
+            UsageLayout = usageLayout.SelectedIndex == 1 ? "Horizontal" : "Vertical";
             ShowSystemUsage = ShowCpu || ShowRam;
             NetworkAtEnd = networkAtEnd.Checked;
             IconSize = (int)size.Value;

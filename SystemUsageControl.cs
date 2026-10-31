@@ -26,12 +26,14 @@ public sealed class SystemUsageControl : Control
     bool initialized;
     double cpuPercent, memoryPercent, usedGiB, totalGiB;
     public bool Horizontal { get; }
+    public bool SideBySide { get; }
     readonly bool showCpu, showRam;
-    public SystemUsageControl(bool horizontal, bool cpuVisible = true, bool ramVisible = true)
+    public SystemUsageControl(bool horizontal, bool cpuVisible = true, bool ramVisible = true, bool sideBySide = false)
     {
         Horizontal = horizontal;
+        SideBySide = sideBySide;
         showCpu = cpuVisible; showRam = ramVisible;
-        Size = horizontal ? new Size(120, showCpu && showRam ? 56 : 36) : new Size(88, showCpu && showRam ? 150 : 82);
+        Size = horizontal ? new Size(sideBySide && showCpu && showRam ? 214 : 120, sideBySide && showCpu && showRam ? 42 : showCpu && showRam ? 56 : 36) : new Size(88, showCpu && showRam ? 150 : 82);
         Margin = new Padding(4, 2, 4, 2);
         DoubleBuffered = true;
         timer.Tick += (_, _) => Sample();
@@ -74,8 +76,9 @@ public sealed class SystemUsageControl : Control
         // Draw inside a normalized coordinate system, preserving icon proportions
         // even when Windows display scaling or dock thickness changes.
         bool horizontal = Horizontal;
-        float virtualWidth = horizontal ? 120f : 90f;
-        float virtualHeight = horizontal ? (showCpu && showRam ? 70f : 36f) : (showCpu && showRam ? 150f : 82f);
+        bool twoAcross = SideBySide && showCpu && showRam && Width >= 200;
+        float virtualWidth = twoAcross ? 210f : horizontal ? 120f : 90f;
+        float virtualHeight = twoAcross ? 36f : horizontal ? (showCpu && showRam ? 70f : 36f) : (showCpu && showRam ? 150f : 82f);
         float scale = Math.Min(Width / virtualWidth, Height / virtualHeight);
         if (scale <= 0) return;
         g.TranslateTransform((Width - virtualWidth * scale) / 2f, (Height - virtualHeight * scale) / 2f);
@@ -110,7 +113,14 @@ public sealed class SystemUsageControl : Control
             using var center = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
             g.DrawString(capacity, memoryNumberFont, ramBrush, new RectangleF(x + 1, y + 4, 24, 16), center);
         }
-        if (horizontal)
+        if (twoAcross)
+        {
+            Chip(7, 5);
+            g.DrawString($"{cpuPercent:0}%", titleFont, cpuBrush, 44, 11);
+            Memory(114, 5);
+            g.DrawString($"{memoryPercent:0}%", titleFont, ramBrush, 151, 11);
+        }
+        else if (horizontal)
         {
             if (showCpu) { Chip(8, 4); g.DrawString($"{cpuPercent:0}%", titleFont, cpuBrush, 47, 9); }
             if (showRam)
