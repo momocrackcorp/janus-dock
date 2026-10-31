@@ -1,12 +1,12 @@
 #define MyAppName "JANUS Dock"
 #ifndef MyAppVersion
-  #define MyAppVersion "6.3.97"
+  #define MyAppVersion "6.4.87"
 #endif
 #ifndef MyBuildFolder
   #define MyBuildFolder "dist-standalone"
 #endif
 #ifndef MyOutputBase
-  #define MyOutputBase "JANUS-Dock-Setup-6.3.97-Autonomo"
+  #define MyOutputBase "JANUS-Dock-Setup-6.4.87-Autonomo"
 #endif
 
 [Setup]
@@ -14,7 +14,7 @@ AppId={{F65CE0CF-0D45-4AB0-A960-ED5FA44A9153}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher=Momocrackcorp
-AppComments=JANUS Dock: accesos rápidos, CPU, RAM, red y discos
+AppComments=JANUS Dock 6.4.87: accesos, discos, CPU/RAM, red y barra configurable
 AppCopyright=Copyright 2026 Momocrackcorp
 VersionInfoDescription=JANUS Dock - Barra de accesos para Windows
 VersionInfoProductName=JANUS Dock
@@ -34,8 +34,8 @@ CloseApplications=yes
 RestartApplications=no
 
 [Messages]
-WelcomeLabel1=Bienvenido a JANUS Dock 6.3.97
-WelcomeLabel2=Actualiza o instala JANUS Dock: accesos y unidades de disco, monitores CPU/RAM, tráfico de red, idiomas y efecto lupa. Conserva las preferencias personales. Puedes iniciarlo con Windows.
+WelcomeLabel1=Bienvenido a JANUS Dock 6.4.87
+WelcomeLabel2=Instala o actualiza JANUS Dock 6.4.87: panel de opciones moderno, controles de energía, indicadores CPU/RAM y red configurables, discos y efectos de iconos. Conserva tus preferencias personales y puedes iniciarlo con Windows.
 
 [Files]
 Source: "..\{#MyBuildFolder}\JanusDock.exe"; DestDir: "{app}"; Flags: ignoreversion
