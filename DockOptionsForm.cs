@@ -56,27 +56,75 @@ public sealed class DockOptionsForm : Form
         Font = new Font("Segoe UI", 9);
         StyleWindowsControls(this);
         Shown += (_, _) => { StyleWindowsControls(this); InstallModernSelectors(this); InstallModernToggles(this); };
-        var tabs = new TabControl { Dock = DockStyle.Fill, Padding = new Point(18, 8), DrawMode = TabDrawMode.OwnerDrawFixed, SizeMode = TabSizeMode.Normal }; 
-        tabs.DrawItem += (_, e) =>
-        {
-            var page = tabs.TabPages[e.Index];
-            bool selected = e.Index == tabs.SelectedIndex;
-            var bounds = tabs.GetTabRect(e.Index);
-            bool isDark = BackColor.GetBrightness() < 0.5f;
-            Color accent = Color.FromArgb(25, 164, 189);
-            Color fill = selected ? accent : (isDark ? Color.FromArgb(45, 52, 62) : Color.FromArgb(237, 241, 245));
-            Color ink = selected ? Color.White : ForeColor;
-            using var brush = new SolidBrush(fill);
-            e.Graphics.FillRectangle(brush, bounds);
-            TextRenderer.DrawText(e.Graphics, page.Text, Font, bounds, ink, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+        // Fluent-style navigation: real pages, no legacy tab headers.
+        ClientSize = new Size(990, 740);
+        MinimumSize = new Size(770, 570);
+        BackColor = Color.FromArgb(246, 249, 253);
+        var root = new Panel { Dock = DockStyle.Fill, BackColor = BackColor };
+        Controls.Add(root);
+        var sidebar = new Panel {
+            Name = "SettingsSidebar", Dock = DockStyle.Left, Width = 198,
+            BackColor = Color.FromArgb(235, 243, 251)
         };
-        Controls.Add(tabs);
-
-        var general = new TabPage("General");
-        var appearance = new TabPage("Apariencia");
-        var about = new TabPage("Acerca de");
-        tabs.TabPages.AddRange(new[] { general, appearance, about });
-        if (initialTab == "Apariencia") tabs.SelectedTab = appearance;
+        var pageHost = new Panel { Dock = DockStyle.Fill, BackColor = BackColor };
+        root.Controls.Add(pageHost);
+        root.Controls.Add(sidebar);
+        sidebar.BringToFront();
+        var general = new Panel { Dock = DockStyle.Fill, BackColor = BackColor };
+        var appearance = new Panel { Dock = DockStyle.Fill, BackColor = BackColor };
+        var accessPage = new Panel { Dock = DockStyle.Fill, BackColor = BackColor };
+        var systemPage = new Panel { Dock = DockStyle.Fill, BackColor = BackColor };
+        var about = new Panel { Dock = DockStyle.Fill, BackColor = BackColor };
+        var pages = new[] { general, appearance, accessPage, systemPage, about };
+        foreach (var page in pages) { pageHost.Controls.Add(page); page.Visible = false; }
+        sidebar.Controls.Add(new Label {
+            Text = "JANUS Dock", Font = new Font("Segoe UI Semibold", 13f, FontStyle.Bold),
+            ForeColor = Color.FromArgb(27, 75, 109), Location = new Point(22, 18),
+            AutoSize = true
+        });
+        sidebar.Controls.Add(new Label {
+            Text = "Configuración", Font = new Font("Segoe UI", 9),
+            ForeColor = Color.FromArgb(91, 111, 133), Location = new Point(23, 49),
+            AutoSize = true
+        });
+        var navigation = new FlowLayoutPanel {
+            Name = "SettingsNavigation", Location = new Point(8, 93), Width = 180,
+            Height = 330, FlowDirection = FlowDirection.TopDown, WrapContents = false,
+            AutoScroll = false, BackColor = sidebar.BackColor
+        };
+        sidebar.Controls.Add(navigation);
+        string[] navNames = { "General", "Apariencia", "Accesos", "Sistema", "Acerca de" };
+        string[] navSymbols = { "⚙", "◈", "▦", "▣", "ⓘ" };
+        var navButtons = new List<Button>();
+        void ShowPage(int selected)
+        {
+            for (int index = 0; index < pages.Length; index++)
+            {
+                pages[index].Visible = index == selected;
+                var button = navButtons[index];
+                button.BackColor = index == selected ? Color.FromArgb(211, 233, 251) : sidebar.BackColor;
+                button.ForeColor = index == selected ? Color.FromArgb(11, 103, 188) : Color.FromArgb(40, 58, 78);
+                button.Font = new Font("Segoe UI", 10, index == selected ? FontStyle.Bold : FontStyle.Regular);
+            }
+            pages[selected].BringToFront();
+        }
+        for (int index = 0; index < navNames.Length; index++)
+        {
+            int pageNumber = index;
+            var button = new Button {
+                Text = $"{navSymbols[index]}   {navNames[index]}",
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 10f), Width = 176, Height = 49,
+                Margin = new Padding(2, 0, 2, 5),
+                BackColor = sidebar.BackColor, ForeColor = Color.FromArgb(40, 58, 78),
+                FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand
+            };
+            button.FlatAppearance.BorderSize = 0;
+            button.Click += (_, _) => ShowPage(pageNumber);
+            navigation.Controls.Add(button);
+            navButtons.Add(button);
+        }
+        ShowPage(initialTab == "Apariencia" ? 1 : initialTab == "Acerca de" ? 4 : 0);
         appearance.Controls.Add(new Label { Text = "Estilo de los iconos:", Location = new Point(22, 32), AutoSize = true });
         var iconStyle = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(175, 28), Width = 260 };
         iconStyle.Items.AddRange(new object[] { "Iconos de Windows", "Iconos Lucide" });
@@ -647,7 +695,7 @@ public sealed class DockOptionsForm : Form
             StyleWindowsControls(child);
         }
     }
-    private static FlowLayoutPanel PageRows(TabPage page)
+    private static FlowLayoutPanel PageRows(ScrollableControl page)
     {
         page.AutoScroll = true;
         var rows = new FlowLayoutPanel
