@@ -310,9 +310,9 @@ public sealed class DockOptionsForm : Form
         appearanceRows.SizeChanged += (_, _) => FitRows(appearanceRows);
 
 
-        var top = new CheckBox { Text = "Mantener siempre visible (encima de otras ventanas)", Checked = config.AlwaysOnTop, AutoSize = true, Location = new Point(18, 22) };
-        var hide = new CheckBox { Text = "Ocultar automáticamente al alejar el puntero", Checked = config.AutoHide, AutoSize = true, Location = new Point(18, 54) };
-        var startup = new CheckBox { Text = "Cargar JANUS Dock al iniciar Windows", Checked = IsStartupEnabled(), AutoSize = true, Location = new Point(18, 86) };
+        var top = new CheckBox { Text = "Mantener siempre visible", Checked = config.AlwaysOnTop, AutoSize = true, Location = new Point(18, 22) };
+        var hide = new CheckBox { Text = "Ocultar automáticamente", Checked = config.AutoHide, AutoSize = true, Location = new Point(18, 54) };
+        var startup = new CheckBox { Text = "Iniciar JANUS Dock con Windows", Checked = IsStartupEnabled(), AutoSize = true, Location = new Point(18, 86) };
         var names = new Label { Text = "Nombres de accesos:", AutoSize = true, Location = new Point(18, 115) };
         var nameMode = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(190, 110), Width = 205 };
         nameMode.Items.AddRange(new object[] { "Sin texto", "Mostrar al pasar el mouse" });
@@ -549,7 +549,7 @@ public sealed class DockOptionsForm : Form
             Checked = networkWidget.Checked, AutoSize = true };
         var quickUsage = new CheckBox { Text = "Mostrar uso de CPU y RAM",
             Checked = cpuWidget.Checked && ramWidget.Checked, AutoSize = true };
-        var quickNetworkEnd = new CheckBox { Text = "Anclar tráfico junto a botones de energía",
+        var quickNetworkEnd = new CheckBox { Text = "Tráfico junto a botones de energía",
             Checked = networkAtEnd.Checked, AutoSize = true };
         quickNetwork.CheckedChanged += (_, _) => networkWidget.Checked = quickNetwork.Checked;
         networkWidget.CheckedChanged += (_, _) => quickNetwork.Checked = networkWidget.Checked;
@@ -889,6 +889,16 @@ public sealed class DockOptionsForm : Form
                 if (layout.Name == "SettingsFieldRow")
                 {
                     layout.Width = usable;
+                    // Prevent clipped selectors when two dashboard columns are shown.
+                    if (layout.Controls.Count == 2 && layout.Controls[0] is Label caption)
+                    {
+                        var selector = layout.Controls[1];
+                        if (selector is ComboBox || selector is ModernSelector)
+                        {
+                            caption.Width = Math.Clamp(usable / 3, 95, 180);
+                            selector.Width = Math.Clamp(usable - caption.Width - 27, 130, 235);
+                        }
+                    }
                     layout.Height = layout.Controls.OfType<TrackBar>().Any() ? 58 : Math.Max(42, layout.Font.Height * 2 + 10);
                 }
                 else if (layout.Name == "SettingsSectionTitle")
@@ -936,7 +946,7 @@ public sealed class DockOptionsForm : Form
         var cards = dashboard.Controls.OfType<SettingsCardPanel>().ToArray();
         if (cards.Length != 4) return;
         const int gap = 14;
-        bool doubleColumn = dashboard.Width >= 780;
+        bool doubleColumn = dashboard.Width >= 640;
         int cellWidth = doubleColumn ? (dashboard.Width - gap) / 2 : dashboard.Width;
         foreach (var card in cards)
         {
