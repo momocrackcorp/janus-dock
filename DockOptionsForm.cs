@@ -95,14 +95,16 @@ public sealed class DockOptionsForm : Form
         sidebar.Controls.Add(navigation);
         string[] navNames = { "General", "Apariencia", "Accesos", "Sistema", "Acerca de" };
         string[] navSymbols = { "⚙", "◈", "▦", "▣", "ⓘ" };
-        var navButtons = new List<Button>();
+        var navButtons = new List<SettingsNavButton>();
         void ShowPage(int selected)
         {
             for (int index = 0; index < pages.Length; index++)
             {
                 pages[index].Visible = index == selected;
                 var button = navButtons[index];
-                button.BackColor = index == selected ? Color.FromArgb(211, 233, 251) : sidebar.BackColor;
+                button.SelectedPage = index == selected;
+                button.BackColor = sidebar.BackColor;
+                button.Invalidate();
                 button.ForeColor = index == selected ? Color.FromArgb(11, 103, 188) : Color.FromArgb(40, 58, 78);
                 button.Font = new Font("Segoe UI", 10, index == selected ? FontStyle.Bold : FontStyle.Regular);
             }
@@ -111,7 +113,7 @@ public sealed class DockOptionsForm : Form
         for (int index = 0; index < navNames.Length; index++)
         {
             int pageNumber = index;
-            var button = new Button {
+            var button = new SettingsNavButton {
                 Text = $"{navSymbols[index]}   {navNames[index]}",
                 TextAlign = ContentAlignment.MiddleLeft,
                 Font = new Font("Segoe UI", 10f), Width = 176, Height = 49,
