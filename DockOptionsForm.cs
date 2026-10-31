@@ -363,7 +363,7 @@ public sealed class DockOptionsForm : Form
 
         var appVersion = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version;
         string versionText = appVersion == null ? "versión desconocida" : $"v{appVersion.Major}.{appVersion.Minor}.{appVersion.Build}";
-        var info = new Label { Text = $"JANUS Dock — {versionText}\n\nAccesos rápidos y personalizables para Windows 10/11.\nMonitores de CPU, RAM, discos y tráfico de red.\nIconos modernos, efecto lupa y varios idiomas.\n\nC# · Windows Forms · .NET 8\nMomocrackcorp · Ñuble, Chile\nAutoría: Omar Aguila", Location = new Point(104, 20), Size = new Size(520, 245) };
+        var info = new Label { Text = $"JANUS Dock — {versionText}\n\nBarra de accesos para Windows 10/11.\nUnidades de disco con iconos Windows/Lucide y apertura en Explorer.\nCPU, RAM y red con indicadores compactos y promedio de 60 s.\nEfecto lupa y Ctrl + rueda para cambiar tamaño de iconos.\nOpciones multidioma y arranque con Windows.\n\nC# · Windows Forms · .NET 8\nMomocrackcorp · Ñuble, Chile\nAutoría: Omar Aguila", Location = new Point(104, 20), Size = new Size(520, 280) };
         var appIcon = new PictureBox { Location = new Point(20, 25), Size = new Size(64, 64), SizeMode = PictureBoxSizeMode.Zoom };
         try { using var ico = Icon.ExtractAssociatedIcon(Application.ExecutablePath); appIcon.Image = ico?.ToBitmap() ?? SystemIcons.Application.ToBitmap(); }
         catch { appIcon.Image = SystemIcons.Application.ToBitmap(); }
