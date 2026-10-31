@@ -903,7 +903,7 @@ public class Dock : Form, IMessageFilter
             var existing = settings.Items.Where(x => x.Path == path).ToList();
             if (!enabled) foreach (var entry in existing) settings.Items.Remove(entry);
             else if (existing.Count == 0)
-                settings.Items.Add(new DockItem { Path = path, Name = path == "janus:shutdown" ? "Apagar" : "Reiniciar" });
+                settings.Items.Add(new DockItem { Path = path, Name = path == "janus:lock" ? "Bloquear" : path == "janus:shutdown" ? "Apagar" : "Reiniciar" });
             else foreach (var duplicate in existing.Skip(1)) settings.Items.Remove(duplicate);
         }
     }
