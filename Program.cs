@@ -374,6 +374,24 @@ public class Dock : Form, IMessageFilter
         if (path == "janus:documents") return ShellFolderIcon(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments));
         if (path == "janus:settings") return LucideDockIcons.Load(path, light)!; // Consistent gear fallback, not generic application icon.
         if (path == "janus:downloads") return ShellFolderIcon(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"));
+        // Prefer the native installed app executable for recognized Office/browser links.
+        // This was the successful strategy in build #109.
+        var knownApp = CommonApps.Catalog.FirstOrDefault(app =>
+            app.Hints.Any(h => Path.GetFileNameWithoutExtension(path).Contains(h, StringComparison.OrdinalIgnoreCase)) ||
+            Path.GetFileName(path).Equals(app.Exe, StringComparison.OrdinalIgnoreCase));
+        if (knownApp != null)
+        {
+            string? installed = CommonApps.LocateExecutable(knownApp);
+            if (installed != null)
+            {
+                try
+                {
+                    using var nativeIcon = Icon.ExtractAssociatedIcon(installed);
+                    if (nativeIcon != null) return nativeIcon.ToBitmap();
+                }
+                catch { }
+            }
+        }
         // Resolve the underlying target/icon of .lnk rather than asking the shell for
         // the shortcut composite (which contains the arrow overlay).
         if (Path.GetExtension(path).Equals(".lnk", StringComparison.OrdinalIgnoreCase))
@@ -484,7 +502,7 @@ public class Dock : Form, IMessageFilter
             if (control is Button b) { b.Image?.Dispose(); (b.Tag as Image)?.Dispose(); }
             control.Dispose();
         }
-        int width = Horizontal ? Math.Max(22, settings.IconSize + 2) : Math.Max(30, settings.Width - 18);
+        int width = Horizontal ? Math.Max(22, settings.IconSize - 8) : Math.Max(30, settings.Width - 18);
         int energySlot = Math.Max(settings.IconSize + 12, (int)Math.Ceiling(settings.IconSize * (settings.HoverAnimation ? 1.8 : 1.0)) + 8);
         energyPanel.Width = Horizontal ? (energySlot + 4) * 2 + 12 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 185 : 0) : Math.Max(55, settings.Width - 10);
         energyPanel.Height = Horizontal ? Math.Max(48, settings.IconSize + 20) : (energySlot + 4) * 2 + 12 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 184 : 0);
@@ -565,7 +583,7 @@ public class Dock : Form, IMessageFilter
                 BackColor = BackColor,
                 ForeColor = ForeColor,
                 Font = new Font("Segoe UI", 8),
-                Margin = Horizontal ? new Padding(settings.IconSpacing / 2, 2, settings.IconSpacing - settings.IconSpacing / 2, 2) : new Padding(2, settings.IconSpacing / 2, 2, settings.IconSpacing - settings.IconSpacing / 2)
+                Margin = Horizontal ? new Padding(settings.IconSpacing / 2, 1, settings.IconSpacing - settings.IconSpacing / 2, 1) : new Padding(1, settings.IconSpacing / 2, 1, settings.IconSpacing - settings.IconSpacing / 2)
             };
             btn.FlatAppearance.BorderSize = 0;
             btn.FlatAppearance.MouseOverBackColor = light ? Color.FromArgb(225, 233, 244) : Color.FromArgb(62, 67, 77);
