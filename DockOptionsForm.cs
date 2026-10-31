@@ -589,6 +589,50 @@ public sealed class DockOptionsForm : Form
         PackCards(accessRows);
         PackCards(systemRows);
         PackCards(aboutRows);
+
+        // Appearance: Iconos / Barra on top, Efectos / Notas below.
+        // Keep all original settings controls; only their layout changes.
+        var appearanceCards = appearanceRows.Controls.OfType<SettingsCardPanel>().ToArray();
+        if (appearanceCards.Length != 3)
+            throw new InvalidOperationException("Apariencia requiere tres tarjetas de configuración.");
+        var appearanceNotes = new SettingsCardPanel { Name = "AppearanceNotes" };
+        appearanceNotes.Controls.Add(SectionTitle("Notas", "Cómo se representan los iconos."));
+        appearanceNotes.Controls.Add(new Label {
+            Text = "Windows conserva los iconos reales de las aplicaciones.",
+            AutoSize = true, Font = new Font("Segoe UI", 9.5f),
+            Margin = new Padding(4, 12, 0, 9)
+        });
+        appearanceNotes.Controls.Add(new Label {
+            Text = "Lucide usa trazos en las funciones integradas del Dock.",
+            AutoSize = true, Font = new Font("Segoe UI", 9.5f),
+            Margin = new Padding(4, 2, 0, 9)
+        });
+        appearanceNotes.Controls.Add(new Label {
+            Text = "Los cambios se aplican automáticamente o con Aplicar.",
+            AutoSize = true, Font = new Font("Segoe UI", 9.5f),
+            Margin = new Padding(4, 2, 0, 9)
+        });
+        var appearanceDashboard = new Panel {
+            Name = "AppearanceDashboard", BackColor = Color.FromArgb(229, 236, 244),
+            Margin = Padding.Empty
+        };
+        foreach (var card in appearanceCards) appearanceDashboard.Controls.Add(card);
+        appearanceDashboard.Controls.Add(appearanceNotes);
+        appearanceRows.Controls.Add(appearanceDashboard);
+
+        // About: photograph to the left, project text and update button to the right.
+        var aboutTextCard = aboutRows.Controls.OfType<SettingsCardPanel>().Single();
+        aboutTextCard.Controls.Remove(aboutPicture);
+        var aboutPhotoCard = new SettingsCardPanel { Name = "AboutPhotoCard" };
+        aboutPhotoCard.Controls.Add(aboutPicture);
+        var aboutDashboard = new Panel {
+            Name = "AboutDashboard", BackColor = Color.FromArgb(229, 236, 244),
+            Margin = Padding.Empty
+        };
+        aboutDashboard.Controls.Add(aboutPhotoCard);
+        aboutDashboard.Controls.Add(aboutTextCard);
+        aboutRows.Controls.Add(aboutDashboard);
+
         // Four real cards arranged in two columns on desktop-width windows,
         // with a responsive single-column fallback on narrow screens.
         var generalDashboard = new Panel {
@@ -993,6 +1037,79 @@ public sealed class DockOptionsForm : Form
         }
     }
 
+    private static void FitAppearanceDashboard(Panel dashboard, int availableWidth)
+    {
+        dashboard.Width = Math.Max(300, availableWidth - 14);
+        var cards = dashboard.Controls.OfType<SettingsCardPanel>().ToArray();
+        if (cards.Length != 4) return;
+        // Controls are added in order: Iconos, Barra, Efectos, Notas.
+        const int gap = 14;
+        bool columns = dashboard.Width >= 760;
+        int columnWidth = columns ? (dashboard.Width - gap) / 2 : dashboard.Width;
+        foreach (var card in cards)
+        {
+            card.Margin = Padding.Empty;
+            FitCard(card, columnWidth + 22);
+        }
+        if (columns)
+        {
+            int rowOne = Math.Max(cards[0].Height, cards[1].Height);
+            cards[0].Location = new Point(0, 0);
+            cards[1].Location = new Point(columnWidth + gap, 0);
+            cards[2].Location = new Point(0, rowOne + gap);
+            cards[3].Location = new Point(columnWidth + gap, rowOne + gap);
+            dashboard.Height = rowOne + gap +
+                Math.Max(cards[2].Height, cards[3].Height) + 4;
+        }
+        else
+        {
+            int y = 0;
+            foreach (var card in cards)
+            {
+                card.Location = new Point(0, y);
+                y += card.Height + gap;
+            }
+            dashboard.Height = y;
+        }
+    }
+
+    private static void FitAboutDashboard(Panel dashboard, int availableWidth)
+    {
+        dashboard.Width = Math.Max(300, availableWidth - 14);
+        var photoCard = dashboard.Controls.OfType<SettingsCardPanel>()
+            .FirstOrDefault(c => c.Name == "AboutPhotoCard");
+        var textCard = dashboard.Controls.OfType<SettingsCardPanel>()
+            .FirstOrDefault(c => c.Name != "AboutPhotoCard");
+        if (photoCard == null || textCard == null) return;
+        const int gap = 16;
+        bool columns = dashboard.Width >= 720;
+        int photoWidth = columns ? Math.Min(365, dashboard.Width * 40 / 100) : dashboard.Width;
+        int textWidth = columns ? dashboard.Width - photoWidth - gap : dashboard.Width;
+        var picture = photoCard.Controls.OfType<PictureBox>().FirstOrDefault();
+        if (picture != null)
+        {
+            picture.Width = Math.Max(210, photoWidth - photoCard.Padding.Horizontal - 12);
+            picture.Height = (int)Math.Round(picture.Width * 339.0 / 560.0);
+            picture.SizeMode = PictureBoxSizeMode.Zoom;
+        }
+        photoCard.Margin = Padding.Empty;
+        textCard.Margin = Padding.Empty;
+        FitCard(photoCard, photoWidth + 22);
+        FitCard(textCard, textWidth + 22);
+        if (columns)
+        {
+            photoCard.Location = new Point(0, 0);
+            textCard.Location = new Point(photoWidth + gap, 0);
+            dashboard.Height = Math.Max(photoCard.Height, textCard.Height) + 4;
+        }
+        else
+        {
+            photoCard.Location = new Point(0, 0);
+            textCard.Location = new Point(0, photoCard.Height + gap);
+            dashboard.Height = photoCard.Height + gap + textCard.Height + 4;
+        }
+    }
+
     private static void FitRows(FlowLayoutPanel rows)
     {
         var page = rows.Parent;
@@ -1046,8 +1163,15 @@ public sealed class DockOptionsForm : Form
                     if (child is Label rowLabel) rowLabel.MaximumSize = new Size(Math.Max(225, width - 38), 0);
         }
         foreach (SettingsCardPanel card in rows.Controls.OfType<SettingsCardPanel>()) FitCard(card, width);
-        foreach (Panel dashboard in rows.Controls.OfType<Panel>().Where(p => p.Name == "GeneralDashboard"))
-            FitGeneralDashboard(dashboard, width - 5);
+        foreach (Panel dashboard in rows.Controls.OfType<Panel>())
+        {
+            switch (dashboard.Name)
+            {
+                case "GeneralDashboard": FitGeneralDashboard(dashboard, width - 5); break;
+                case "AppearanceDashboard": FitAppearanceDashboard(dashboard, width - 5); break;
+                case "AboutDashboard": FitAboutDashboard(dashboard, width - 5); break;
+            }
+        }
         rows.PerformLayout();
         rows.Height = rows.Controls.Cast<Control>().Sum(x => x.Height + x.Margin.Vertical) + rows.Padding.Vertical + 10;
     }
