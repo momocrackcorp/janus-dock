@@ -175,7 +175,8 @@ public class Dock : Form, IMessageFilter
         settings.IconSize = Math.Clamp(settings.IconSize, 16, 96);
         settings.IconSpacing = Math.Clamp(settings.IconSpacing, 0, 24);
         settings.ZoomPercent = Math.Clamp(settings.ZoomPercent, 150, 340);
-        if (settings.ShowNames && settings.NameMode == "Tooltip") settings.NameMode = "Written";
+        // Migrate obsolete permanent-caption preference to tooltip-only labels.
+        if (settings.NameMode == "Written" || settings.ShowNames) { settings.NameMode = "Tooltip"; settings.ShowNames = false; }
         if (settings.DockMode != "Flotante") settings.DockMode = "Acoplada";
         settings.CriticalPercent = Math.Clamp(settings.CriticalPercent, 70, 99);
         settings.DiskColors ??= new(StringComparer.OrdinalIgnoreCase);
