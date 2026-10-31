@@ -134,7 +134,7 @@ public class Dock : Form, IMessageFilter
     readonly FlowLayoutPanel panel = new()
     {
         Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown,
-        WrapContents = false, AutoScroll = true, Padding = new Padding(5)
+        WrapContents = false, AutoScroll = true, Padding = new Padding(0)
     };
     readonly FlowLayoutPanel energyPanel = new()
     {
@@ -503,7 +503,8 @@ public class Dock : Form, IMessageFilter
             control.Dispose();
         }
         // Use a fixed, tight icon cell. Hover effects paint inside the cell and never reserve extra space.
-        int width = Math.Max(24, settings.IconSize + 2);
+        // Keep actual center-to-center spacing close to Windows taskbar even at 125–150% DPI.
+        int width = Horizontal ? Math.Max(22, (int)Math.Round(settings.IconSize * 0.78)) : Math.Max(24, settings.Width - 18);
         int energySlot = Math.Max(settings.IconSize + 12, (int)Math.Ceiling(settings.IconSize * (settings.HoverAnimation ? 1.8 : 1.0)) + 8);
         energyPanel.Width = Horizontal ? (energySlot + 4) * 2 + 12 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 185 : 0) : Math.Max(55, settings.Width - 10);
         energyPanel.Height = Horizontal ? Math.Max(48, settings.IconSize + 20) : (energySlot + 4) * 2 + 12 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 184 : 0);
