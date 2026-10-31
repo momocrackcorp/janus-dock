@@ -8,6 +8,7 @@ namespace JanusDock;
 internal sealed class ModernToggle : UserControl
 {
     readonly CheckBox model;
+    public bool RightAligned { get; set; }
     public ModernToggle(CheckBox original)
     {
         model = original;
@@ -38,7 +39,8 @@ internal sealed class ModernToggle : UserControl
         g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
         bool on = model.Checked;
         Color accent = Color.FromArgb(18, 165, 185);
-        int x = 5, y = (Height - 22) / 2;
+        int x = RightAligned ? Math.Max(5, Width - 52) : 5;
+        int y = (Height - 22) / 2;
         using var track = new SolidBrush(on ? accent : Color.FromArgb(155, 163, 174));
         using var knob = new SolidBrush(Color.White);
         using var shape = new System.Drawing.Drawing2D.GraphicsPath();
@@ -47,7 +49,10 @@ internal sealed class ModernToggle : UserControl
         shape.CloseFigure();
         g.FillPath(track, shape);
         g.FillEllipse(knob, on ? x + 25 : x + 3, y + 3, 16, 16);
-        TextRenderer.DrawText(g, model.Text, Font, new Rectangle(59, 0, Width - 63, Height),
+        var labelBounds = RightAligned
+            ? new Rectangle(10, 0, Math.Max(20, Width - 80), Height)
+            : new Rectangle(59, 0, Math.Max(20, Width - 63), Height);
+        TextRenderer.DrawText(g, model.Text, Font, labelBounds,
             ForeColor, TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine |
             TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
     }
