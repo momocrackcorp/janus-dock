@@ -373,6 +373,25 @@ public class Dock : Form, IMessageFilter
         if (path == "janus:documents") return ShellFolderIcon(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments));
         if (path == "janus:settings") return LucideDockIcons.Load(path, light)!; // Consistent gear fallback, not generic application icon.
         if (path == "janus:downloads") return ShellFolderIcon(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"));
+        // For known installed apps (Office and browsers), prefer their actual
+        // executable icon. Some Start Menu links point to a generic launcher,
+        // causing the same placeholder icon to repeat in the Windows style.
+        var knownApp = CommonApps.Catalog.FirstOrDefault(app =>
+            app.Hints.Any(h => Path.GetFileNameWithoutExtension(path).Contains(h, StringComparison.OrdinalIgnoreCase)) ||
+            Path.GetFileName(path).Equals(app.Exe, StringComparison.OrdinalIgnoreCase));
+        if (knownApp != null)
+        {
+            string? installed = CommonApps.LocateExecutable(knownApp);
+            if (installed != null)
+            {
+                try
+                {
+                    using var realIcon = Icon.ExtractAssociatedIcon(installed);
+                    if (realIcon != null) return realIcon.ToBitmap();
+                }
+                catch { }
+            }
+        }
         // Resolve the underlying target/icon of .lnk rather than asking the shell for
         // the shortcut composite (which contains the arrow overlay).
         if (Path.GetExtension(path).Equals(".lnk", StringComparison.OrdinalIgnoreCase))
