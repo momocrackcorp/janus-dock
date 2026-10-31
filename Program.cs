@@ -141,7 +141,7 @@ public class Dock : Form, IMessageFilter
         Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown,
         WrapContents = false, AutoScroll = true, Padding = new Padding(0)
     };
-    readonly FlowLayoutPanel energyPanel = new()
+    readonly RoundedEnergyPanel energyPanel = new()
     {
         FlowDirection = FlowDirection.TopDown, WrapContents = false,
         AutoScroll = false, Padding = new Padding(4), Visible = false
@@ -306,6 +306,9 @@ public class Dock : Form, IMessageFilter
         footer.BackColor = BackColor;
         panel.BackColor = BackColor;
         energyPanel.BackColor = BackColor;
+        energyPanel.CapsuleColor = BackColor.GetBrightness() > .54f ? ControlPaint.Dark(BackColor, .08f) : ControlPaint.Light(BackColor, .16f);
+        energyPanel.CapsuleBorder = Color.FromArgb(85, ForeColor);
+        energyPanel.Invalidate();
         grip.BackColor = light ? Color.FromArgb(210, 216, 226) : Color.FromArgb(66, 71, 82);
         foreach (var button in new[] { add, options })
         {
@@ -416,7 +419,7 @@ public class Dock : Form, IMessageFilter
             "janus:restart" => "\uE72C",  // Refresh
             _ => "\uE7E8"                 // Power
         };
-        Color ink = action switch
+        Color ink = settings.IconStyle == "Lucide" ? Color.FromArgb(23, 42, 51) : action switch
         {
             "janus:lock" => Color.FromArgb(225, 175, 45),
             "janus:restart" => Color.FromArgb(42, 183, 136),
@@ -574,8 +577,9 @@ public class Dock : Form, IMessageFilter
         // Keep actual center-to-center spacing close to Windows taskbar even at 125–150% DPI.
         int width = Horizontal ? Math.Max(22, (int)Math.Round(settings.IconSize * 0.78)) : Math.Max(24, settings.Width - 18);
         int energySlot = Math.Max(24, settings.IconSize + 2);
-        energyPanel.Width = Horizontal ? (energySlot + 4) * (settings.ShowLock ? 3 : 2) + 12 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 185 : 0) : Math.Max(55, settings.Width - 10);
-        energyPanel.Height = Horizontal ? Math.Max(48, settings.IconSize + 20) : (energySlot + 4) * 2 + 12 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 184 : 0);
+        int powerCount = (settings.ShowLock ? 1 : 0) + (settings.ShowShutdown ? 1 : 0) + (settings.ShowRestart ? 1 : 0);
+        energyPanel.Width = Horizontal ? Math.Max(1, powerCount) * (energySlot + settings.IconSpacing) + 24 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 185 : 0) : Math.Max(55, settings.Width - 10);
+        energyPanel.Height = Horizontal ? Math.Max(48, settings.HorizontalHeight - 4) : Math.Max(1, powerCount) * (energySlot + settings.IconSpacing) + 24 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 184 : 0);
         foreach (var item in settings.Items.ToList())
         {
             bool isEnergy = item.Path is "janus:lock" or "janus:shutdown" or "janus:restart";
@@ -680,7 +684,7 @@ public class Dock : Form, IMessageFilter
                 btn.ImageAlign = ContentAlignment.MiddleCenter;
                 btn.Width = Horizontal ? width : Math.Max(24, settings.Width - 18);
                 btn.Height = settings.IconSize + (settings.NameMode == "Written" ? 40 : 12);
-                btn.Margin = Horizontal ? new Padding(settings.IconSpacing / 2, Math.Max(0, (energyPanel.Height - btn.Height) / 2), settings.IconSpacing - settings.IconSpacing / 2, 0) : new Padding(1, settings.IconSpacing / 2, 1, settings.IconSpacing - settings.IconSpacing / 2);
+                btn.Margin = Horizontal ? new Padding(settings.IconSpacing / 2 + 5, Math.Max(0, (energyPanel.Height - btn.Height) / 2), settings.IconSpacing - settings.IconSpacing / 2, 0) : new Padding(1, settings.IconSpacing / 2 + 5, 1, settings.IconSpacing - settings.IconSpacing / 2);
             }
             destination.Controls.Add(btn);
         }
