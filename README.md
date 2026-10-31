@@ -86,6 +86,16 @@ dotnet build JanusDock.csproj -c Release
 
 Las compilaciones automatizadas pueden consultarse en [GitHub Actions](https://github.com/momocrackcorp/janus-dock/actions).
 
+## Créditos y atribuciones de iconos
+
+Los siguientes iconos se atribuyen a sus autores originales en **[Flaticon](https://www.flaticon.com/)**:
+
+- **Bloquear:** [Pixel perfect](https://www.flaticon.com/authors/pixel-perfect) — Flaticon.
+- **Reiniciar / Reset:** [Roundicons](https://www.flaticon.com/authors/roundicons) — Flaticon.
+- **Apagar / Encendido:** [Uniconlabs](https://www.flaticon.com/authors/uniconlabs) — Flaticon.
+
+Los derechos de cada icono corresponden a sus respectivos autores. Su inclusión en JANUS Dock no implica autoría por parte de Momocrackcorp.
+
 ## Versiones y problemas
 
 - [Versiones y descargas](https://github.com/momocrackcorp/janus-dock/releases)
