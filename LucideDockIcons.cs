@@ -56,7 +56,7 @@ internal static class LucideDockIcons
             "folder" => Color.FromArgb(241, 191, 80),
             "monitor" => Color.FromArgb(159, 196, 241),
             "download" => Color.FromArgb(110, 183, 247),
-            "settings" => Color.FromArgb(203, 211, 224),
+            "settings" => light ? Color.FromArgb(42, 78, 109) : Color.FromArgb(203, 211, 224),
             "network" => Color.FromArgb(242, 199, 79),
             "browser" => Color.FromArgb(93, 188, 241),
             "word" => Color.FromArgb(66, 145, 232),
