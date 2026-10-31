@@ -6,7 +6,7 @@
 
 **Windows 10 / 11 · x64 · C# / .NET 8 · Código abierto**
 
-[![Descargar versión 6.2](https://img.shields.io/badge/Descargar-v6.2.0-2563eb?style=for-the-badge&logo=github)](https://github.com/momocrackcorp/janus-dock/releases/tag/v6.2.0)
+[![Descargar versión 6.3.97](https://img.shields.io/badge/Descargar-v6.3.97-2563eb?style=for-the-badge&logo=github)](https://github.com/momocrackcorp/janus-dock/releases/tag/v6.3.97)
 [![Última compilación](https://github.com/momocrackcorp/janus-dock/actions/workflows/build-janus-dock.yml/badge.svg)](https://github.com/momocrackcorp/janus-dock/actions/workflows/build-janus-dock.yml)
 [![Licencia](https://img.shields.io/github/license/momocrackcorp/janus-dock?style=flat-square)](LICENSE)
 
@@ -18,14 +18,14 @@
 
 ## Descargar
 
-**Recomendado: instalador autónomo para Windows x64.** Instala JANUS Dock en una carpeta fija, crea el acceso del menú Inicio y permite activar el arranque con Windows. También puedes usar la edición portátil.
+**Recomendado: instalador autónomo para Windows x64.** Si ya instalaste la versión anterior, cierra JANUS Dock y ejecuta el nuevo instalador: actualiza la instalación en la misma carpeta y conserva la configuración del usuario. Instala JANUS Dock en una carpeta fija, crea el acceso del menú Inicio y permite activar el arranque con Windows. También puedes usar la edición portátil.
 
 
-**[Ir a la última versión pública — v6.2.0](https://github.com/momocrackcorp/janus-dock/releases/tag/v6.2.0)**
+**[Ir a la última versión pública — v6.3.97](https://github.com/momocrackcorp/janus-dock/releases/tag/v6.3.97)**
 
 | Archivo | ¿Cuál elegir? |
 | --- | --- |
-| **JANUS-Dock-Setup-6.2-Autonomo.exe** | Instalador recomendado: incorpora .NET y permite el inicio automático con Windows. | 
+| **JANUS-Dock-Setup-6.3.97-Autonomo.exe** | Instalador recomendado: incorpora .NET y permite el inicio automático con Windows. | 
 | **JANUS-Dock-Autonomo-Windows-x64.zip** | Recomendado. Incluye el entorno .NET; no requiere instalación adicional de .NET. |
 | **JANUS-Dock-Liviano-Windows-x64.zip** | Descarga más pequeña. Requiere **.NET 8 Desktop Runtime x64** instalado. |
 | **SHA256SUMS.txt** | Permite comprobar la integridad de los ZIP. |
@@ -44,16 +44,16 @@
 - **Accesos comunes:** localización de Microsoft Edge, Chrome, Brave, Firefox, Word, Excel, PowerPoint, Outlook y OneNote cuando estén instalados.
 - **Iconos:** iconos nativos de Windows o estilo vectorial **Lucide** coloreado para funciones compatibles.
 - **Organización:** ordena accesos, agrega separadores y ajusta la apariencia del Dock.
-- **Animación:** ampliación de iconos al interactuar con el puntero.
-- **Unidades de disco:** indicadores visuales de capacidad.
-- **Tráfico de red:** muestra descarga y subida con **promedio móvil de los últimos 60 segundos**, actualizado cada segundo.
-- **CPU y RAM:** porcentaje de CPU y porcentaje/cantidad utilizada de memoria física, actualizados cada segundo.
+- **Animación:** efecto lupa para accesos y discos, y **Ctrl + rueda** sobre el Dock para ajustar el tamaño de iconos (16–96 px).
+- **Unidades de disco:** iconos tipo Windows/Lucide con barra de ocupación, letra de unidad destacada, elección de colores y particiones; clic para abrir la unidad en el Explorador y detalles al pasar el mouse.
+- **Tráfico de red:** subida sobre descarga en un bloque compacto, con **promedio móvil de los últimos 60 segundos**, actualizado cada segundo.
+- **CPU y RAM:** indicadores independientes, porcentajes sin textos redundantes, RAM total dentro del icono y detalle de uso al pasar el mouse.
 - **Energía:** botones de apagar y reiniciar con confirmación.
 - **Idioma:** español de Chile, inglés y portugués de Brasil (traducción inicial en desarrollo).\n- **Inicio automático:** configurable desde Opciones y desde el instalador.\n- **Apariencia:** tamaño de iconos hasta 96 px, selectores modernos y aplicación de ajustes desde Opciones.\n- **Preferencias locales:** se guardan en `%APPDATA%\JANUS\Dock\config.json`.
 
 > Algunas funciones y apariencias pueden variar según la configuración de Windows, la escala de pantalla y los programas instalados.
 
-## Actualizaciones\n\nConsulta [Releases](https://github.com/momocrackcorp/janus-dock/releases) y selecciona versiones estables para uso habitual. El botón de actualizaciones de la aplicación abre GitHub; la descarga e instalación directa desde Opciones aún no está implementada.\n\n## Cómo agregar accesos
+## Actualizaciones\n\nConsulta [Releases](https://github.com/momocrackcorp/janus-dock/releases) y selecciona versiones estables para uso habitual. Desde **Acerca de → Buscar actualizaciones en GitHub** puedes abrir la última versión estable y descargar el instalador para actualizar. La descarga e instalación automática desde la aplicación aún no está implementada.\n\n## Cómo agregar accesos
 
 Haz clic derecho sobre un espacio libre del Dock y selecciona **Agregar**.
 
