@@ -22,11 +22,7 @@ public sealed class RoundedEnergyPanel : FlowLayoutPanel
     {
         using var background = new SolidBrush(BackColor);
         e.Graphics.FillRectangle(background, ClientRectangle);
-    }
-
-    protected override void OnPaint(PaintEventArgs e)
-    {
-        base.OnPaint(e);
+        if (Width < 12 || Height < 12) return;
         if (Width < 12 || Height < 12) return;
         e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
         var rect = new Rectangle(2, 3, Width - 5, Height - 7);
