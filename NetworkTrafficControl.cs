@@ -104,6 +104,41 @@ public sealed class NetworkTrafficControl : Control
         base.OnPaint(e);
         var g = e.Graphics;
         g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        if (Horizontal)
+        {
+            // Independent monitor, always immediately LEFT of the end capsule.
+            // The dark rectangular surface is intentionally NOT a part of it.
+            int pad = 2, corner = Math.Min(11, Height / 4);
+            using var panelShape = new System.Drawing.Drawing2D.GraphicsPath();
+            panelShape.AddArc(pad, pad, corner * 2, corner * 2, 180, 90);
+            panelShape.AddArc(Width - pad - corner * 2, pad, corner * 2, corner * 2, 270, 90);
+            panelShape.AddArc(Width - pad - corner * 2, Height - pad - corner * 2, corner * 2, corner * 2, 0, 90);
+            panelShape.AddArc(pad, Height - pad - corner * 2, corner * 2, corner * 2, 90, 90);
+            panelShape.CloseFigure();
+            using var surface = new SolidBrush(Color.FromArgb(26, 32, 45));
+            g.FillPath(surface, panelShape);
+            // Amber stepped bandwidth glyph, scaled to the dock height.
+            int barBottom = Height - 8;
+            int maxBar = Math.Max(15, Height - 16);
+            for (int i = 0; i < 5; i++)
+            {
+                int bh = (i + 1) * maxBar / 5;
+                var color = Color.FromArgb(255, Math.Min(245, 174 + i * 13), Math.Max(88, 156 - i * 8));
+                using var brush = new SolidBrush(color);
+                g.FillRectangle(brush, 7 + i * 7, barBottom - bh, 5, bh);
+            }
+            using var networkFont = new Font("Segoe UI", 12.2f, FontStyle.Bold, GraphicsUnit.Point);
+            var flag = TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine |
+                       TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding;
+            int ySplit = Height / 2;
+            TextRenderer.DrawText(g, "↑ " + Format(up), networkFont,
+                new Rectangle(45, 2, Math.Max(28, Width - 51), Math.Max(16, ySplit - 2)),
+                Color.FromArgb(39, 202, 233), flag);
+            TextRenderer.DrawText(g, "↓ " + Format(down), networkFont,
+                new Rectangle(45, ySplit, Math.Max(28, Width - 51), Math.Max(16, Height - ySplit - 2)),
+                Color.FromArgb(75, 233, 134), flag);
+            return;
+        }
         var downColor = Color.FromArgb(63, 215, 138);
         var upColor = Color.FromArgb(105, 177, 245);
         var labelColor = ForeColor;

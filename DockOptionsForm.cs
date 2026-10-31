@@ -21,6 +21,11 @@ public sealed class DockOptionsForm : Form
     public bool ShowDigitalClock { get; private set; }
     public bool ShowClockDate { get; private set; } = true;
     public bool ShowClockSticker { get; private set; } = true;
+    public string ClockFormat { get; private set; } = "12";
+    public bool ShowClockAmPm { get; private set; } = true;
+    public bool ShowTerminalButton { get; private set; }
+    public string TerminalMode { get; private set; } = "Terminal";
+    public string UsageStyle { get; private set; } = "Circular";
     public string UsageLayout { get; private set; } = "Vertical";
     public bool NetworkAtEnd { get; private set; }
     public bool StartWithWindows { get; private set; }
@@ -394,18 +399,39 @@ public sealed class DockOptionsForm : Form
         usageLayout.SelectedIndex = config.UsageLayout == "Horizontal" ? 1 : 0;
         generalRows.Controls.Add(FieldRow(
             new Label { Text = "Distribución CPU / RAM:", AutoSize = true }, usageLayout));
+        var usageStyle = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 185 };
+        usageStyle.Items.AddRange(new object[] { "Circular", "Clásico" });
+        usageStyle.SelectedIndex = config.UsageStyle == "Clásico" ? 1 : 0;
+        generalRows.Controls.Add(FieldRow(new Label { Text = "Diseño CPU / RAM:", AutoSize = true }, usageStyle));
+        var terminalEnabled = new CheckBox { Text = "Mostrar botón Terminal / CMD", AutoSize = true, Checked = config.ShowTerminalButton };
+        var terminalChoice = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 185 };
+        terminalChoice.Items.AddRange(new object[] { "Terminal", "CMD" });
+        terminalChoice.SelectedIndex = config.TerminalMode == "CMD" ? 1 : 0;
+        terminalEnabled.CheckedChanged += (_, _) => terminalChoice.Enabled = terminalEnabled.Checked;
+        terminalChoice.Enabled = terminalEnabled.Checked;
+        generalRows.Controls.Add(terminalEnabled);
+        generalRows.Controls.Add(FieldRow(new Label { Text = "Abrir con:", AutoSize = true }, terminalChoice));
         var networkAtEnd = new CheckBox { Text = "Anclar tráfico al costado de los botones de energía", AutoSize = true, Checked = config.NetworkAtEnd };
         generalRows.Controls.Add(networkAtEnd);
-        var digitalClock = new CheckBox { Text = "Mostrar reloj digital LCD (12 h, AM/PM)", AutoSize = true, Checked = config.ShowDigitalClock };
+        var digitalClock = new CheckBox { Text = "Mostrar reloj digital LCD", AutoSize = true, Checked = config.ShowDigitalClock };
         generalRows.Controls.Add(digitalClock);
+        var clockFormat = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 185 };
+        clockFormat.Items.AddRange(new object[] { "12 horas", "24 horas" });
+        clockFormat.SelectedIndex = config.ClockFormat == "24" ? 1 : 0;
+        generalRows.Controls.Add(FieldRow(new Label { Text = "Formato del reloj:", AutoSize = true }, clockFormat));
+        var clockAmPm = new CheckBox { Text = "Mostrar AM/PM (solo 12 h)", AutoSize = true, Checked = config.ShowClockAmPm };
+        generalRows.Controls.Add(clockAmPm);
         var clockDate = new CheckBox { Text = "Mostrar fecha bajo el reloj (dd-MM)", AutoSize = true, Checked = config.ShowClockDate };
         var clockSticker = new CheckBox { Text = "Mostrar calcomanía CASIO blanca", AutoSize = true, Checked = config.ShowClockSticker };
         void UpdateClockDependents()
         {
             clockDate.Enabled = digitalClock.Checked;
             clockSticker.Enabled = digitalClock.Checked;
+            clockFormat.Enabled = digitalClock.Checked;
+            clockAmPm.Enabled = digitalClock.Checked && clockFormat.SelectedIndex == 0;
         }
         digitalClock.CheckedChanged += (_, _) => UpdateClockDependents();
+        clockFormat.SelectedIndexChanged += (_, _) => UpdateClockDependents();
         UpdateClockDependents();
         generalRows.Controls.Add(clockDate);
         generalRows.Controls.Add(clockSticker);
@@ -680,6 +706,11 @@ public sealed class DockOptionsForm : Form
             ShowDigitalClock = digitalClock.Checked;
             ShowClockDate = clockDate.Checked;
             ShowClockSticker = clockSticker.Checked;
+            ClockFormat = clockFormat.SelectedIndex == 1 ? "24" : "12";
+            ShowClockAmPm = clockAmPm.Checked;
+            ShowTerminalButton = terminalEnabled.Checked;
+            TerminalMode = terminalChoice.SelectedIndex == 1 ? "CMD" : "Terminal";
+            UsageStyle = usageStyle.SelectedIndex == 1 ? "Clásico" : "Circular";
             UsageLayout = usageLayout.SelectedIndex == 1 ? "Horizontal" : "Vertical";
             ShowSystemUsage = ShowCpu || ShowRam;
             NetworkAtEnd = networkAtEnd.Checked;

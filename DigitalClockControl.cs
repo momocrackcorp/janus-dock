@@ -18,6 +18,8 @@ public sealed class DigitalClockControl : Control
     public bool HorizontalBar { get; }
     public bool ShowDate { get; set; } = true;
     public bool ShowSticker { get; set; } = true;
+    public bool Hour24 { get; set; }
+    public bool ShowAmPm { get; set; } = true;
 
     public DigitalClockControl(bool horizontalBar)
     {
@@ -45,7 +47,8 @@ public sealed class DigitalClockControl : Control
     void RefreshTime()
     {
         AccessibleName = "Reloj digital";
-        AccessibleDescription = DateTime.Now.ToString("hh:mm tt, dd-MM", CultureInfo.InvariantCulture);
+        AccessibleDescription = DateTime.Now.ToString(Hour24 ? "HH:mm" : ShowAmPm ? "hh:mm tt" : "hh:mm", CultureInfo.InvariantCulture)
+            + (ShowDate ? DateTime.Now.ToString(", dd-MM", CultureInfo.InvariantCulture) : "");
         Invalidate();
     }
 
@@ -121,15 +124,16 @@ public sealed class DigitalClockControl : Control
         }
 
         DateTime now = DateTime.Now;
-        string digits = now.ToString("hhmm", CultureInfo.InvariantCulture);
-        string suffix = now.ToString("tt", CultureInfo.InvariantCulture);
+        string digits = now.ToString(Hour24 ? "HHmm" : "hhmm", CultureInfo.InvariantCulture);
+        string suffix = !Hour24 && ShowAmPm ? now.ToString("tt", CultureInfo.InvariantCulture) : "";
         float[] digitX = { 52, 81, 122, 151 };
         for (int i = 0; i < 4; i++) DrawDigit(g, digits[i], digitX[i], 25, 26, 33);
         using var ink = new SolidBrush(Color.FromArgb(24, 29, 25));
         g.FillEllipse(ink, 114, 34, 3.8f, 3.8f);
         g.FillEllipse(ink, 114, 48, 3.8f, 3.8f);
-        using (var suffixFont = new Font("Segoe UI", 17, FontStyle.Bold, GraphicsUnit.Pixel))
-            g.DrawString(suffix, suffixFont, ink, 185, 39);
+        if (suffix.Length > 0)
+            using (var suffixFont = new Font("Segoe UI", 17, FontStyle.Bold, GraphicsUnit.Pixel))
+                g.DrawString(suffix, suffixFont, ink, 185, 39);
 
         if (ShowDate)
         {

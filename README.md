@@ -48,7 +48,10 @@ Para actualizar desde 6.3.97 o una versión anterior, **cierra JANUS Dock y ejec
 - **Accesos:** programas, archivos, carpetas, unidades, separadores y accesos habituales de Windows, navegadores y Office. Admite arrastrar archivos.
 - **Organización:** cambiar el orden de los accesos y modificar el tamaño de iconos entre **16 y 96 px**; también con **Ctrl + rueda** sobre el Dock.
 - **Discos:** iconos Windows o Lucide, colores configurables, ocupación y detalle de capacidad en el tooltip.
-- **Indicadores:** tráfico de red, CPU y RAM, con actualización periódica y presentación compacta.
+- **Indicadores:** tráfico de red con tarjeta oscura independiente de la cápsula, CPU/RAM con medidores circulares o vista clásica y actualización cada segundo. La red queda a la izquierda del módulo negro situado en el extremo derecho.
+- **Terminal/CMD opcional:** acceso directo configurable a Windows Terminal o Símbolo del sistema, con alternativa a CMD si Windows Terminal no está instalado.
+- **Reloj configurable:** formato de 12 o 24 horas y control independiente de AM/PM en modo 12 horas. La fecha y calcomanía siguen dependiendo del interruptor principal del reloj.
+- **Round corner:** cápsula negra que sobresale dos píxeles arriba y abajo del grosor configurado de la barra horizontal, con el resto del Dock de su color habitual.
 - **Reloj LCD opcional:** reloj digital estilo retro con hora real en formato de 12 horas (hh:mm AM/PM), integrado en la cápsula negra de los botones de energía. **Fecha dd-MM** en relieve bajo el reloj y **calcomanía CASIO blanca** (convertida desde el archivo proporcionado, sin fondo) opcionales e independientes. Ambas opciones solo se habilitan si el reloj está activo, en **General → Información del sistema**. El reloj también puede ocultarse con clic derecho.
 - **Personalización:** barra según los colores de Windows o con color propio; selectores, interruptores y tarjetas modernos.
 - **Idiomas:** español de Chile, inglés y portugués de Brasil (algunas traducciones siguen en desarrollo).

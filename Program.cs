@@ -39,6 +39,11 @@ public class DockSettings
     public bool ShowDigitalClock { get; set; } = false;
     public bool ShowClockDate { get; set; } = true;
     public bool ShowClockSticker { get; set; } = true;
+    public string ClockFormat { get; set; } = "12";
+    public bool ShowClockAmPm { get; set; } = true;
+    public bool ShowTerminalButton { get; set; } = false;
+    public string TerminalMode { get; set; } = "Terminal";
+    public string UsageStyle { get; set; } = "Circular";
     public string UsageLayout { get; set; } = "Vertical";
     public bool NetworkAtEnd { get; set; } = false;
     public int DiskColorArgb { get; set; } = Color.FromArgb(48, 130, 222).ToArgb();
@@ -191,6 +196,9 @@ public class Dock : Form, IMessageFilter
         settings.DiskColors ??= new(StringComparer.OrdinalIgnoreCase);
         settings.HiddenDiskLetters ??= new();
         settings.UsageLayout = settings.UsageLayout == "Horizontal" ? "Horizontal" : "Vertical";
+        settings.ClockFormat = settings.ClockFormat == "24" ? "24" : "12";
+        settings.TerminalMode = settings.TerminalMode == "CMD" ? "CMD" : "Terminal";
+        settings.UsageStyle = settings.UsageStyle == "Clásico" ? "Clásico" : "Circular";
         // Migrate old disk widget into the reorderable item list once.
         if (settings.ShowDiskWidget && !settings.Items.Any(x => x.IsDiskWidget))
             settings.Items.Insert(0, new DockItem { Name = "Discos", IsDiskWidget = true });
@@ -622,7 +630,8 @@ public class Dock : Form, IMessageFilter
                 ? 16 + powerCount * (width + settings.IconSpacing) + 8 + embeddedClockWidth
                 : Math.Max(1, powerCount) * (energySlot + settings.IconSpacing) + 24
             : settings.Width;
-        energyPanel.Height = Horizontal ? settings.HorizontalHeight : Math.Max(1, powerCount) * (energySlot + settings.IconSpacing) + 18;
+        energyPanel.Height = Horizontal ? settings.HorizontalHeight + (settings.ShowDigitalClock ? 4 : 0)
+                                        : Math.Max(1, powerCount) * (energySlot + settings.IconSpacing) + 18;
         // Reflect clock activation immediately, even when AppBar geometry
         // remains unchanged and SetOrientation() is not called.
         energyPanel.Padding = Horizontal
@@ -744,17 +753,21 @@ public class Dock : Form, IMessageFilter
         {
             // The display direction is independent of the dock's position.
             // On narrow vertical docks, stack the readings to avoid clipping.
-            bool sideBySide = settings.UsageLayout == "Horizontal" && settings.ShowCpu && settings.ShowRam;
+            bool circle = settings.UsageStyle == "Circular";
+            bool sideBySide = (circle ? Horizontal : settings.UsageLayout == "Horizontal")
+                && settings.ShowCpu && settings.ShowRam;
             int usageWidth = Horizontal
-                ? (sideBySide ? 160 : Math.Max(170, Math.Min(245, settings.IconSize * 5 + 25)))
+                ? circle ? (settings.ShowCpu && settings.ShowRam ? 140 : 74)
+                         : sideBySide ? 160 : Math.Max(170, Math.Min(245, settings.IconSize * 5 + 25))
                 : Math.Max(56, settings.Width - 14);
-            bool showSideBySide = sideBySide && usageWidth >= 154;
-            var usage = new SystemUsageControl(Horizontal, settings.ShowCpu, settings.ShowRam, showSideBySide)
+            bool showSideBySide = sideBySide && (circle || usageWidth >= 154);
+            var usage = new SystemUsageControl(Horizontal, settings.ShowCpu, settings.ShowRam,
+                showSideBySide, settings.UsageStyle)
             {
                 Width = usageWidth,
-                Height = Horizontal
-                    ? Math.Max(36, Math.Min(settings.HorizontalHeight - 8, 68))
-                    : showSideBySide ? 44 : settings.ShowCpu && settings.ShowRam ? 148 : 82,
+                Height = Horizontal ? Math.Max(36, settings.HorizontalHeight - (circle ? 4 : 8))
+                    : circle ? (settings.ShowCpu && settings.ShowRam ? 136 : 72)
+                             : showSideBySide ? 44 : settings.ShowCpu && settings.ShowRam ? 148 : 82,
                 BackColor = BackColor,
                 ForeColor = ForeColor
             };
@@ -782,11 +795,52 @@ public class Dock : Form, IMessageFilter
             usage.ContextMenuStrip = usageMenu;
             panel.Controls.Add(usage);
         }
+        if (settings.ShowTerminalButton)
+        {
+            var terminalButton = new Button
+            {
+                Text = ">_",
+                Width = Horizontal ? 40 : Math.Max(36, settings.Width - 18),
+                Height = 38,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(39, 48, 66),
+                ForeColor = Color.FromArgb(195, 213, 231),
+                Font = new Font("Consolas", 13, FontStyle.Bold),
+                Margin = Horizontal
+                    ? new Padding(4, Math.Max(0, (settings.HorizontalHeight - 38) / 2), 6, 0)
+                    : new Padding(4, 3, 4, 3),
+                AccessibleName = settings.TerminalMode == "CMD" ? "Abrir CMD" : "Abrir Terminal"
+            };
+            terminalButton.FlatAppearance.BorderColor = Color.FromArgb(72, 86, 109);
+            var terminalTip = new ToolTip();
+            terminalTip.SetToolTip(terminalButton,
+                settings.TerminalMode == "CMD" ? "Abrir Símbolo del sistema" : "Abrir Windows Terminal");
+            terminalButton.Click += (_, _) =>
+            {
+                string target = settings.TerminalMode == "CMD" ? "cmd.exe" : "wt.exe";
+                try { Process.Start(new ProcessStartInfo(target) { UseShellExecute = true }); }
+                catch (Exception ex)
+                {
+                    if (target == "cmd.exe")
+                        MessageBox.Show(ex.Message, "JANUS Dock", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    else
+                    {
+                        try { Process.Start(new ProcessStartInfo("cmd.exe") { UseShellExecute = true }); }
+                        catch (Exception fallback)
+                        {
+                            MessageBox.Show(fallback.Message, "JANUS Dock", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        }
+                    }
+                }
+            };
+            terminalButton.Disposed += (_, _) => terminalTip.Dispose();
+            panel.Controls.Add(terminalButton);
+        }
         if (settings.ShowNetworkTraffic)
         {
             var network = new NetworkTrafficControl(Horizontal)
             {
-                Width = Horizontal ? 170 : Math.Max(65, settings.Width - 14),
+                Width = Horizontal ? 190 : Math.Max(65, settings.Width - 14),
                 BackColor = BackColor,
                 ForeColor = ForeColor
             };
@@ -809,8 +863,10 @@ public class Dock : Form, IMessageFilter
             {
                 ShowDate = settings.ShowClockDate,
                 ShowSticker = settings.ShowClockSticker,
+                Hour24 = settings.ClockFormat == "24",
+                ShowAmPm = settings.ShowClockAmPm,
                 Width = Horizontal ? embeddedClockWidth : settings.Width,
-                Height = Horizontal ? settings.HorizontalHeight : 126,
+                Height = Horizontal ? settings.HorizontalHeight + 4 : 126,
                 Margin = Horizontal ? new Padding(8, 0, 0, 0) : Padding.Empty,
                 BackColor = Horizontal ? energyPanel.CapsuleColor : BackColor
             };
@@ -832,7 +888,7 @@ public class Dock : Form, IMessageFilter
         clockArea.Visible = settings.ShowDigitalClock && !Horizontal;
         energyPanel.Visible = energyPanel.Controls.Count > 0;
         networkArea.Visible = networkArea.Controls.Count > 0;
-        networkArea.Width = Horizontal ? 176 : settings.Width;
+        networkArea.Width = Horizontal ? 194 : settings.Width;
         networkArea.Height = Horizontal ? settings.HorizontalHeight : 184;
         // Keep the original, independent rounded capsule at the screen edge.
         // Network occupies the adjacent strip, never the capsule itself.
@@ -845,6 +901,7 @@ public class Dock : Form, IMessageFilter
         panel.ResumeLayout();
         AlignFooter();
         if (IsHandleCreated && !resizeActive) Position();
+        else if (IsHandleCreated) UpdateRoundCornerRegion();
     }
     ContextMenuStrip MakeDockMenu()
     {
@@ -955,7 +1012,8 @@ public class Dock : Form, IMessageFilter
         // Keep the AppBar reservation stable for ordinary visual/widget edits.
         // Re-registering on every checkbox change can shift the bar away from its edge.
         bool reDock = settings.DockMode != dlg.DockMode || settings.Edge != dlg.Edge ||
-            settings.Width != dlg.BarWidth || settings.HorizontalHeight != dlg.BarHeight;
+            settings.Width != dlg.BarWidth || settings.HorizontalHeight != dlg.BarHeight ||
+            (Horizontal && settings.ShowDigitalClock != dlg.ShowDigitalClock);
         if (reDock) UnregisterBar();
         settings.Language = dlg.Language;
         settings.AlwaysOnTop = dlg.AlwaysOnTop;
@@ -971,6 +1029,11 @@ public class Dock : Form, IMessageFilter
         settings.ShowDigitalClock = dlg.ShowDigitalClock;
         settings.ShowClockDate = dlg.ShowClockDate;
         settings.ShowClockSticker = dlg.ShowClockSticker;
+        settings.ClockFormat = dlg.ClockFormat;
+        settings.ShowClockAmPm = dlg.ShowClockAmPm;
+        settings.ShowTerminalButton = dlg.ShowTerminalButton;
+        settings.TerminalMode = dlg.TerminalMode;
+        settings.UsageStyle = dlg.UsageStyle;
         settings.UsageLayout = dlg.UsageLayout;
         settings.NetworkAtEnd = dlg.NetworkAtEnd;
         settings.DiskColorArgb = dlg.DiskColorArgb;
@@ -1167,6 +1230,35 @@ public class Dock : Form, IMessageFilter
         }
         if (shouldExpand == collapsed) { collapsed = !collapsed; Position(); }
     }
+    void UpdateRoundCornerRegion()
+    {
+        var previous = Region;
+        if (!Horizontal || !settings.ShowDigitalClock || collapsed ||
+            settings.DockMode == "Flotante" || Width < energyPanel.Width + 8 || Height < 15)
+        {
+            Region = null;
+            previous?.Dispose();
+            return;
+        }
+        // Keep the main bar at its selected height while the black round
+        // corner extends two pixels above and two below it.
+        var area = new Region(new Rectangle(0, 2, Width, Math.Max(1, Height - 4)));
+        float radius = (Height - 2) / 2f;
+        float diameter = radius * 2f;
+        float x = Width - energyPanel.Width;
+        using (var capsule = new System.Drawing.Drawing2D.GraphicsPath())
+        {
+            capsule.AddArc(x, 1, diameter, diameter, 180, 90);
+            capsule.AddLine(x + radius, 1, Width, 1);
+            capsule.AddLine(Width, 1, Width, Height - 1);
+            capsule.AddLine(Width, Height - 1, x + radius, Height - 1);
+            capsule.AddArc(x, Height - diameter - 1, diameter, diameter, 90, 90);
+            capsule.CloseFigure();
+            area.Union(capsule);
+        }
+        Region = area;
+        previous?.Dispose();
+    }
     void Position()
     {
         if (repositioning) return;
@@ -1180,7 +1272,8 @@ public class Dock : Form, IMessageFilter
                 if (Width < 65 || Height < 65 || (Left == 0 && Top == 0)) Bounds = new Rectangle(bounds.Left + 140, bounds.Top + 120, 110, 450);
                 return;
             }
-            int thickness = collapsed ? RevealStrip : (Horizontal ? settings.HorizontalHeight : settings.Width);
+            int thickness = collapsed ? RevealStrip
+                : Horizontal ? settings.HorizontalHeight + (settings.ShowDigitalClock ? 4 : 0) : settings.Width;
             var d = Data();
             // Query from physical screen bounds, not WorkingArea: the latter
             // already includes our own AppBar reservation and would drift upward
@@ -1205,6 +1298,7 @@ public class Dock : Form, IMessageFilter
                 SHAppBarMessage(ABM_SETPOS, ref d);
             }
             Bounds = Rectangle.FromLTRB(d.rc.left, d.rc.top, d.rc.right, d.rc.bottom);
+            UpdateRoundCornerRegion();
             panel.Visible = !collapsed;
             footer.Width = Horizontal ? 80 : settings.Width;
             // Do not overwrite the compact sizes assigned by Render().

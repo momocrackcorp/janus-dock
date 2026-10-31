@@ -27,11 +27,14 @@ public sealed class SystemUsageControl : Control
     double cpuPercent, memoryPercent, usedGiB, totalGiB;
     public bool Horizontal { get; }
     public bool SideBySide { get; }
+    public string UsageStyle { get; }
     readonly bool showCpu, showRam;
-    public SystemUsageControl(bool horizontal, bool cpuVisible = true, bool ramVisible = true, bool sideBySide = false)
+    public SystemUsageControl(bool horizontal, bool cpuVisible = true, bool ramVisible = true,
+        bool sideBySide = false, string usageStyle = "Clásico")
     {
         Horizontal = horizontal;
         SideBySide = sideBySide;
+        UsageStyle = usageStyle;
         showCpu = cpuVisible; showRam = ramVisible;
         Size = horizontal ? new Size(sideBySide && showCpu && showRam ? 160 : 120, sideBySide && showCpu && showRam ? 42 : showCpu && showRam ? 56 : 36) : new Size(88, showCpu && showRam ? 150 : 82);
         Margin = new Padding(4, 2, 4, 2);
@@ -68,10 +71,72 @@ public sealed class SystemUsageControl : Control
         }
         catch { /* Keep last valid sample. */ }
     }
+    private void PaintCircular(Graphics g)
+    {
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        bool two = showCpu && showRam;
+        bool across = Horizontal && two;
+        float vw = across ? 140f : Horizontal ? 74f : 86f;
+        float vh = across || Horizontal ? 64f : two ? 130f : 70f;
+        float factor = Math.Min(Width / vw, Height / vh);
+        if (factor <= 0) return;
+        g.TranslateTransform((Width - vw * factor) / 2, (Height - vh * factor) / 2);
+        g.ScaleTransform(factor, factor);
+        using var baseRing = new Pen(Color.FromArgb(64, 79, 105), 5.3f)
+        { StartCap = System.Drawing.Drawing2D.LineCap.Round, EndCap = System.Drawing.Drawing2D.LineCap.Round };
+        using var cpuRing = new Pen(Color.FromArgb(255, 120, 53), 5.3f)
+        { StartCap = System.Drawing.Drawing2D.LineCap.Round, EndCap = System.Drawing.Drawing2D.LineCap.Round };
+        using var ramRing = new Pen(Color.FromArgb(67, 146, 255), 5.3f)
+        { StartCap = System.Drawing.Drawing2D.LineCap.Round, EndCap = System.Drawing.Drawing2D.LineCap.Round };
+        using var labelFont = new Font("Segoe UI", 12f, FontStyle.Bold, GraphicsUnit.Pixel);
+        using var glyph = new Pen(Color.FromArgb(219, 226, 240), 1.7f);
+        using var textBrush = new SolidBrush(Color.FromArgb(221, 229, 239));
+        using var centered = new StringFormat
+        { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+        void Meter(float x, float y, double percent, bool cpu)
+        {
+            var ring = new RectangleF(x - 20, y - 20, 40, 40);
+            g.DrawArc(baseRing, ring, 0, 359.9f);
+            g.DrawArc(cpu ? cpuRing : ramRing, ring, -90, (float)Math.Clamp(percent * 3.6, 0, 359.9));
+            if (cpu)
+            {
+                g.DrawRectangle(glyph, x - 8, y - 6, 16, 13);
+                g.DrawLine(glyph, x - 4, y - 9, x - 4, y - 6);
+                g.DrawLine(glyph, x + 4, y - 9, x + 4, y - 6);
+            }
+            else
+            {
+                g.DrawRectangle(glyph, x - 10, y - 5, 20, 10);
+                for (int i = -6; i <= 6; i += 6)
+                    g.DrawLine(glyph, x + i, y + 5, x + i, y + 9);
+            }
+            g.DrawString($"{percent:0}%", labelFont, textBrush,
+                new RectangleF(x - 26, y + 21, 52, 16), centered);
+        }
+        if (across)
+        {
+            Meter(35, 25, cpuPercent, true);
+            Meter(105, 25, memoryPercent, false);
+        }
+        else if (Horizontal)
+        {
+            Meter(37, 25, showCpu ? cpuPercent : memoryPercent, showCpu);
+        }
+        else
+        {
+            if (showCpu) Meter(43, 28, cpuPercent, true);
+            if (showRam) Meter(43, showCpu ? 92 : 28, memoryPercent, false);
+        }
+    }
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
         var g = e.Graphics;
+        if (UsageStyle == "Circular")
+        {
+            PaintCircular(g);
+            return;
+        }
         g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
         // Draw inside a normalized coordinate system, preserving icon proportions
         // even when Windows display scaling or dock thickness changes.
