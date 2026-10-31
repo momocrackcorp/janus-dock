@@ -242,7 +242,8 @@ public sealed class DockOptionsForm : Form
         var iconSizeLabel = new Label { Text = $"{size.Value} px", AutoSize = true, ForeColor = Color.FromArgb(16, 157, 178), Font = new Font("Segoe UI", 10f, FontStyle.Bold) };
         iconSlider.ValueChanged += (_, _) => { size.Value = iconSlider.Value; iconSizeLabel.Text = $"{iconSlider.Value} px"; };
         size.ValueChanged += (_, _) => { if (iconSlider.Value != (int)size.Value) iconSlider.Value = (int)size.Value; };
-        appearanceRows.Controls.Add(FieldRow(new Label { Text = "Tamaño de iconos:", AutoSize = true }, iconSlider, iconSizeLabel, smallIcons));
+        appearanceRows.Controls.Add(FieldRow(new Label { Text = "Tamaño de iconos:", AutoSize = true }, iconSlider, iconSizeLabel));
+        appearanceRows.Controls.Add(smallIcons);
         var spacingSlider = new TrackBar { Minimum = 0, Maximum = 24, TickFrequency = 4, SmallChange = 1, LargeChange = 2, Width = 270, Value = Math.Clamp(config.IconSpacing, 0, 24) };
         var spacingLabel = new Label { Text = $"{spacingSlider.Value} px", AutoSize = true };
         spacingSlider.ValueChanged += (_, _) => spacingLabel.Text = $"{spacingSlider.Value} px";
@@ -261,8 +262,22 @@ public sealed class DockOptionsForm : Form
         animation.CheckedChanged += (_, _) => zoomChoice.Enabled = animation.Checked;
         appearanceRows.Controls.Add(SectionTitle("Barra", "Color y dimensiones según su orientación."));
         appearanceRows.Controls.Add(FieldRow(new Label { Text = "Color de la barra:", AutoSize = true }, barColorMode, chooseBarColor));
-        appearanceRows.Controls.Add(FieldRow(new Label { Text = "Ancho barra vertical (px):", AutoSize = true }, barWidth));
-        appearanceRows.Controls.Add(FieldRow(new Label { Text = "Alto barra horizontal (px):", AutoSize = true }, barHeight));
+        var widthTrack = new TrackBar { Minimum = 64, Maximum = 300, TickFrequency = 32,
+            SmallChange = 2, LargeChange = 8, Width = 280, Value = (int)barWidth.Value };
+        var heightTrack = new TrackBar { Minimum = 48, Maximum = 160, TickFrequency = 16,
+            SmallChange = 2, LargeChange = 8, Width = 280, Value = (int)barHeight.Value };
+        var widthValue = new Label { Text = $"{widthTrack.Value} px", AutoSize = true };
+        var heightValue = new Label { Text = $"{heightTrack.Value} px", AutoSize = true };
+        widthTrack.ValueChanged += (_, _) => {
+            barWidth.Value = widthTrack.Value;
+            widthValue.Text = $"{widthTrack.Value} px";
+        };
+        heightTrack.ValueChanged += (_, _) => {
+            barHeight.Value = heightTrack.Value;
+            heightValue.Text = $"{heightTrack.Value} px";
+        };
+        appearanceRows.Controls.Add(FieldRow(new Label { Text = "Ancho barra vertical:", AutoSize = true }, widthTrack, widthValue));
+        appearanceRows.Controls.Add(FieldRow(new Label { Text = "Alto barra horizontal:", AutoSize = true }, heightTrack, heightValue));
         var hoverEffect = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 145 };
         hoverEffect.Items.AddRange(new object[] { "Ninguno", "Foco", "Lupa" });
         hoverEffect.SelectedIndex = config.HoverEffect == "Foco" ? 1 : config.HoverEffect == "Ninguno" ? 0 : config.HoverAnimation ? 2 : 1;
@@ -335,9 +350,9 @@ public sealed class DockOptionsForm : Form
         lockButton.Text = "Mostrar botón Bloquear";
         shutdown.Text = "Mostrar botón Apagar";
         restart.Text = "Mostrar botón Reiniciar";
-        generalRows.Controls.Add(lockButton);
         generalRows.Controls.Add(shutdown);
         generalRows.Controls.Add(restart);
+        generalRows.Controls.Add(lockButton);
         generalRows.Controls.Add(new Label { Text = "Al ocultarse queda una franja para recuperar la barra con el mouse.", AutoSize = true });
         generalRows.SizeChanged += (_, _) => FitRows(generalRows);
 
@@ -799,7 +814,7 @@ public sealed class DockOptionsForm : Form
             if (control == controls[0] && control is Label mainLabel)
             {
                 mainLabel.AutoSize = false;
-                mainLabel.Width = 202;
+                mainLabel.Width = controls.Length >= 4 ? 125 : controls.Length >= 3 ? 205 : 270;
                 mainLabel.Height = 32;
                 mainLabel.TextAlign = ContentAlignment.MiddleLeft;
             }
