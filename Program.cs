@@ -21,6 +21,7 @@ public class DockSettings
     public int Width { get; set; } = 88;
     public int HorizontalHeight { get; set; } = 64;
     public int IconSize { get; set; } = 40;
+    public int IconSpacing { get; set; } = 8;
     public string IconStyle { get; set; } = "Windows";
     public bool ShowNames { get; set; } = false;
     public string NameMode { get; set; } = "Tooltip";
@@ -563,7 +564,7 @@ public class Dock : Form, IMessageFilter
                 BackColor = BackColor,
                 ForeColor = ForeColor,
                 Font = new Font("Segoe UI", 8),
-                Margin = new Padding(0, 2, 0, 2)
+                Margin = Horizontal ? new Padding(settings.IconSpacing / 2, 2, settings.IconSpacing - settings.IconSpacing / 2, 2) : new Padding(2, settings.IconSpacing / 2, 2, settings.IconSpacing - settings.IconSpacing / 2)
             };
             btn.FlatAppearance.BorderSize = 0;
             btn.FlatAppearance.MouseOverBackColor = light ? Color.FromArgb(225, 233, 244) : Color.FromArgb(62, 67, 77);
@@ -785,6 +786,7 @@ public class Dock : Form, IMessageFilter
         if (!settings.ShowDiskWidget && currentWidget != null) settings.Items.Remove(currentWidget);
         settings.IconStyle = dlg.IconStyle;
         settings.IconSize = dlg.IconSize;
+        settings.IconSpacing = dlg.IconSpacing;
         settings.Width = dlg.BarWidth;
         settings.HorizontalHeight = dlg.BarHeight;
         settings.Edge = dlg.Edge;
