@@ -10,6 +10,7 @@ public sealed class ZoomShortcutButton : Button
     public Image? SourceIcon { get; set; }
     public int BaseIconSize { get; set; } = 32;
     public bool ZoomEnabled { get; set; } = true;
+    public bool FocusEnabled { get; set; }
     public float ZoomFactor { get; set; } = 2.8f;
     public bool ShowCaption { get; set; }
     private float zoom = 1f;
@@ -45,10 +46,18 @@ public sealed class ZoomShortcutButton : Button
         e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
         e.Graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
         e.Graphics.Clear(BackColor);
-        if (ClientRectangle.Contains(PointToClient(Cursor.Position)) && ZoomEnabled)
+        if (ClientRectangle.Contains(PointToClient(Cursor.Position)) && (ZoomEnabled || FocusEnabled))
         {
             using var hover = new SolidBrush(Color.FromArgb(25, ForeColor));
-            e.Graphics.FillRectangle(hover, ClientRectangle);
+            using var frame = new GraphicsPath();
+            int radius = 8;
+            var rect = new Rectangle(1, 1, Math.Max(2, Width - 3), Math.Max(2, Height - 3));
+            frame.AddArc(rect.Left, rect.Top, radius, radius, 180, 90);
+            frame.AddArc(rect.Right - radius, rect.Top, radius, radius, 270, 90);
+            frame.AddArc(rect.Right - radius, rect.Bottom - radius, radius, radius, 0, 90);
+            frame.AddArc(rect.Left, rect.Bottom - radius, radius, radius, 90, 90);
+            frame.CloseFigure();
+            e.Graphics.FillPath(hover, frame);
         }
         // Give the animation a visibly smaller resting size, leaving room to grow
         // inside narrow vertical bars without clipping at high DPI.
