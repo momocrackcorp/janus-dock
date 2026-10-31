@@ -401,10 +401,37 @@ public class Dock : Form, IMessageFilter
         g.DrawEllipse(edge, 65, 73, 10, 10);
         return image;
     }
+    // Native Windows Segoe icon glyphs, rendered uniformly at the dock's icon size.
+    // No custom PNG artwork or mismatched button dimensions.
+    Image WindowsPowerGlyph(string action)
+    {
+        const int canvas = 96;
+        var bmp = new Bitmap(canvas, canvas);
+        using var g = Graphics.FromImage(bmp);
+        g.Clear(Color.Transparent);
+        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+        string glyph = action switch
+        {
+            "janus:lock" => "\uE72E",     // Lock
+            "janus:restart" => "\uE72C",  // Refresh
+            _ => "\uE7E8"                 // Power
+        };
+        Color ink = action switch
+        {
+            "janus:lock" => Color.FromArgb(225, 175, 45),
+            "janus:restart" => Color.FromArgb(42, 183, 136),
+            _ => Color.FromArgb(228, 72, 77)
+        };
+        using var font = new Font("Segoe MDL2 Assets", 62f, FontStyle.Regular, GraphicsUnit.Pixel);
+        using var brush = new SolidBrush(ink);
+        using var layout = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+        g.DrawString(glyph, font, brush, new RectangleF(0, 0, canvas, canvas), layout);
+        return bmp;
+    }
     Image GetIcon(string path)
     {
         // Colored preview-style power icons are consistent in both appearance modes.
-        if (path is "janus:lock" or "janus:shutdown" or "janus:restart") return PowerImages.Load(path);
+        if (path is "janus:lock" or "janus:shutdown" or "janus:restart") return WindowsPowerGlyph(path);
         if (settings.IconStyle == "Lucide")
         {
             var lucide = LucideDockIcons.Load(path, light);
@@ -546,7 +573,7 @@ public class Dock : Form, IMessageFilter
         // Use a fixed, tight icon cell. Hover effects paint inside the cell and never reserve extra space.
         // Keep actual center-to-center spacing close to Windows taskbar even at 125–150% DPI.
         int width = Horizontal ? Math.Max(22, (int)Math.Round(settings.IconSize * 0.78)) : Math.Max(24, settings.Width - 18);
-        int energySlot = Math.Max(settings.IconSize + 12, (int)Math.Ceiling(settings.IconSize * (settings.HoverAnimation ? 1.8 : 1.0)) + 8);
+        int energySlot = Math.Max(24, settings.IconSize + 2);
         energyPanel.Width = Horizontal ? (energySlot + 4) * (settings.ShowLock ? 3 : 2) + 12 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 185 : 0) : Math.Max(55, settings.Width - 10);
         energyPanel.Height = Horizontal ? Math.Max(48, settings.IconSize + 20) : (energySlot + 4) * 2 + 12 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 184 : 0);
         foreach (var item in settings.Items.ToList())
@@ -651,9 +678,9 @@ public class Dock : Form, IMessageFilter
             {
                 // Keep the native/lucide bitmap square; button dimensions need not be.
                 btn.ImageAlign = ContentAlignment.MiddleCenter;
-                btn.Width = Horizontal ? energySlot : Math.Max(42, settings.Width - 20);
-                btn.Height = Horizontal ? Math.Min(Math.Max(40, settings.IconSize + 14), Math.Max(40, settings.HorizontalHeight - 8)) : energySlot;
-                btn.Margin = Horizontal ? new Padding(2, Math.Max(0, (energyPanel.Height - btn.Height) / 2), 2, 0) : new Padding(2);
+                btn.Width = Horizontal ? width : Math.Max(24, settings.Width - 18);
+                btn.Height = settings.IconSize + (settings.NameMode == "Written" ? 40 : 12);
+                btn.Margin = Horizontal ? new Padding(settings.IconSpacing / 2, Math.Max(0, (energyPanel.Height - btn.Height) / 2), settings.IconSpacing - settings.IconSpacing / 2, 0) : new Padding(1, settings.IconSpacing / 2, 1, settings.IconSpacing - settings.IconSpacing / 2);
             }
             destination.Controls.Add(btn);
         }
