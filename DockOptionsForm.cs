@@ -514,7 +514,7 @@ public sealed class DockOptionsForm : Form
         // The project photo is embedded and loaded automatically.
         // No file chooser or external image is needed for the About page.
         var aboutPicture = new PictureBox {
-            Size = new Size(280, 150),
+            Size = new Size(330, 200),
             SizeMode = PictureBoxSizeMode.Zoom,
             BackColor = Color.FromArgb(227, 238, 246),
             Margin = new Padding(5, 6, 5, 7)
@@ -523,7 +523,10 @@ public sealed class DockOptionsForm : Form
         catch { aboutPicture.Image = null; }
         aboutRows.Controls.Add(SectionTitle("JANUS Dock", "Información del proyecto."));
         aboutRows.Controls.Add(aboutPicture);
-        aboutRows.Controls.Add(appIcon);
+        // The user's photograph is the visual identity of About.
+        // Remove the old generic multi-monitor placeholder icon.
+        info.Font = new Font("Segoe UI", 10f);
+        info.MaximumSize = new Size(720, 0);
         aboutRows.Controls.Add(info);
         updates.AutoSize = true;
         aboutRows.Controls.Add(updates);
