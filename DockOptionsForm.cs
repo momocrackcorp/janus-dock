@@ -23,6 +23,7 @@ public sealed class DockOptionsForm : Form
     public bool ShowClockSticker { get; private set; } = true;
     public string ClockFormat { get; private set; } = "12";
     public bool ShowClockAmPm { get; private set; } = true;
+    public string ClockDisplayMode { get; private set; } = "LCD";
     public bool ShowTerminalButton { get; private set; }
     public string TerminalMode { get; private set; } = "Terminal";
     public string UsageStyle { get; private set; } = "Circular";
@@ -372,7 +373,8 @@ public sealed class DockOptionsForm : Form
         generalRows.Controls.Add(top);
         generalRows.Controls.Add(hide);
         generalRows.Controls.Add(startup);
-        generalRows.Controls.Add(SectionTitle("Disposición", "Etiquetas y posición de la barra."));
+        var dispositionTitle = SectionTitle("Disposición", "Etiquetas y posición de la barra.");
+        generalRows.Controls.Add(dispositionTitle);
         generalRows.Controls.Add(FieldRow(names, nameMode));
         generalRows.Controls.Add(FieldRow(new Label { Text = "Modo:", AutoSize = true }, dockMode));
         generalRows.Controls.Add(FieldRow(new Label { Text = "Ubicación:", AutoSize = true }, location));
@@ -402,19 +404,18 @@ public sealed class DockOptionsForm : Form
         var ramWidget = new CheckBox { Text = "Mostrar uso de memoria RAM", AutoSize = true, Checked = config.ShowSystemUsage && config.ShowRam };
         generalRows.Controls.Add(cpuWidget);
         generalRows.Controls.Add(ramWidget);
-        var usageLayout = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 185 };
-        usageLayout.Items.AddRange(new object[] { "Vertical", "Horizontal" });
-        usageLayout.SelectedIndex = config.UsageLayout == "Horizontal" ? 1 : 0;
-        generalRows.Controls.Add(FieldRow(
-            new Label { Text = "Distribución CPU / RAM:", AutoSize = true }, usageLayout));
         var usageStyle = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 185 };
         usageStyle.Items.AddRange(new object[] { "Circular", "Clásico" });
         usageStyle.SelectedIndex = config.UsageStyle == "Clásico" ? 1 : 0;
         generalRows.Controls.Add(FieldRow(new Label { Text = "Diseño CPU / RAM:", AutoSize = true }, usageStyle));
         var networkAtEnd = new CheckBox { Text = "Anclar tráfico al costado de los botones de energía", AutoSize = true, Checked = config.NetworkAtEnd };
         generalRows.Controls.Add(networkAtEnd);
-        var digitalClock = new CheckBox { Text = "Mostrar reloj digital LCD", AutoSize = true, Checked = config.ShowDigitalClock };
+        var digitalClock = new CheckBox { Text = "Mostrar reloj", AutoSize = true, Checked = config.ShowDigitalClock };
         generalRows.Controls.Add(digitalClock);
+        var clockMode = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 185 };
+        clockMode.Items.AddRange(new object[] { "Digital LCD", "Solo texto" });
+        clockMode.SelectedIndex = config.ClockDisplayMode == "Texto" ? 1 : 0;
+        generalRows.Controls.Add(FieldRow(new Label { Text = "Presentación del reloj:", AutoSize = true }, clockMode));
         var clockFormat = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 185 };
         clockFormat.Items.AddRange(new object[] { "12 horas", "24 horas" });
         clockFormat.SelectedIndex = config.ClockFormat == "24" ? 1 : 0;
@@ -426,12 +427,14 @@ public sealed class DockOptionsForm : Form
         void UpdateClockDependents()
         {
             clockDate.Enabled = digitalClock.Checked;
-            clockSticker.Enabled = digitalClock.Checked;
+            clockSticker.Enabled = digitalClock.Checked && clockMode.SelectedIndex == 0;
+            clockMode.Enabled = digitalClock.Checked;
             clockFormat.Enabled = digitalClock.Checked;
             clockAmPm.Enabled = digitalClock.Checked && clockFormat.SelectedIndex == 0;
         }
         digitalClock.CheckedChanged += (_, _) => UpdateClockDependents();
         clockFormat.SelectedIndexChanged += (_, _) => UpdateClockDependents();
+        clockMode.SelectedIndexChanged += (_, _) => UpdateClockDependents();
         UpdateClockDependents();
         generalRows.Controls.Add(clockDate);
         generalRows.Controls.Add(clockSticker);
@@ -593,6 +596,15 @@ public sealed class DockOptionsForm : Form
             foreach (var control in items) target.Controls.Add(control);
         }
         MoveFromSection(appearanceRows, accessRows, accessesSection);
+        // Transfer the complete Disposición section into Apariencia, below
+        // the icon/bar/effects cards. It is no longer duplicated in General.
+        int dispositionIndex = generalRows.Controls.GetChildIndex(dispositionTitle);
+        var dispositionControls = generalRows.Controls.Cast<Control>()
+            .Skip(dispositionIndex).Take(4).ToArray();
+        if (dispositionControls.Length != 4 || dispositionControls[0] != dispositionTitle)
+            throw new InvalidOperationException("No se pudo mover Disposición.");
+        foreach (var control in dispositionControls)
+            appearanceRows.Controls.Add(control);
         // Only the disk options are moved to Sistema. Network, CPU, RAM,
         // layout, and the end-position switch live in General once, not twice.
         MoveFromSection(generalRows, systemRows, disksSection);
@@ -608,8 +620,8 @@ public sealed class DockOptionsForm : Form
         // Appearance: Iconos / Barra on top, Efectos / Notas below.
         // Keep all original settings controls; only their layout changes.
         var appearanceCards = appearanceRows.Controls.OfType<SettingsCardPanel>().ToArray();
-        if (appearanceCards.Length != 3)
-            throw new InvalidOperationException("Apariencia requiere tres tarjetas de configuración.");
+        if (appearanceCards.Length != 4)
+            throw new InvalidOperationException("Apariencia requiere cuatro tarjetas de configuración.");
         var appearanceNotes = new SettingsCardPanel { Name = "AppearanceNotes" };
         appearanceNotes.Controls.Add(SectionTitle("Notas", "Cómo se representan los iconos."));
         appearanceNotes.Controls.Add(new Label {
@@ -655,8 +667,8 @@ public sealed class DockOptionsForm : Form
             Margin = Padding.Empty
         };
         var generalCards = generalRows.Controls.OfType<SettingsCardPanel>().ToArray();
-        if (generalCards.Length != 4)
-            throw new InvalidOperationException("La página General requiere cuatro tarjetas.");
+        if (generalCards.Length != 3)
+            throw new InvalidOperationException("La página General requiere tres tarjetas.");
         foreach (var card in generalCards) generalDashboard.Controls.Add(card);
         generalRows.Controls.Add(generalDashboard);
         // Refit cards after modern controls are installed at runtime.
@@ -708,10 +720,12 @@ public sealed class DockOptionsForm : Form
             ShowClockSticker = clockSticker.Checked;
             ClockFormat = clockFormat.SelectedIndex == 1 ? "24" : "12";
             ShowClockAmPm = clockAmPm.Checked;
+            ClockDisplayMode = clockMode.SelectedIndex == 1 ? "Texto" : "LCD";
             ShowTerminalButton = terminalEnabled.Checked;
             TerminalMode = terminalChoice.SelectedIndex == 1 ? "CMD" : "Terminal";
             UsageStyle = usageStyle.SelectedIndex == 1 ? "Clásico" : "Circular";
-            UsageLayout = usageLayout.SelectedIndex == 1 ? "Horizontal" : "Vertical";
+            // Horizontal readings are the standard whenever the bar is horizontal.
+            UsageLayout = "Horizontal";
             ShowSystemUsage = ShowCpu || ShowRam;
             NetworkAtEnd = networkAtEnd.Checked;
             IconSize = (int)size.Value;
@@ -1062,37 +1076,30 @@ public sealed class DockOptionsForm : Form
     {
         dashboard.Width = Math.Max(300, availableWidth - 14);
         var cards = dashboard.Controls.OfType<SettingsCardPanel>().ToArray();
-        if (cards.Length != 4) return;
+        if (cards.Length != 3) return;
         const int gap = 14;
-        bool doubleColumn = dashboard.Width >= 640;
-        int cellWidth = doubleColumn ? (dashboard.Width - gap) / 2 : dashboard.Width;
+        bool columns = dashboard.Width >= 640;
+        int w = columns ? (dashboard.Width - gap) / 2 : dashboard.Width;
         foreach (var card in cards)
         {
             card.Margin = Padding.Empty;
-            FitCard(card, cellWidth + 22);
+            FitCard(card, w + 22);
         }
-        // Cards in creation order: 0 Behaviour, 1 Arrangement,
-        // 2 System buttons (including Terminal), 3 System monitors.
-        // Keep the tall monitor card at the top of the right column.
-        if (doubleColumn)
+        // Comportamiento + Botones left; Información del sistema top-right.
+        if (columns)
         {
-            int leftY = 0;
-            cards[0].Location = new Point(0, leftY);
-            leftY += cards[0].Height + gap;
-            cards[2].Location = new Point(0, leftY);
-            leftY += cards[2].Height + gap;
-            cards[1].Location = new Point(0, leftY);
-            leftY += cards[1].Height;
-            cards[3].Location = new Point(cellWidth + gap, 0);
-            dashboard.Height = Math.Max(leftY, cards[3].Height) + 4;
+            cards[0].Location = new Point(0, 0);
+            cards[1].Location = new Point(0, cards[0].Height + gap);
+            cards[2].Location = new Point(w + gap, 0);
+            dashboard.Height = Math.Max(cards[0].Height + gap + cards[1].Height, cards[2].Height) + 4;
         }
         else
         {
             int y = 0;
-            foreach (int index in new[] { 0, 2, 1, 3 })
+            foreach (var card in cards)
             {
-                cards[index].Location = new Point(0, y);
-                y += cards[index].Height + gap;
+                card.Location = new Point(0, y);
+                y += card.Height + gap;
             }
             dashboard.Height = y;
         }
@@ -1102,33 +1109,34 @@ public sealed class DockOptionsForm : Form
     {
         dashboard.Width = Math.Max(300, availableWidth - 14);
         var cards = dashboard.Controls.OfType<SettingsCardPanel>().ToArray();
-        if (cards.Length != 4) return;
-        // Controls are added in order: Iconos, Barra, Efectos, Notas.
+        if (cards.Length != 5) return;
+        // Creation order: Iconos, Barra, Efectos, Disposición, Notas.
         const int gap = 14;
         bool columns = dashboard.Width >= 825;
-        int columnWidth = columns ? (dashboard.Width - gap) / 2 : dashboard.Width;
+        int w = columns ? (dashboard.Width - gap) / 2 : dashboard.Width;
         foreach (var card in cards)
         {
             card.Margin = Padding.Empty;
-            FitCard(card, columnWidth + 22);
+            FitCard(card, w + 22);
         }
         if (columns)
         {
-            int rowOne = Math.Max(cards[0].Height, cards[1].Height);
             cards[0].Location = new Point(0, 0);
-            cards[1].Location = new Point(columnWidth + gap, 0);
-            cards[2].Location = new Point(0, rowOne + gap);
-            cards[3].Location = new Point(columnWidth + gap, rowOne + gap);
-            dashboard.Height = rowOne + gap +
-                Math.Max(cards[2].Height, cards[3].Height) + 4;
+            cards[3].Location = new Point(0, cards[0].Height + gap);
+            cards[1].Location = new Point(w + gap, 0);
+            cards[2].Location = new Point(w + gap, cards[1].Height + gap);
+            cards[4].Location = new Point(w + gap, cards[1].Height + gap + cards[2].Height + gap);
+            int leftHeight = cards[0].Height + gap + cards[3].Height;
+            int rightHeight = cards[1].Height + gap + cards[2].Height + gap + cards[4].Height;
+            dashboard.Height = Math.Max(leftHeight, rightHeight) + 4;
         }
         else
         {
             int y = 0;
-            foreach (var card in cards)
+            foreach (int i in new[] { 0, 3, 1, 2, 4 })
             {
-                card.Location = new Point(0, y);
-                y += card.Height + gap;
+                cards[i].Location = new Point(0, y);
+                y += cards[i].Height + gap;
             }
             dashboard.Height = y;
         }

@@ -37,6 +37,7 @@ public class DockSettings
     public bool ShowCpu { get; set; } = true;
     public bool ShowRam { get; set; } = true;
     public bool ShowDigitalClock { get; set; } = false;
+    public string ClockDisplayMode { get; set; } = "LCD";
     public bool ShowClockDate { get; set; } = true;
     public bool ShowClockSticker { get; set; } = true;
     public string ClockFormat { get; set; } = "12";
@@ -44,7 +45,7 @@ public class DockSettings
     public bool ShowTerminalButton { get; set; } = false;
     public string TerminalMode { get; set; } = "Terminal";
     public string UsageStyle { get; set; } = "Circular";
-    public string UsageLayout { get; set; } = "Vertical";
+    public string UsageLayout { get; set; } = "Horizontal";
     public bool NetworkAtEnd { get; set; } = false;
     public int DiskColorArgb { get; set; } = Color.FromArgb(48, 130, 222).ToArgb();
     public int CriticalPercent { get; set; } = 90;
@@ -150,9 +151,9 @@ public class Dock : Form, IMessageFilter
         Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown,
         WrapContents = false, AutoScroll = true, Padding = new Padding(0)
     };
-    // Independent siblings of the shortcuts: the network monitor stays on
-    // the Dock background while the energy capsule owns the outer edge.
-    // Keeping both on the form avoids nested DockStyle.Fill/Z-order overlap.
+    // One right-docked parent with explicitly positioned children.
+    // Network always precedes the round; the round is the final rightmost item.
+    readonly Panel endCluster = new() { Visible = false };
     readonly Panel networkArea = new() { Visible = false };
     readonly Panel clockArea = new() { Visible = false };
     readonly RoundedEnergyPanel energyPanel = new()
@@ -195,7 +196,8 @@ public class Dock : Form, IMessageFilter
         settings.CriticalPercent = Math.Clamp(settings.CriticalPercent, 70, 99);
         settings.DiskColors ??= new(StringComparer.OrdinalIgnoreCase);
         settings.HiddenDiskLetters ??= new();
-        settings.UsageLayout = settings.UsageLayout == "Horizontal" ? "Horizontal" : "Vertical";
+        settings.UsageLayout = "Horizontal";
+        settings.ClockDisplayMode = settings.ClockDisplayMode == "Texto" ? "Texto" : "LCD";
         settings.ClockFormat = settings.ClockFormat == "24" ? "24" : "12";
         settings.TerminalMode = settings.TerminalMode == "CMD" ? "CMD" : "Terminal";
         settings.UsageStyle = settings.UsageStyle == "Clásico" ? "Clásico" : "Circular";
@@ -217,10 +219,11 @@ public class Dock : Form, IMessageFilter
         options.FlatAppearance.BorderSize = 0;
         footer.Controls.Add(add);
         footer.Controls.Add(options);
+        endCluster.Controls.Add(networkArea);
+        endCluster.Controls.Add(clockArea);
+        endCluster.Controls.Add(energyPanel);
         Controls.Add(panel);
-        Controls.Add(clockArea);
-        Controls.Add(networkArea);
-        Controls.Add(energyPanel);
+        Controls.Add(endCluster);
         Controls.Add(footer);
         Controls.Add(grip);
         SetOrientation();
@@ -326,6 +329,7 @@ public class Dock : Form, IMessageFilter
         ForeColor = BackColor.GetBrightness() > .54f ? Color.FromArgb(28, 30, 35) : Color.FromArgb(241, 241, 244);
         footer.BackColor = BackColor;
         panel.BackColor = BackColor;
+        endCluster.BackColor = BackColor;
         networkArea.BackColor = BackColor;
         clockArea.BackColor = BackColor;
         energyPanel.BackColor = BackColor;
@@ -588,6 +592,7 @@ public class Dock : Form, IMessageFilter
         // from an older saved Items list.
         SyncPowerButtons();
         panel.SuspendLayout();
+        endCluster.SuspendLayout();
         clockArea.SuspendLayout();
         networkArea.SuspendLayout();
         energyPanel.SuspendLayout();
@@ -620,7 +625,8 @@ public class Dock : Form, IMessageFilter
         int powerCount = (settings.ShowLock ? 1 : 0) + (settings.ShowShutdown ? 1 : 0) + (settings.ShowRestart ? 1 : 0);
         // The energy capsule is sized ONLY for power buttons.
         // Network traffic occupies a sibling region on the bar background.
-        int embeddedClockWidth = Horizontal && settings.ShowDigitalClock
+        bool lcdEmbedded = Horizontal && settings.ShowDigitalClock && settings.ClockDisplayMode == "LCD";
+        int embeddedClockWidth = lcdEmbedded
             ? Math.Max(112, (int)Math.Round(settings.HorizontalHeight * 2.346))
             : 0;
         // Exact reference: one full-height black capsule, rounded only on the
@@ -636,7 +642,8 @@ public class Dock : Form, IMessageFilter
         // Reflect clock activation immediately, even when AppBar geometry
         // remains unchanged and SetOrientation() is not called.
         energyPanel.Padding = Horizontal
-            ? settings.ShowDigitalClock ? new Padding(16, 0, 0, 0) : new Padding(16, 0, 6, 0)
+            ? settings.ShowDigitalClock && settings.ClockDisplayMode == "LCD"
+                ? new Padding(16, 0, 0, 0) : new Padding(16, 0, 6, 0)
             : new Padding(0, 7, 0, 3);
         foreach (var item in settings.Items.ToList())
         {
@@ -755,8 +762,8 @@ public class Dock : Form, IMessageFilter
             // The display direction is independent of the dock's position.
             // On narrow vertical docks, stack the readings to avoid clipping.
             bool circle = settings.UsageStyle == "Circular";
-            bool sideBySide = (circle ? Horizontal : settings.UsageLayout == "Horizontal")
-                && settings.ShowCpu && settings.ShowRam;
+            // Horizontal readings are automatic; vertical docks stack.
+            bool sideBySide = Horizontal && settings.ShowCpu && settings.ShowRam;
             int usageWidth = Horizontal
                 ? circle ? (settings.ShowCpu && settings.ShowRam ? 140 : 74)
                          : sideBySide ? 160 : Math.Max(170, Math.Min(245, settings.IconSize * 5 + 25))
@@ -773,25 +780,6 @@ public class Dock : Form, IMessageFilter
                 ForeColor = ForeColor
             };
             var usageMenu = DockMenuStyle.Create(light, Color.FromArgb(58, 173, 201));
-            var layoutMenu = new ToolStripMenuItem("Distribución CPU / RAM");
-            foreach (string layout in new[] { "Vertical", "Horizontal" })
-            {
-                var choice = new ToolStripMenuItem(layout == "Horizontal"
-                    ? "Horizontal (lado a lado)" : "Vertical (uno sobre otro)")
-                {
-                    Checked = settings.UsageLayout == layout
-                };
-                choice.Click += (_, _) =>
-                {
-                    if (settings.UsageLayout == layout) return;
-                    settings.UsageLayout = layout;
-                    Store();
-                    Render();
-                };
-                layoutMenu.DropDownItems.Add(choice);
-            }
-            usageMenu.Items.Add(layoutMenu);
-            usageMenu.Items.Add(new ToolStripSeparator());
             usageMenu.Items.Add("Opciones de CPU y RAM...", null, (_, _) => ShowOptions("General"));
             usage.ContextMenuStrip = usageMenu;
             panel.Controls.Add(usage);
@@ -862,18 +850,19 @@ public class Dock : Form, IMessageFilter
         {
             var clock = new DigitalClockControl(Horizontal)
             {
+                TextOnly = !lcdEmbedded,
                 ShowDate = settings.ShowClockDate,
-                ShowSticker = settings.ShowClockSticker,
+                ShowSticker = lcdEmbedded && settings.ShowClockSticker,
                 Hour24 = settings.ClockFormat == "24",
                 ShowAmPm = settings.ShowClockAmPm,
-                Width = Horizontal ? embeddedClockWidth : settings.Width,
-                Height = Horizontal ? settings.HorizontalHeight
-                    : (settings.ShowClockDate ? 77 : 52),
-                Margin = Horizontal ? new Padding(8, 0, 0, 0) : Padding.Empty,
-                BackColor = Horizontal ? energyPanel.CapsuleColor : BackColor
+                Width = lcdEmbedded ? embeddedClockWidth : Horizontal ? 100 : settings.Width,
+                Height = lcdEmbedded ? Math.Max(36, settings.HorizontalHeight - 4)
+                    : Horizontal ? settings.HorizontalHeight : settings.ShowClockDate ? 77 : 52,
+                Margin = lcdEmbedded ? new Padding(8, 2, 0, 1) : Padding.Empty,
+                BackColor = lcdEmbedded ? energyPanel.CapsuleColor : BackColor
             };
             var clockMenu = DockMenuStyle.Create(light, Color.FromArgb(58, 173, 201));
-            clockMenu.Items.Add("Ocultar reloj digital", null, (_, _) =>
+            clockMenu.Items.Add("Ocultar reloj", null, (_, _) =>
             {
                 settings.ShowDigitalClock = false;
                 Store();
@@ -882,25 +871,44 @@ public class Dock : Form, IMessageFilter
             });
             clockMenu.Items.Add("Opciones del reloj...", null, (_, _) => ShowOptions("General"));
             clock.ContextMenuStrip = clockMenu;
-            if (Horizontal) energyPanel.Controls.Add(clock);
-            else clockArea.Controls.Add(clock);
+            if (lcdEmbedded)
+                energyPanel.Controls.Add(clock);
+            else
+            {
+                clock.Dock = DockStyle.Fill;
+                clockArea.Controls.Add(clock);
+            }
         }
-        clockArea.Width = Horizontal ? 0 : settings.Width;
-        clockArea.Height = Horizontal ? settings.HorizontalHeight
-            : (settings.ShowClockDate ? 77 : 52);
-        clockArea.Visible = settings.ShowDigitalClock && !Horizontal;
+        bool networkPinned = networkArea.Controls.Count > 0;
+        bool textClock = settings.ShowDigitalClock && !lcdEmbedded;
         energyPanel.Visible = energyPanel.Controls.Count > 0;
-        networkArea.Visible = networkArea.Controls.Count > 0;
-        networkArea.Width = Horizontal ? 194 : settings.Width;
-        networkArea.Height = Horizontal ? settings.HorizontalHeight : 184;
-        // Keep the original, independent rounded capsule at the screen edge.
-        // Network occupies the adjacent strip, never the capsule itself.
-        clockArea.BringToFront();
-        networkArea.BringToFront();
-        energyPanel.BringToFront();
+        networkArea.Visible = networkPinned;
+        clockArea.Visible = textClock;
+
+        // Deterministic placement inside a single right-docked parent.
+        int networkLength = networkPinned ? Horizontal ? 194 : 184 : 0;
+        int clockLength = textClock ? Horizontal ? 100
+            : settings.ShowClockDate ? 77 : 52 : 0;
+        int powerLength = energyPanel.Visible
+            ? Horizontal ? energyPanel.Width : energyPanel.Height : 0;
+        endCluster.Width = Horizontal ? networkLength + clockLength + powerLength : settings.Width;
+        endCluster.Height = Horizontal ? settings.HorizontalHeight
+            : networkLength + clockLength + powerLength;
+        networkArea.Bounds = Horizontal
+            ? new Rectangle(0, 0, networkLength, settings.HorizontalHeight)
+            : new Rectangle(0, 0, settings.Width, networkLength);
+        clockArea.Bounds = Horizontal
+            ? new Rectangle(networkLength, 0, clockLength, settings.HorizontalHeight)
+            : new Rectangle(0, networkLength, settings.Width, clockLength);
+        energyPanel.Bounds = Horizontal
+            ? new Rectangle(networkLength + clockLength, 0, powerLength, settings.HorizontalHeight)
+            : new Rectangle(0, networkLength + clockLength, settings.Width, powerLength);
+        endCluster.Visible = energyPanel.Visible || networkPinned || textClock;
+        endCluster.BringToFront();
         energyPanel.ResumeLayout();
         networkArea.ResumeLayout();
         clockArea.ResumeLayout();
+        endCluster.ResumeLayout();
         panel.ResumeLayout();
         AlignFooter();
         if (IsHandleCreated && !resizeActive) Position();
@@ -1028,6 +1036,7 @@ public class Dock : Form, IMessageFilter
         settings.ShowCpu = dlg.ShowCpu;
         settings.ShowRam = dlg.ShowRam;
         settings.ShowDigitalClock = dlg.ShowDigitalClock;
+        settings.ClockDisplayMode = dlg.ClockDisplayMode;
         settings.ShowClockDate = dlg.ShowClockDate;
         settings.ShowClockSticker = dlg.ShowClockSticker;
         settings.ClockFormat = dlg.ClockFormat;
@@ -1035,7 +1044,7 @@ public class Dock : Form, IMessageFilter
         settings.ShowTerminalButton = dlg.ShowTerminalButton;
         settings.TerminalMode = dlg.TerminalMode;
         settings.UsageStyle = dlg.UsageStyle;
-        settings.UsageLayout = dlg.UsageLayout;
+        settings.UsageLayout = "Horizontal";
         settings.NetworkAtEnd = dlg.NetworkAtEnd;
         settings.DiskColorArgb = dlg.DiskColorArgb;
         settings.CriticalPercent = dlg.CriticalPercent;
@@ -1151,16 +1160,14 @@ public class Dock : Form, IMessageFilter
         energyPanel.FlowDirection = Horizontal ? FlowDirection.LeftToRight : FlowDirection.TopDown;
         energyPanel.HorizontalBar = Horizontal;
         energyPanel.Padding = Horizontal
-            ? settings.ShowDigitalClock ? new Padding(16, 0, 0, 0) : new Padding(16, 0, 6, 0)
+            ? settings.ShowDigitalClock && settings.ClockDisplayMode == "LCD"
+                ? new Padding(16, 0, 0, 0) : new Padding(16, 0, 6, 0)
             : new Padding(0, 7, 0, 3);
-        clockArea.Dock = Horizontal ? DockStyle.Right : DockStyle.Bottom;
-        networkArea.Dock = Horizontal ? DockStyle.Right : DockStyle.Bottom;
-        energyPanel.Dock = Horizontal ? DockStyle.Right : DockStyle.Bottom;
-        // Docking follows z-order: energy first at the outer edge,
-        // network second immediately beside it and shortcuts fill the rest.
-        clockArea.BringToFront();
-        networkArea.BringToFront();
-        energyPanel.BringToFront();
+        endCluster.Dock = Horizontal ? DockStyle.Right : DockStyle.Bottom;
+        networkArea.Dock = DockStyle.None;
+        clockArea.Dock = DockStyle.None;
+        energyPanel.Dock = DockStyle.None;
+        endCluster.BringToFront();
         panel.Dock = DockStyle.Fill;
         footer.Dock = Horizontal ? DockStyle.Right : DockStyle.Bottom;
         footer.Width = Horizontal ? 80 : settings.Width;

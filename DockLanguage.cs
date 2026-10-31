@@ -31,6 +31,8 @@ internal static class DockLanguage
         ["Mostrar reloj digital LCD (12 h, AM/PM)"] = ("Show LCD digital clock (12 h, AM/PM)", "Mostrar relógio digital LCD (12 h, AM/PM)"),
         ["Mostrar reloj digital LCD"] = ("Show LCD digital clock", "Mostrar relógio digital LCD"),
         ["Formato del reloj:"] = ("Clock format:", "Formato do relógio:"),
+        ["Mostrar reloj"] = ("Show clock", "Mostrar relógio"),
+        ["Presentación del reloj:"] = ("Clock display:", "Apresentação do relógio:"),
         ["Mostrar AM/PM (solo 12 h)"] = ("Show AM/PM (12-hour only)", "Mostrar AM/PM (apenas 12 h)"),
         ["Mostrar botón Terminal / CMD"] = ("Show Terminal / CMD button", "Mostrar botão Terminal / CMD"),
         ["Abrir con:"] = ("Open with:", "Abrir com:"),

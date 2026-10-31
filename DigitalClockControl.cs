@@ -16,6 +16,7 @@ public sealed class DigitalClockControl : Control
     readonly System.Windows.Forms.Timer timer = new() { Interval = 1000 };
     static readonly Image? CasioWordmark = LoadWordmark();
     public bool HorizontalBar { get; }
+    public bool TextOnly { get; set; }
     public bool ShowDate { get; set; } = true;
     public bool ShowSticker { get; set; } = true;
     public bool Hour24 { get; set; }
@@ -106,35 +107,42 @@ public sealed class DigitalClockControl : Control
         if (Width < 2 || Height < 2) return;
         Graphics g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        if (!HorizontalBar)
+        if (!HorizontalBar || TextOnly)
         {
-            // On vertical docks this is plain text on the dock background,
-            // never a miniature LCD display or a black capsule.
+            // Plain clock mode has no LCD frame, black panel or CASIO decal.
             g.Clear(BackColor);
-            DateTime verticalNow = DateTime.Now;
-            string time = verticalNow.ToString(Hour24 ? "HH:mm" : "hh:mm", CultureInfo.InvariantCulture);
-            string verticalSuffix = !Hour24 && ShowAmPm ? verticalNow.ToString("tt", CultureInfo.InvariantCulture) : "";
-            Color foreground = BackColor.GetBrightness() > .55f
+            DateTime nowText = DateTime.Now;
+            string time = nowText.ToString(Hour24 ? "HH:mm" : "hh:mm", CultureInfo.InvariantCulture);
+            string suffixText = !Hour24 && ShowAmPm
+                ? nowText.ToString("tt", CultureInfo.InvariantCulture) : "";
+            Color inkText = BackColor.GetBrightness() > .55f
                 ? Color.FromArgb(26, 35, 48) : Color.FromArgb(232, 237, 243);
             var flags = TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter |
-                        TextFormatFlags.NoPadding | TextFormatFlags.SingleLine;
-            using var face = new Font("Segoe UI", Math.Clamp(Width / 5.6f, 11f, 19f),
-                FontStyle.Bold, GraphicsUnit.Pixel);
-            TextRenderer.DrawText(g, time, face, new Rectangle(0, 2, Width, 28), foreground, flags);
-            int dateY = 35;
-            if (verticalSuffix.Length != 0)
+                TextFormatFlags.NoPadding | TextFormatFlags.SingleLine;
+            int clockHeight = HorizontalBar
+                ? ShowDate ? Math.Max(21, Height * 2 / 3) : Height
+                : 29;
+            float size = Math.Clamp(Width / (HorizontalBar ? 7.0f : 5.6f), 11f, 19f);
+            using var face = new Font("Segoe UI", size, FontStyle.Bold, GraphicsUnit.Pixel);
+            TextRenderer.DrawText(g, time + (HorizontalBar && suffixText.Length > 0 ? " " + suffixText : ""),
+                face, new Rectangle(0, HorizontalBar ? 0 : 2, Width, clockHeight),
+                inkText, flags);
+            int dateY = HorizontalBar ? clockHeight : 35;
+            if (!HorizontalBar && suffixText.Length > 0)
             {
                 using var suffixFace = new Font("Segoe UI", 10, FontStyle.Regular, GraphicsUnit.Pixel);
-                TextRenderer.DrawText(g, verticalSuffix, suffixFace, new Rectangle(0, 27, Width, 16),
-                    foreground, flags);
-                dateY = 48;
+                TextRenderer.DrawText(g, suffixText, suffixFace,
+                    new Rectangle(0, 29, Width, 16), inkText, flags);
+                dateY = 47;
             }
             if (ShowDate)
             {
-                using var dateFace = new Font("Consolas", Math.Clamp(Width / 7.5f, 10f, 13f),
+                using var dateFace = new Font("Consolas", 11f,
                     FontStyle.Regular, GraphicsUnit.Pixel);
-                TextRenderer.DrawText(g, verticalNow.ToString("dd-MM", CultureInfo.InvariantCulture),
-                    dateFace, new Rectangle(0, dateY, Width, 19), foreground, flags);
+                TextRenderer.DrawText(g,
+                    nowText.ToString("dd-MM", CultureInfo.InvariantCulture),
+                    dateFace, new Rectangle(0, dateY, Width, 18),
+                    inkText, flags);
             }
             return;
         }
@@ -151,13 +159,14 @@ public sealed class DigitalClockControl : Control
         g.DrawLine(divider, 3.5f, 18, 3.5f, 86);
 
         // Light gray-green LCD embedded in the same black housing.
-        var shadow = new RectangleF(19, 16, 213, 49);
+        // Compact inset: keep a black border above and below the display.
+        var shadow = new RectangleF(19, 19, 213, 44);
         using (var shadowShape = RoundedRectangle(shadow, 15))
         using (var darkBorder = new Pen(Color.FromArgb(40, 44, 42), 4.1f))
         {
             g.DrawPath(darkBorder, shadowShape);
         }
-        var lcdRect = new RectangleF(20.5f, 17.5f, 210, 46);
+        var lcdRect = new RectangleF(20.5f, 20.5f, 210, 41);
         using (var lcdShape = RoundedRectangle(lcdRect, 14))
         using (var lcdFill = new LinearGradientBrush(lcdRect,
                    Color.FromArgb(200, 206, 191), Color.FromArgb(174, 183, 167),
@@ -172,10 +181,10 @@ public sealed class DigitalClockControl : Control
         string digits = now.ToString(Hour24 ? "HHmm" : "hhmm", CultureInfo.InvariantCulture);
         string suffix = !Hour24 && ShowAmPm ? now.ToString("tt", CultureInfo.InvariantCulture) : "";
         float[] digitX = { 52, 81, 122, 151 };
-        for (int i = 0; i < 4; i++) DrawDigit(g, digits[i], digitX[i], 26, 24, 29);
+        for (int i = 0; i < 4; i++) DrawDigit(g, digits[i], digitX[i], 28, 24, 25);
         using var ink = new SolidBrush(Color.FromArgb(24, 29, 25));
         g.FillEllipse(ink, 111, 34, 3.4f, 3.4f);
-        g.FillEllipse(ink, 111, 46, 3.4f, 3.4f);
+        g.FillEllipse(ink, 111, 45, 3.4f, 3.4f);
         if (suffix.Length > 0)
             using (var suffixFont = new Font("Segoe UI", 14, FontStyle.Bold, GraphicsUnit.Pixel))
                 g.DrawString(suffix, suffixFont, ink, 185, 38);
