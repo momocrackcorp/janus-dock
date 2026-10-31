@@ -23,6 +23,8 @@ public class DockSettings
     public int IconSize { get; set; } = 40;
     public int IconSpacing { get; set; } = 4;
     public string IconStyle { get; set; } = "Windows";
+    public string BarColorMode { get; set; } = "Windows";
+    public int CustomBarColorArgb { get; set; } = Color.FromArgb(36, 57, 64).ToArgb();
     public bool ShowNames { get; set; } = false;
     public string NameMode { get; set; } = "Tooltip";
     public string DockMode { get; set; } = "Acoplada";
@@ -237,7 +239,12 @@ public class Dock : Form, IMessageFilter
         themeTimer.Tick += (_, _) =>
         {
             bool next = IsLightTheme();
-            Color nextBarColor = TaskbarColor();
+            Color nextBarColor = settings.BarColorMode switch
+            {
+                "Custom" => Color.FromArgb(settings.CustomBarColorArgb),
+                "Classic" => Color.FromArgb(192, 192, 192),
+                _ => TaskbarColor()
+            };
             if (next != light || BackColor.ToArgb() != nextBarColor.ToArgb())
             {
                 light = next;
@@ -287,8 +294,13 @@ public class Dock : Form, IMessageFilter
     }
     void ApplyTheme()
     {
-        BackColor = TaskbarColor();
-        ForeColor = light ? Color.FromArgb(28, 30, 35) : Color.FromArgb(241, 241, 244);
+        BackColor = settings.BarColorMode switch
+        {
+            "Custom" => Color.FromArgb(settings.CustomBarColorArgb),
+            "Classic" => Color.FromArgb(192, 192, 192),
+            _ => TaskbarColor()
+        };
+        ForeColor = BackColor.GetBrightness() > .54f ? Color.FromArgb(28, 30, 35) : Color.FromArgb(241, 241, 244);
         footer.BackColor = BackColor;
         panel.BackColor = BackColor;
         energyPanel.BackColor = BackColor;
@@ -370,6 +382,23 @@ public class Dock : Form, IMessageFilter
         return SystemIcons.Application.ToBitmap();
     }
     Image EnergyIcon(bool shutdown) => PowerImages.Load(shutdown);
+    // Classic tools motif: crossed wrench and screwdriver, based on the user's reference.
+    Image WindowsSettingsIcon()
+    {
+        var image = new Bitmap(96, 96);
+        using var g = Graphics.FromImage(image);
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        using var metal = new Pen(Color.FromArgb(190, 202, 212), 11f) { StartCap = System.Drawing.Drawing2D.LineCap.Round, EndCap = System.Drawing.Drawing2D.LineCap.Round };
+        using var edge = new Pen(Color.FromArgb(68, 83, 96), 2f);
+        using var gold = new Pen(Color.FromArgb(244, 184, 40), 13f) { StartCap = System.Drawing.Drawing2D.LineCap.Round };
+        g.DrawLine(metal, 21, 76, 72, 24);
+        g.DrawEllipse(metal, 62, 12, 19, 19);
+        g.DrawLine(edge, 19, 78, 74, 22);
+        g.DrawLine(gold, 26, 24, 72, 74);
+        g.DrawLine(metal, 19, 17, 28, 26);
+        g.DrawEllipse(edge, 65, 73, 10, 10);
+        return image;
+    }
     Image GetIcon(string path)
     {
         // Colored preview-style power icons are consistent in both appearance modes.
@@ -382,7 +411,7 @@ public class Dock : Form, IMessageFilter
         if (path == "janus:shutdown") return EnergyIcon(true);
         if (path == "janus:restart") return EnergyIcon(false);
         if (path == "janus:documents") return ShellFolderIcon(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments));
-        if (path == "janus:settings") return LucideDockIcons.Load(path, light)!; // Consistent gear fallback, not generic application icon.
+        if (path == "janus:settings") return WindowsSettingsIcon();
         if (path == "janus:downloads") return ShellFolderIcon(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"));
         // Prefer the native installed app executable for recognized Office/browser links.
         // This was the successful strategy in build #109.
@@ -818,6 +847,8 @@ public class Dock : Form, IMessageFilter
         if (settings.ShowDiskWidget && currentWidget == null) settings.Items.Add(new DockItem { Name = "Discos", IsDiskWidget = true });
         if (!settings.ShowDiskWidget && currentWidget != null) settings.Items.Remove(currentWidget);
         settings.IconStyle = dlg.IconStyle;
+        settings.BarColorMode = dlg.BarColorMode;
+        settings.CustomBarColorArgb = dlg.CustomBarColorArgb;
         settings.IconSize = dlg.IconSize;
         settings.IconSpacing = dlg.IconSpacing;
         settings.Width = dlg.BarWidth;
@@ -829,6 +860,7 @@ public class Dock : Form, IMessageFilter
         if (reDock) SetOrientation();
         if (reDock || !registered) RegisterBar();
         Store();
+        ApplyTheme();
         Render();
         if (reDock || !registered) Position();
     }
