@@ -306,7 +306,9 @@ public class Dock : Form, IMessageFilter
         footer.BackColor = BackColor;
         panel.BackColor = BackColor;
         energyPanel.BackColor = BackColor;
-        energyPanel.CapsuleColor = BackColor.GetBrightness() > .54f ? ControlPaint.Dark(BackColor, .08f) : ControlPaint.Light(BackColor, .16f);
+        energyPanel.CapsuleColor = settings.IconStyle == "Lucide"
+            ? Color.FromArgb(225, 236, 243)
+            : (BackColor.GetBrightness() > .54f ? ControlPaint.Dark(BackColor, .08f) : ControlPaint.Light(BackColor, .16f));
         energyPanel.CapsuleBorder = Color.FromArgb(85, ForeColor);
         energyPanel.Invalidate();
         grip.BackColor = light ? Color.FromArgb(210, 216, 226) : Color.FromArgb(66, 71, 82);
@@ -682,6 +684,8 @@ public class Dock : Form, IMessageFilter
             {
                 // Keep the native/lucide bitmap square; button dimensions need not be.
                 btn.ImageAlign = ContentAlignment.MiddleCenter;
+                btn.BackColor = energyPanel.CapsuleColor;
+                btn.FocusEnabled = settings.HoverEffect == "Foco";
                 btn.Width = Horizontal ? width : Math.Max(24, settings.Width - 18);
                 btn.Height = settings.IconSize + (settings.NameMode == "Written" ? 40 : 12);
                 btn.Margin = Horizontal ? new Padding(settings.IconSpacing / 2 + 5, Math.Max(0, (energyPanel.Height - btn.Height) / 2), settings.IconSpacing - settings.IconSpacing / 2, 0) : new Padding(1, settings.IconSpacing / 2 + 5, 1, settings.IconSpacing - settings.IconSpacing / 2);
