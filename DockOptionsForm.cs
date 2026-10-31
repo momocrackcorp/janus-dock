@@ -836,6 +836,13 @@ public sealed class DockOptionsForm : Form
                 rows.Controls.Add(card);
             }
             card.Controls.Add(control);
+            if (control is FlowLayoutPanel layout && layout.Name is "SettingsFieldRow" or "SettingsSectionTitle")
+            {
+                layout.BackColor = card.BackColor;
+                foreach (Control inner in layout.Controls)
+                    if (inner is Label label) label.BackColor = card.BackColor;
+            }
+            if (control is Label textLabel) textLabel.BackColor = card.BackColor;
         }
     }
 
@@ -869,6 +876,7 @@ public sealed class DockOptionsForm : Form
             }
             if (child is ModernToggle toggle)
             {
+                toggle.BackColor = card.BackColor;
                 toggle.RightAligned = true;
                 toggle.Width = usable;
                 toggle.Height = Math.Max(34, toggle.Font.Height + 16);
