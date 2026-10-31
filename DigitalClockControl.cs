@@ -113,7 +113,7 @@ public sealed class DigitalClockControl : Control
             g.Clear(BackColor);
             DateTime verticalNow = DateTime.Now;
             string time = verticalNow.ToString(Hour24 ? "HH:mm" : "hh:mm", CultureInfo.InvariantCulture);
-            string suffix = !Hour24 && ShowAmPm ? verticalNow.ToString("tt", CultureInfo.InvariantCulture) : "";
+            string verticalSuffix = !Hour24 && ShowAmPm ? verticalNow.ToString("tt", CultureInfo.InvariantCulture) : "";
             Color foreground = BackColor.GetBrightness() > .55f
                 ? Color.FromArgb(26, 35, 48) : Color.FromArgb(232, 237, 243);
             var flags = TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter |
@@ -122,10 +122,10 @@ public sealed class DigitalClockControl : Control
                 FontStyle.Bold, GraphicsUnit.Pixel);
             TextRenderer.DrawText(g, time, face, new Rectangle(0, 2, Width, 28), foreground, flags);
             int dateY = 35;
-            if (suffix.Length != 0)
+            if (verticalSuffix.Length != 0)
             {
                 using var suffixFace = new Font("Segoe UI", 10, FontStyle.Regular, GraphicsUnit.Pixel);
-                TextRenderer.DrawText(g, suffix, suffixFace, new Rectangle(0, 27, Width, 16),
+                TextRenderer.DrawText(g, verticalSuffix, suffixFace, new Rectangle(0, 27, Width, 16),
                     foreground, flags);
                 dateY = 48;
             }
