@@ -676,6 +676,8 @@ public sealed class DiskUsageControl : Control
     public bool ZoomEnabled { get; set; } = true;
     public float ZoomFactor { get; set; } = 1.8f;
     bool hovered;
+    float hoverProgress;
+    readonly System.Windows.Forms.Timer hoverTimer = new() { Interval = 16 };
     static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Task<string>> MediaCache = new();
     readonly string details;
     readonly bool compact;
@@ -688,8 +690,15 @@ public sealed class DiskUsageControl : Control
         if (compactMode)
         {
             Cursor = Cursors.Hand;
-            MouseEnter += (_, _) => { hovered = true; Invalidate(); };
-            MouseLeave += (_, _) => { hovered = false; Invalidate(); };
+            hoverTimer.Tick += (_, _) =>
+            {
+                float target = hovered && ZoomEnabled ? 1f : 0f;
+                hoverProgress += (target - hoverProgress) * .28f;
+                if (Math.Abs(target - hoverProgress) < .01f) { hoverProgress = target; hoverTimer.Stop(); }
+                Invalidate();
+            };
+            MouseEnter += (_, _) => { hovered = true; hoverTimer.Start(); };
+            MouseLeave += (_, _) => { hovered = false; hoverTimer.Start(); };
             Click += (_, _) =>
             {
                 try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", rootPath) { UseShellExecute = true }); }
@@ -737,6 +746,11 @@ public sealed class DiskUsageControl : Control
         catch { return ""; }
     }
     public void SetAppearance(Color color, int criticalPercent) { accent = color; threshold = criticalPercent; Invalidate(); }
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing) { hoverTimer.Stop(); hoverTimer.Dispose(); }
+        base.Dispose(disposing);
+    }
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
@@ -760,7 +774,12 @@ public sealed class DiskUsageControl : Control
 
         // The disk itself is the usage indicator: Windows is a shaded device,
         // Lucide is an outline device. Both scale with IconPixels.
-        float baseSize = Math.Min(Math.Min(IconPixels * 1.20f * (hovered && ZoomEnabled ? ZoomFactor : 1f), Width - 4), Height - 4);
+        // Animate from a smaller resting icon toward the largest drawable size.
+        // The old code immediately hit the clip limit, making hover imperceptible.
+        float room = Math.Max(16f, Math.Min(Width - 4, Height - 4));
+        float normal = Math.Min(room * .78f, IconPixels * .92f);
+        float magnified = Math.Min(room, normal * Math.Clamp(ZoomFactor, 1f, 3.4f));
+        float baseSize = normal + (magnified - normal) * (ZoomEnabled ? hoverProgress : 0f);
         float sz = Math.Max(15f, baseSize);
         float x = (Width - sz) / 2f, y = (Height - sz) / 2f;
         g.TranslateTransform(x, y);
