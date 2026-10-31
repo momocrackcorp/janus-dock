@@ -851,6 +851,13 @@ public sealed class DockOptionsForm : Form
                     layout.Width = usable;
                 }
             }
+            if (child is ModernToggle toggle)
+            {
+                toggle.RightAligned = true;
+                toggle.Width = usable;
+                toggle.Height = Math.Max(38, toggle.Font.Height + 20);
+                toggle.Invalidate();
+            }
             if (child is ListBox list) list.Width = usable;
             if (child is Label label) label.MaximumSize = new Size(usable, 0);
             if (child is FlowLayoutPanel diskFlow &&
