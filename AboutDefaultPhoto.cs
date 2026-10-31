@@ -9,18 +9,7 @@ internal static class AboutDefaultPhoto
   public static Image Load()
   {
     // Optional local portrait: kept out of the public repository and executable.
-    string localImage = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "JANUS", "Dock", "about-photo.jpg");
-    if (File.Exists(localImage))
-    {
-        try
-        {
-            using var source = Image.FromFile(localImage);
-            return new Bitmap(source);
-        }
-        catch { /* Fall back to the embedded image if the local file is damaged. */ }
-    }
+    // Always show the approved B/W project photo; no stale local override.
     using var stream = new MemoryStream(Convert.FromBase64String(Jpeg));
     using var image = Image.FromStream(stream);
     return new Bitmap(image);
