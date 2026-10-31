@@ -389,7 +389,6 @@ public class Dock : Form, IMessageFilter
         }
         return SystemIcons.Application.ToBitmap();
     }
-    Image EnergyIcon(bool shutdown) => PowerImages.Load(shutdown);
     // Classic tools motif: crossed wrench and screwdriver, based on the user's reference.
     Image WindowsSettingsIcon()
     {
@@ -436,15 +435,13 @@ public class Dock : Form, IMessageFilter
     }
     Image GetIcon(string path)
     {
-        // Colored preview-style power icons are consistent in both appearance modes.
+        // Use built-in Windows power glyphs; no third-party PNG assets.
         if (path is "janus:lock" or "janus:shutdown" or "janus:restart") return WindowsPowerGlyph(path);
         if (settings.IconStyle == "Lucide")
         {
             var lucide = LucideDockIcons.Load(path, light);
             if (lucide != null) return lucide;
         }
-        if (path == "janus:shutdown") return EnergyIcon(true);
-        if (path == "janus:restart") return EnergyIcon(false);
         if (path == "janus:documents") return ShellFolderIcon(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments));
         if (path == "janus:settings") return WindowsSettingsIcon();
         if (path == "janus:downloads") return ShellFolderIcon(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"));
