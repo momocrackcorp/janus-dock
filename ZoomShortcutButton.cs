@@ -52,8 +52,8 @@ public sealed class ZoomShortcutButton : Button
         }
         // Give the animation a visibly smaller resting size, leaving room to grow
         // inside narrow vertical bars without clipping at high DPI.
-        float baseFactor = 1f;
-        int size = (int)Math.Round(BaseIconSize * baseFactor * zoom);
+        // Resting icon fills its compact slot; magnification never changes cell spacing.
+        int size = (int)Math.Round(BaseIconSize * zoom);
         size = Math.Min(size, Math.Min(ClientSize.Width - 2, ClientSize.Height - (ShowCaption ? 29 : 2)));
         size = Math.Max(1, size);
         int x = (ClientSize.Width - size) / 2;
