@@ -501,21 +501,26 @@ public sealed class DockOptionsForm : Form
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "JANUS", "Dock", "about-photo.png");
         var aboutPicture = new PictureBox {
-            Size = new Size(240, 135),
+            Size = new Size(280, 150),
             SizeMode = PictureBoxSizeMode.Zoom,
             BackColor = Color.FromArgb(227, 238, 246),
             Margin = new Padding(5, 7, 5, 5)
         };
         void LoadAboutPicture()
         {
-            if (!File.Exists(aboutPicturePath)) return;
             try {
-                using var loaded = Image.FromFile(aboutPicturePath);
-                var fresh = new Bitmap(loaded);
+                Image fresh;
+                if (File.Exists(aboutPicturePath))
+                {
+                    using var loaded = Image.FromFile(aboutPicturePath);
+                    fresh = new Bitmap(loaded);
+                }
+                else fresh = AboutDefaultPhoto.Load();
                 var oldImage = aboutPicture.Image;
                 aboutPicture.Image = fresh;
                 oldImage?.Dispose();
-            } catch { }
+            }
+            catch { /* Keep the About page open even if the picture is invalid. */ }
         }
         LoadAboutPicture();
         var photoButton = new Button { Text = "Elegir imagen para Acerca de...", AutoSize = true,
