@@ -275,7 +275,7 @@ public sealed class DockOptionsForm : Form
         generalRows.Controls.Add(FieldRow(names, nameMode));
         generalRows.Controls.Add(FieldRow(new Label { Text = "Modo:", AutoSize = true }, dockMode));
         generalRows.Controls.Add(FieldRow(new Label { Text = "Ubicación:", AutoSize = true }, location));
-        generalRows.Controls.Add(FieldRow(powerTitle, shutdown, restart));
+        generalRows.Controls.Add(FieldRow(powerTitle, lockButton, shutdown, restart));
         generalRows.Controls.Add(new Label { Text = "Al ocultarse queda una franja para recuperar la barra con el mouse.", AutoSize = true });
         generalRows.SizeChanged += (_, _) => FitRows(generalRows);
 
