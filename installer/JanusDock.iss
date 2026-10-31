@@ -31,8 +31,6 @@ Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 CloseApplications=yes
-CloseApplicationsFilter=*.exe
-AppMutex=JANUS-Dock-SingleInstance
 RestartApplications=no
 
 [Messages]
