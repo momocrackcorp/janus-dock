@@ -391,7 +391,7 @@ public sealed class DockOptionsForm : Form
         usageLayout.SelectedIndex = config.UsageLayout == "Horizontal" ? 1 : 0;
         generalRows.Controls.Add(FieldRow(
             new Label { Text = "Distribución CPU / RAM:", AutoSize = true }, usageLayout));
-        var networkAtEnd = new CheckBox { Text = "Anclar tráfico junto a los botones de energía (derecha / abajo)", AutoSize = true, Checked = config.NetworkAtEnd };
+        var networkAtEnd = new CheckBox { Text = "Anclar tráfico al costado de los botones de energía", AutoSize = true, Checked = config.NetworkAtEnd };
         generalRows.Controls.Add(networkAtEnd);
         var widget = new CheckBox { Text = "Mostrar indicador de uso de discos en la barra", Checked = config.ShowDiskWidget, Location = new Point(18, 20), AutoSize = true };
         var diskColors = new Dictionary<string,int>(config.DiskColors, StringComparer.OrdinalIgnoreCase);
@@ -491,9 +491,9 @@ public sealed class DockOptionsForm : Form
             catch { }
         }
 
-        // Disk settings use the same scrollable stack for 200% DPI.
-        // Disk options now belong to General: keep disk colors and threshold intact.
-        generalRows.Controls.Add(SectionTitle("Indicadores de discos", "Selecciona qué unidades mostrar y sus colores."));
+        // Disk settings retain their own page and stack for high-DPI displays.
+        var disksSection = SectionTitle("Indicadores de discos", "Selecciona qué unidades mostrar y sus colores.");
+        generalRows.Controls.Add(disksSection);
         generalRows.Controls.Add(widget);
         generalRows.Controls.Add(widgetLabel);
         generalRows.Controls.Add(FieldRow(new Label { Text = "Avisar desde (%):", AutoSize = true }, critical));
@@ -550,43 +550,9 @@ public sealed class DockOptionsForm : Form
             foreach (var control in items) target.Controls.Add(control);
         }
         MoveFromSection(appearanceRows, accessRows, accessesSection);
-        MoveFromSection(generalRows, systemRows, monitorsSection);
-
-        // Compact overview in General. Detailed CPU/RAM and disk options remain
-        // in Sistema; these switches operate the same underlying settings.
-        var quickNetwork = new CheckBox { Text = "Mostrar tráfico de red",
-            Checked = networkWidget.Checked, AutoSize = true };
-        var quickUsage = new CheckBox { Text = "Mostrar uso de CPU y RAM",
-            Checked = cpuWidget.Checked && ramWidget.Checked, AutoSize = true };
-        var quickNetworkEnd = new CheckBox { Text = "Tráfico junto a botones de energía",
-            Checked = networkAtEnd.Checked, AutoSize = true };
-        quickNetwork.CheckedChanged += (_, _) => networkWidget.Checked = quickNetwork.Checked;
-        networkWidget.CheckedChanged += (_, _) => quickNetwork.Checked = networkWidget.Checked;
-        bool syncingUsage = false;
-        quickUsage.CheckedChanged += (_, _) =>
-        {
-            if (syncingUsage) return;
-            syncingUsage = true;
-            bool enabled = quickUsage.Checked;
-            cpuWidget.Checked = enabled;
-            ramWidget.Checked = enabled;
-            syncingUsage = false;
-        };
-        void SyncUsageQuick()
-        {
-            if (syncingUsage) return;
-            syncingUsage = true;
-            quickUsage.Checked = cpuWidget.Checked && ramWidget.Checked;
-            syncingUsage = false;
-        }
-        cpuWidget.CheckedChanged += (_, _) => SyncUsageQuick();
-        ramWidget.CheckedChanged += (_, _) => SyncUsageQuick();
-        quickNetworkEnd.CheckedChanged += (_, _) => networkAtEnd.Checked = quickNetworkEnd.Checked;
-        networkAtEnd.CheckedChanged += (_, _) => quickNetworkEnd.Checked = networkAtEnd.Checked;
-        generalRows.Controls.Add(SectionTitle("Información del sistema", "Indicadores compactos en la barra."));
-        generalRows.Controls.Add(quickNetwork);
-        generalRows.Controls.Add(quickUsage);
-        generalRows.Controls.Add(quickNetworkEnd);
+        // Only the disk options are moved to Sistema. Network, CPU, RAM,
+        // layout, and the end-position switch live in General once, not twice.
+        MoveFromSection(generalRows, systemRows, disksSection);
         accessRows.SizeChanged += (_, _) => FitRows(accessRows);
         systemRows.SizeChanged += (_, _) => FitRows(systemRows);
 
@@ -850,10 +816,10 @@ public sealed class DockOptionsForm : Form
             BackColor = Color.FromArgb(229, 236, 244)
         };
         string description = page.Name switch {
-            "General" => "Comportamiento y funciones principales del Dock.",
+            "General" => "Comportamiento, energía y monitores del Dock.",
             "Apariencia" => "Personaliza el aspecto visual del Dock.",
             "Accesos" => "Organiza las aplicaciones y los separadores.",
-            "Sistema" => "Monitores de red, CPU, memoria y discos.",
+            "Sistema" => "Indicadores de discos, unidades y colores.",
             _ => "Proyecto, versión, imagen y créditos."
         };
         header.Controls.Add(new Label {

@@ -33,7 +33,7 @@ public sealed class SystemUsageControl : Control
         Horizontal = horizontal;
         SideBySide = sideBySide;
         showCpu = cpuVisible; showRam = ramVisible;
-        Size = horizontal ? new Size(sideBySide && showCpu && showRam ? 214 : 120, sideBySide && showCpu && showRam ? 42 : showCpu && showRam ? 56 : 36) : new Size(88, showCpu && showRam ? 150 : 82);
+        Size = horizontal ? new Size(sideBySide && showCpu && showRam ? 160 : 120, sideBySide && showCpu && showRam ? 42 : showCpu && showRam ? 56 : 36) : new Size(88, showCpu && showRam ? 150 : 82);
         Margin = new Padding(4, 2, 4, 2);
         DoubleBuffered = true;
         timer.Tick += (_, _) => Sample();
@@ -76,8 +76,8 @@ public sealed class SystemUsageControl : Control
         // Draw inside a normalized coordinate system, preserving icon proportions
         // even when Windows display scaling or dock thickness changes.
         bool horizontal = Horizontal;
-        bool twoAcross = SideBySide && showCpu && showRam && Width >= 200;
-        float virtualWidth = twoAcross ? 210f : horizontal ? 120f : 90f;
+        bool twoAcross = SideBySide && showCpu && showRam && Width >= 154;
+        float virtualWidth = twoAcross ? 156f : horizontal ? 120f : 90f;
         float virtualHeight = twoAcross ? 36f : horizontal ? (showCpu && showRam ? 70f : 36f) : (showCpu && showRam ? 150f : 82f);
         float scale = Math.Min(Width / virtualWidth, Height / virtualHeight);
         if (scale <= 0) return;
@@ -115,10 +115,10 @@ public sealed class SystemUsageControl : Control
         }
         if (twoAcross)
         {
-            Chip(7, 5);
-            g.DrawString($"{cpuPercent:0}%", titleFont, cpuBrush, 44, 11);
-            Memory(114, 5);
-            g.DrawString($"{memoryPercent:0}%", titleFont, ramBrush, 151, 11);
+            Chip(4, 5);
+            g.DrawString($"{cpuPercent:0}%", titleFont, cpuBrush, 37, 11);
+            Memory(79, 5);
+            g.DrawString($"{memoryPercent:0}%", titleFont, ramBrush, 112, 11);
         }
         else if (horizontal)
         {

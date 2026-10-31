@@ -142,6 +142,10 @@ public class Dock : Form, IMessageFilter
         Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown,
         WrapContents = false, AutoScroll = true, Padding = new Padding(0)
     };
+    // Separate, docked end section: the network monitor is NEVER inside
+    // the rounded energy capsule. It has its own background and layout.
+    readonly Panel endSection = new() { Visible = false };
+    readonly Panel networkArea = new() { Visible = false };
     readonly RoundedEnergyPanel energyPanel = new()
     {
         FlowDirection = FlowDirection.TopDown, WrapContents = false,
@@ -201,8 +205,10 @@ public class Dock : Form, IMessageFilter
         options.FlatAppearance.BorderSize = 0;
         footer.Controls.Add(add);
         footer.Controls.Add(options);
+        endSection.Controls.Add(networkArea);
+        endSection.Controls.Add(energyPanel);
         Controls.Add(panel);
-        Controls.Add(energyPanel);
+        Controls.Add(endSection);
         Controls.Add(footer);
         Controls.Add(grip);
         SetOrientation();
@@ -308,6 +314,8 @@ public class Dock : Form, IMessageFilter
         ForeColor = BackColor.GetBrightness() > .54f ? Color.FromArgb(28, 30, 35) : Color.FromArgb(241, 241, 244);
         footer.BackColor = BackColor;
         panel.BackColor = BackColor;
+        endSection.BackColor = BackColor;
+        networkArea.BackColor = BackColor;
         energyPanel.BackColor = BackColor;
         energyPanel.HorizontalBar = Horizontal;
         energyPanel.CapsuleColor = settings.IconStyle == "Lucide"
@@ -562,7 +570,14 @@ public class Dock : Form, IMessageFilter
     void Render()
     {
         panel.SuspendLayout();
+        endSection.SuspendLayout();
+        networkArea.SuspendLayout();
         energyPanel.SuspendLayout();
+        foreach (var existingNetwork in networkArea.Controls.Cast<Control>().ToArray())
+        {
+            networkArea.Controls.Remove(existingNetwork);
+            existingNetwork.Dispose();
+        }
         foreach (var existingEnergy in energyPanel.Controls.Cast<Control>().ToArray())
         {
             energyPanel.Controls.Remove(existingEnergy);
@@ -580,8 +595,10 @@ public class Dock : Form, IMessageFilter
         int width = Horizontal ? Math.Max(22, (int)Math.Round(settings.IconSize * 0.78)) : Math.Max(24, settings.Width - 18);
         int energySlot = Math.Max(24, settings.IconSize + 2);
         int powerCount = (settings.ShowLock ? 1 : 0) + (settings.ShowShutdown ? 1 : 0) + (settings.ShowRestart ? 1 : 0);
-        energyPanel.Width = Horizontal ? Math.Max(1, powerCount) * (energySlot + settings.IconSpacing) + 24 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 185 : 0) : settings.Width;
-        energyPanel.Height = Horizontal ? settings.HorizontalHeight : Math.Max(1, powerCount) * (energySlot + settings.IconSpacing) + 18 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 184 : 0);
+        // The energy capsule is sized ONLY for power buttons.
+        // Network traffic occupies a sibling region on the bar background.
+        energyPanel.Width = Horizontal ? Math.Max(1, powerCount) * (energySlot + settings.IconSpacing) + 24 : settings.Width;
+        energyPanel.Height = Horizontal ? settings.HorizontalHeight : Math.Max(1, powerCount) * (energySlot + settings.IconSpacing) + 18;
         foreach (var item in settings.Items.ToList())
         {
             bool isEnergy = item.Path is "janus:lock" or "janus:shutdown" or "janus:restart";
@@ -698,9 +715,9 @@ public class Dock : Form, IMessageFilter
             // On narrow vertical docks, stack the readings to avoid clipping.
             bool sideBySide = settings.UsageLayout == "Horizontal" && settings.ShowCpu && settings.ShowRam;
             int usageWidth = Horizontal
-                ? (sideBySide ? 214 : Math.Max(170, Math.Min(245, settings.IconSize * 5 + 25)))
+                ? (sideBySide ? 160 : Math.Max(170, Math.Min(245, settings.IconSize * 5 + 25)))
                 : Math.Max(56, settings.Width - 14);
-            bool showSideBySide = sideBySide && usageWidth >= 200;
+            bool showSideBySide = sideBySide && usageWidth >= 154;
             var usage = new SystemUsageControl(Horizontal, settings.ShowCpu, settings.ShowRam, showSideBySide)
             {
                 Width = usageWidth,
@@ -730,7 +747,7 @@ public class Dock : Form, IMessageFilter
             }
             usageMenu.Items.Add(layoutMenu);
             usageMenu.Items.Add(new ToolStripSeparator());
-            usageMenu.Items.Add("Opciones de CPU y RAM...", null, (_, _) => ShowOptions("Sistema"));
+            usageMenu.Items.Add("Opciones de CPU y RAM...", null, (_, _) => ShowOptions("General"));
             usage.ContextMenuStrip = usageMenu;
             panel.Controls.Add(usage);
         }
@@ -747,15 +764,25 @@ public class Dock : Form, IMessageFilter
             network.ContextMenuStrip = networkMenu;
             if (settings.NetworkAtEnd)
             {
-                // In WinForms docking the trailing section is independent of the
-                // scrolling shortcuts. Place network first, then power commands.
-                energyPanel.Controls.Add(network);
-                energyPanel.Controls.SetChildIndex(network, 0);
+                // Reserved end region beside the energy capsule, never its child.
+                // DockStyle.Fill sizes the network display to the available area.
+                network.Margin = Padding.Empty;
+                network.Dock = DockStyle.Fill;
+                networkArea.Controls.Add(network);
             }
             else panel.Controls.Add(network);
         }
         energyPanel.Visible = energyPanel.Controls.Count > 0;
+        networkArea.Visible = networkArea.Controls.Count > 0;
+        int energyLength = energyPanel.Visible
+            ? (Horizontal ? energyPanel.Width : energyPanel.Height) : 0;
+        int networkLength = networkArea.Visible ? (Horizontal ? 176 : 184) : 0;
+        endSection.Width = Horizontal ? energyLength + networkLength : settings.Width;
+        endSection.Height = Horizontal ? settings.HorizontalHeight : energyLength + networkLength;
+        endSection.Visible = energyPanel.Visible || networkArea.Visible;
         energyPanel.ResumeLayout();
+        networkArea.ResumeLayout();
+        endSection.ResumeLayout();
         panel.ResumeLayout();
         AlignFooter();
         if (IsHandleCreated && !resizeActive) Position();
@@ -1012,9 +1039,11 @@ public class Dock : Form, IMessageFilter
         energyPanel.FlowDirection = Horizontal ? FlowDirection.LeftToRight : FlowDirection.TopDown;
         energyPanel.HorizontalBar = Horizontal;
         energyPanel.Padding = Horizontal ? new Padding(16, 0, 6, 0) : new Padding(0, 7, 0, 3);
+        endSection.Dock = Horizontal ? DockStyle.Right : DockStyle.Bottom;
+        networkArea.Dock = DockStyle.Fill;
         energyPanel.Dock = Horizontal ? DockStyle.Right : DockStyle.Bottom;
-        // A dedicated end zone leaves power controls far from ordinary shortcuts.
-        energyPanel.BringToFront();
+        // The capsule takes the outermost edge; its sibling holds network data.
+        endSection.BringToFront();
         panel.Dock = DockStyle.Fill;
         footer.Dock = Horizontal ? DockStyle.Right : DockStyle.Bottom;
         footer.Width = Horizontal ? 80 : settings.Width;
