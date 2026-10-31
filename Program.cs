@@ -142,9 +142,9 @@ public class Dock : Form, IMessageFilter
         Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown,
         WrapContents = false, AutoScroll = true, Padding = new Padding(0)
     };
-    // Separate, docked end section: the network monitor is NEVER inside
-    // the rounded energy capsule. It has its own background and layout.
-    readonly Panel endSection = new() { Visible = false };
+    // Independent siblings of the shortcuts: the network monitor stays on
+    // the Dock background while the energy capsule owns the outer edge.
+    // Keeping both on the form avoids nested DockStyle.Fill/Z-order overlap.
     readonly Panel networkArea = new() { Visible = false };
     readonly RoundedEnergyPanel energyPanel = new()
     {
@@ -205,10 +205,9 @@ public class Dock : Form, IMessageFilter
         options.FlatAppearance.BorderSize = 0;
         footer.Controls.Add(add);
         footer.Controls.Add(options);
-        endSection.Controls.Add(networkArea);
-        endSection.Controls.Add(energyPanel);
         Controls.Add(panel);
-        Controls.Add(endSection);
+        Controls.Add(networkArea);
+        Controls.Add(energyPanel);
         Controls.Add(footer);
         Controls.Add(grip);
         SetOrientation();
@@ -314,7 +313,6 @@ public class Dock : Form, IMessageFilter
         ForeColor = BackColor.GetBrightness() > .54f ? Color.FromArgb(28, 30, 35) : Color.FromArgb(241, 241, 244);
         footer.BackColor = BackColor;
         panel.BackColor = BackColor;
-        endSection.BackColor = BackColor;
         networkArea.BackColor = BackColor;
         energyPanel.BackColor = BackColor;
         energyPanel.HorizontalBar = Horizontal;
@@ -569,8 +567,10 @@ public class Dock : Form, IMessageFilter
     }
     void Render()
     {
+        // Power switches are authoritative even if a shortcut was removed
+        // from an older saved Items list.
+        SyncPowerButtons();
         panel.SuspendLayout();
-        endSection.SuspendLayout();
         networkArea.SuspendLayout();
         energyPanel.SuspendLayout();
         foreach (var existingNetwork in networkArea.Controls.Cast<Control>().ToArray())
@@ -774,15 +774,14 @@ public class Dock : Form, IMessageFilter
         }
         energyPanel.Visible = energyPanel.Controls.Count > 0;
         networkArea.Visible = networkArea.Controls.Count > 0;
-        int energyLength = energyPanel.Visible
-            ? (Horizontal ? energyPanel.Width : energyPanel.Height) : 0;
-        int networkLength = networkArea.Visible ? (Horizontal ? 176 : 184) : 0;
-        endSection.Width = Horizontal ? energyLength + networkLength : settings.Width;
-        endSection.Height = Horizontal ? settings.HorizontalHeight : energyLength + networkLength;
-        endSection.Visible = energyPanel.Visible || networkArea.Visible;
+        networkArea.Width = Horizontal ? 176 : settings.Width;
+        networkArea.Height = Horizontal ? settings.HorizontalHeight : 184;
+        // Keep the original, independent rounded capsule at the screen edge.
+        // Network occupies the adjacent strip, never the capsule itself.
+        networkArea.BringToFront();
+        energyPanel.BringToFront();
         energyPanel.ResumeLayout();
         networkArea.ResumeLayout();
-        endSection.ResumeLayout();
         panel.ResumeLayout();
         AlignFooter();
         if (IsHandleCreated && !resizeActive) Position();
@@ -1039,11 +1038,12 @@ public class Dock : Form, IMessageFilter
         energyPanel.FlowDirection = Horizontal ? FlowDirection.LeftToRight : FlowDirection.TopDown;
         energyPanel.HorizontalBar = Horizontal;
         energyPanel.Padding = Horizontal ? new Padding(16, 0, 6, 0) : new Padding(0, 7, 0, 3);
-        endSection.Dock = Horizontal ? DockStyle.Right : DockStyle.Bottom;
-        networkArea.Dock = DockStyle.Fill;
+        networkArea.Dock = Horizontal ? DockStyle.Right : DockStyle.Bottom;
         energyPanel.Dock = Horizontal ? DockStyle.Right : DockStyle.Bottom;
-        // The capsule takes the outermost edge; its sibling holds network data.
-        endSection.BringToFront();
+        // Docking follows z-order: energy first at the outer edge,
+        // network second immediately beside it and shortcuts fill the rest.
+        networkArea.BringToFront();
+        energyPanel.BringToFront();
         panel.Dock = DockStyle.Fill;
         footer.Dock = Horizontal ? DockStyle.Right : DockStyle.Bottom;
         footer.Width = Horizontal ? 80 : settings.Width;

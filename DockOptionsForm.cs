@@ -1173,6 +1173,17 @@ public sealed class DockOptionsForm : Form
         }
         rows.PerformLayout();
         rows.Height = rows.Controls.Cast<Control>().Sum(x => x.Height + x.Margin.Vertical) + rows.Padding.Vertical + 10;
+
+        // About: center the photograph and project information as one group
+        // in the space below the fixed heading. Keep tall/narrow layouts
+        // top-aligned so page scrolling still works.
+        if (page.Name == "Acerca de")
+        {
+            const int headerHeight = 82;
+            int available = Math.Max(0, page.ClientSize.Height - headerHeight);
+            int offset = Math.Max(0, (available - rows.Height) / 2);
+            rows.Location = new Point(0, headerHeight + offset);
+        }
     }
 
     public static bool IsStartupEnabled()
