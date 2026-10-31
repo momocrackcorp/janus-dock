@@ -44,6 +44,7 @@ public class DockSettings
     public bool HoverAnimation { get; set; } = true;
     public string HoverEffect { get; set; } = "Lupa";
     public int ZoomPercent { get; set; } = 280;
+    public bool ShowLock { get; set; } = false;
     public bool ShowShutdown { get; set; } = false;
     public bool ShowRestart { get; set; } = false;
 }
@@ -102,6 +103,7 @@ public class Dock : Form, IMessageFilter
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
     static extern uint ExtractIconEx(string fileName, int iconIndex, IntPtr[]? largeIcons, IntPtr[]? smallIcons, uint icons);
     [DllImport("user32.dll")] static extern bool DestroyIcon(IntPtr hIcon);
+    [DllImport("user32.dll")] static extern bool LockWorkStation();
     [DllImport("user32.dll")] static extern bool ReleaseCapture();
     [DllImport("user32.dll")] static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
     const int WM_NCLBUTTONDOWN = 0xA1, HTCAPTION = 2;
@@ -328,7 +330,7 @@ public class Dock : Form, IMessageFilter
     {
         if (!path.StartsWith("janus:", StringComparison.OrdinalIgnoreCase) && path != "shell:MyComputerFolder" && !File.Exists(path) && !Directory.Exists(path) &&
             !(Uri.TryCreate(path, UriKind.Absolute, out var uri) && (uri.Scheme == "https" || uri.Scheme == "http"))) return;
-        string name = path switch { "shell:MyComputerFolder" => "Este equipo", "janus:documents" => "Documentos", "janus:downloads" => "Descargas", "janus:shutdown" => "Apagar", "janus:restart" => "Reiniciar", "janus:settings" => "Configuración", _ => Path.GetFileNameWithoutExtension(path.TrimEnd('\\', '/')) };
+        string name = path switch { "shell:MyComputerFolder" => "Este equipo", "janus:documents" => "Documentos", "janus:downloads" => "Descargas", "janus:lock" => "Bloquear", "janus:shutdown" => "Apagar", "janus:restart" => "Reiniciar", "janus:settings" => "Configuración", _ => Path.GetFileNameWithoutExtension(path.TrimEnd('\\', '/')) };
         settings.Items.Add(new DockItem { Name = string.IsNullOrWhiteSpace(name) ? path : name, Path = path });
         Store(); Render();
     }
@@ -402,7 +404,7 @@ public class Dock : Form, IMessageFilter
     Image GetIcon(string path)
     {
         // Colored preview-style power icons are consistent in both appearance modes.
-        if (path is "janus:shutdown" or "janus:restart") return LucideDockIcons.Load(path, light)!;
+        if (path is "janus:lock" or "janus:shutdown" or "janus:restart") return PowerImages.Load(path);
         if (settings.IconStyle == "Lucide")
         {
             var lucide = LucideDockIcons.Load(path, light);
@@ -545,11 +547,11 @@ public class Dock : Form, IMessageFilter
         // Keep actual center-to-center spacing close to Windows taskbar even at 125–150% DPI.
         int width = Horizontal ? Math.Max(22, (int)Math.Round(settings.IconSize * 0.78)) : Math.Max(24, settings.Width - 18);
         int energySlot = Math.Max(settings.IconSize + 12, (int)Math.Ceiling(settings.IconSize * (settings.HoverAnimation ? 1.8 : 1.0)) + 8);
-        energyPanel.Width = Horizontal ? (energySlot + 4) * 2 + 12 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 185 : 0) : Math.Max(55, settings.Width - 10);
+        energyPanel.Width = Horizontal ? (energySlot + 4) * (settings.ShowLock ? 3 : 2) + 12 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 185 : 0) : Math.Max(55, settings.Width - 10);
         energyPanel.Height = Horizontal ? Math.Max(48, settings.IconSize + 20) : (energySlot + 4) * 2 + 12 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 184 : 0);
         foreach (var item in settings.Items.ToList())
         {
-            bool isEnergy = item.Path is "janus:shutdown" or "janus:restart";
+            bool isEnergy = item.Path is "janus:lock" or "janus:shutdown" or "janus:restart";
             var destination = isEnergy ? energyPanel : panel;
             if (item.IsDiskWidget)
             {
@@ -839,6 +841,7 @@ public class Dock : Form, IMessageFilter
         settings.HoverEffect = dlg.HoverEffect;
         settings.HoverAnimation = dlg.HoverEffect == "Lupa";
         settings.ZoomPercent = dlg.ZoomPercent;
+        settings.ShowLock = dlg.ShowLock;
         settings.ShowShutdown = dlg.ShowShutdown;
         settings.ShowRestart = dlg.ShowRestart;
         settings.Items = dlg.OrderedItems;
@@ -895,7 +898,7 @@ public class Dock : Form, IMessageFilter
     void SyncPowerButtons()
     {
         // Old manually inserted power shortcuts are managed by these switches.
-        foreach (var (path, enabled) in new[] { ("janus:shutdown", settings.ShowShutdown), ("janus:restart", settings.ShowRestart) })
+        foreach (var (path, enabled) in new[] { ("janus:lock", settings.ShowLock), ("janus:shutdown", settings.ShowShutdown), ("janus:restart", settings.ShowRestart) })
         {
             var existing = settings.Items.Where(x => x.Path == path).ToList();
             if (!enabled) foreach (var entry in existing) settings.Items.Remove(entry);
@@ -929,6 +932,7 @@ public class Dock : Form, IMessageFilter
                 if (MessageBox.Show($"¿Seguro que quieres {verb} el equipo? Guarda tus documentos primero.", "Confirmar acción de energía", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
                 Process.Start(new ProcessStartInfo("shutdown.exe", item.Path == "janus:shutdown" ? "/s /t 0" : "/r /t 0") { UseShellExecute = true });
             }
+            else if (item.Path == "janus:lock") { if (MessageBox.Show("¿Bloquear esta sesión?", "JANUS Dock", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) LockWorkStation(); }
             else if (item.Path == "janus:settings") Process.Start(new ProcessStartInfo("ms-settings:") { UseShellExecute = true });
             else if (item.Path == "janus:documents") Process.Start(new ProcessStartInfo("explorer.exe", $"\"{Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)}\"") { UseShellExecute = true });
             else if (item.Path == "janus:downloads") Process.Start(new ProcessStartInfo("explorer.exe", $"\"{Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads")}\"") { UseShellExecute = true });
