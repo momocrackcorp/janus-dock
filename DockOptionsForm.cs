@@ -23,7 +23,8 @@ public sealed class DockOptionsForm : Form
     public int DiskColorArgb { get; private set; }
     public Dictionary<string,int> DiskColors { get; private set; } = new(StringComparer.OrdinalIgnoreCase);
     public List<string> HiddenDiskLetters { get; private set; } = new();
-    public bool HoverAnimation { get; private set; } = true;
+    public bool HoverAnimation { get; private set; }
+    public string HoverEffect { get; private set; } = "Lupa"; = true;
     public int ZoomPercent { get; private set; } = 280;
     public bool ShowShutdown { get; private set; }
     public bool ShowRestart { get; private set; }
@@ -189,7 +190,13 @@ public sealed class DockOptionsForm : Form
         appearanceRows.Controls.Add(new Label { Text = "Dimensiones de la barra", AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold) });
         appearanceRows.Controls.Add(FieldRow(new Label { Text = "Ancho barra vertical (px):", AutoSize = true }, barWidth));
         appearanceRows.Controls.Add(FieldRow(new Label { Text = "Alto barra horizontal (px):", AutoSize = true }, barHeight));
-        appearanceRows.Controls.Add(animation);
+        var hoverEffect = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 145 };
+        hoverEffect.Items.AddRange(new object[] { "Ninguno", "Foco", "Lupa" });
+        hoverEffect.SelectedIndex = config.HoverEffect == "Foco" ? 1 : config.HoverEffect == "Ninguno" ? 0 : config.HoverAnimation ? 2 : 1;
+        hoverEffect.SelectedIndexChanged += (_, _) => zoomChoice.Enabled = hoverEffect.SelectedIndex == 2;
+        zoomChoice.Enabled = hoverEffect.SelectedIndex == 2;
+        appearanceRows.Controls.Add(FieldRow(new Label { Text = "Efecto al pasar el mouse:", AutoSize = true }, hoverEffect));
+
         appearanceRows.Controls.Add(FieldRow(new Label { Text = "Ampliación de la lupa:", AutoSize = true }, zoomChoice));
 
         appearanceRows.Controls.Add(new Label { Text = "Windows conserva los iconos originales; Lucide usa trazos para accesos integrados.", AutoSize = true });
@@ -432,7 +439,8 @@ public sealed class DockOptionsForm : Form
             DiskColorArgb = config.DiskColorArgb;
             DiskColors = diskColors;
             HiddenDiskLetters = hiddenDisks.OrderBy(x => x).ToList();
-            HoverAnimation = animation.Checked;
+            HoverEffect = hoverEffect.SelectedIndex == 0 ? "Ninguno" : hoverEffect.SelectedIndex == 1 ? "Foco" : "Lupa";
+            HoverAnimation = HoverEffect == "Lupa";
             ZoomPercent = zoomValues[Math.Max(0, zoomChoice.SelectedIndex)];
             ShowShutdown = shutdown.Checked;
             ShowRestart = restart.Checked;
