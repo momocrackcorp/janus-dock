@@ -496,59 +496,20 @@ public sealed class DockOptionsForm : Form
         appIcon.Size = new Size(64, 64);
         info.AutoSize = true;
         info.MaximumSize = new Size(480, 0);
-        // Optional user-chosen picture on About; persist it in the user's app data.
-        string aboutPicturePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "JANUS", "Dock", "about-photo.png");
+        // The project photo is embedded and loaded automatically.
+        // No file chooser or external image is needed for the About page.
         var aboutPicture = new PictureBox {
             Size = new Size(280, 150),
             SizeMode = PictureBoxSizeMode.Zoom,
             BackColor = Color.FromArgb(227, 238, 246),
-            Margin = new Padding(5, 7, 5, 5)
+            Margin = new Padding(5, 6, 5, 7)
         };
-        void LoadAboutPicture()
-        {
-            try {
-                Image fresh;
-                if (File.Exists(aboutPicturePath))
-                {
-                    using var loaded = Image.FromFile(aboutPicturePath);
-                    fresh = new Bitmap(loaded);
-                }
-                else fresh = AboutDefaultPhoto.Load();
-                var oldImage = aboutPicture.Image;
-                aboutPicture.Image = fresh;
-                oldImage?.Dispose();
-            }
-            catch { /* Keep the About page open even if the picture is invalid. */ }
-        }
-        LoadAboutPicture();
-        var photoButton = new Button { Text = "Elegir imagen para Acerca de...", AutoSize = true,
-            MinimumSize = new Size(220, 36) };
-        photoButton.Click += (_, _) => {
-            using var picker = new OpenFileDialog { Title = "Imagen para Acerca de",
-                Filter = "Imágenes|*.png;*.jpg;*.jpeg;*.bmp" };
-            if (picker.ShowDialog(this) != DialogResult.OK) return;
-            try {
-                using var original = Image.FromFile(picker.FileName);
-                Directory.CreateDirectory(Path.GetDirectoryName(aboutPicturePath)!);
-                using var copy = new Bitmap(original);
-                copy.Save(aboutPicturePath, System.Drawing.Imaging.ImageFormat.Png);
-                LoadAboutPicture();
-            } catch (Exception ex) {
-                MessageBox.Show("No se pudo cargar la imagen: " + ex.Message, "JANUS Dock",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
-        };
-        aboutRows.Controls.Add(SectionTitle("JANUS Dock", "Información del proyecto y una imagen personalizable."));
+        try { aboutPicture.Image = AboutDefaultPhoto.Load(); }
+        catch { aboutPicture.Image = null; }
+        aboutRows.Controls.Add(SectionTitle("JANUS Dock", "Información del proyecto."));
         aboutRows.Controls.Add(aboutPicture);
-        aboutRows.Controls.Add(photoButton);
         aboutRows.Controls.Add(appIcon);
         aboutRows.Controls.Add(info);
-        aboutRows.Controls.Add(new Label {
-            Text = "Créditos de iconos (Flaticon)\nReiniciar: Roundicons\nApagar: Uniconlabs",
-            AutoSize = true, MaximumSize = new Size(480, 0)
-        });
         updates.AutoSize = true;
         aboutRows.Controls.Add(updates);
         aboutRows.SizeChanged += (_, _) => FitRows(aboutRows);
