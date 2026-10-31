@@ -164,6 +164,7 @@ public sealed class DockOptionsForm : Form
         // Organizing remains in Apariencia; use stacked rows on narrow/high-DPI displays.
         appearance.Controls.Clear();
         var appearanceRows = PageRows(appearance);
+        appearanceRows.Controls.Add(SectionTitle("Iconos", "Ajusta el tamaño y la separación de los accesos."));
         appearanceRows.Controls.Add(FieldRow(new Label { Text = "Estilo de los iconos:", AutoSize = true }, iconStyle));
         var barColorMode = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 220 };
         barColorMode.Items.AddRange(new object[] { "Tema de Windows", "Color personalizado", "Clásico (Windows 95/98/2000/ME)" });
@@ -181,7 +182,7 @@ public sealed class DockOptionsForm : Form
         };
         chooseBarColor.Enabled = barColorMode.SelectedIndex == 1;
         barColorMode.SelectedIndexChanged += (_, _) => chooseBarColor.Enabled = barColorMode.SelectedIndex == 1;
-        appearanceRows.Controls.Add(FieldRow(new Label { Text = "Color de la barra:", AutoSize = true }, barColorMode, chooseBarColor));
+
 
         // Icon size belongs with all other appearance settings.
         var size = new NumericUpDown { Minimum = 16, Maximum = 96, Increment = 8, Value = Math.Clamp(config.IconSize, 16, 96), Width = 95 };
@@ -208,7 +209,8 @@ public sealed class DockOptionsForm : Form
         if (zoomChoice.SelectedIndex < 0) zoomChoice.SelectedIndex = 5;
         zoomChoice.Enabled = animation.Checked;
         animation.CheckedChanged += (_, _) => zoomChoice.Enabled = animation.Checked;
-        appearanceRows.Controls.Add(new Label { Text = "Dimensiones de la barra", AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold) });
+        appearanceRows.Controls.Add(SectionTitle("Barra", "Color y dimensiones según su orientación."));
+        appearanceRows.Controls.Add(FieldRow(new Label { Text = "Color de la barra:", AutoSize = true }, barColorMode, chooseBarColor));
         appearanceRows.Controls.Add(FieldRow(new Label { Text = "Ancho barra vertical (px):", AutoSize = true }, barWidth));
         appearanceRows.Controls.Add(FieldRow(new Label { Text = "Alto barra horizontal (px):", AutoSize = true }, barHeight));
         var hoverEffect = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 145 };
@@ -216,13 +218,13 @@ public sealed class DockOptionsForm : Form
         hoverEffect.SelectedIndex = config.HoverEffect == "Foco" ? 1 : config.HoverEffect == "Ninguno" ? 0 : config.HoverAnimation ? 2 : 1;
         hoverEffect.SelectedIndexChanged += (_, _) => zoomChoice.Enabled = hoverEffect.SelectedIndex == 2;
         zoomChoice.Enabled = hoverEffect.SelectedIndex == 2;
+        appearanceRows.Controls.Add(SectionTitle("Efectos", "Elige cómo reaccionan los accesos."));
         appearanceRows.Controls.Add(FieldRow(new Label { Text = "Efecto al pasar el mouse:", AutoSize = true }, hoverEffect));
 
         appearanceRows.Controls.Add(FieldRow(new Label { Text = "Ampliación de la lupa:", AutoSize = true }, zoomChoice));
 
-        appearanceRows.Controls.Add(new Label { Text = "Windows conserva los iconos originales; Lucide usa trazos para accesos integrados.", AutoSize = true });
-        appearanceRows.Controls.Add(new Label { Text = "Organizar accesos y separadores", AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold) });
-        appearanceRows.Controls.Add(new Label { Text = "Arrastra filas o usa los botones. Guardar aplica los cambios.", AutoSize = true });
+
+        appearanceRows.Controls.Add(SectionTitle("Organizar accesos", "Arrastra o utiliza los controles para ordenar."));
         orderList.Height = 170;
         appearanceRows.Controls.Add(orderList);
         actions.FlowDirection = FlowDirection.LeftToRight;
@@ -241,8 +243,8 @@ public sealed class DockOptionsForm : Form
         var startup = new CheckBox { Text = "Cargar JANUS Dock al iniciar Windows", Checked = IsStartupEnabled(), AutoSize = true, Location = new Point(18, 86) };
         var names = new Label { Text = "Nombres de accesos:", AutoSize = true, Location = new Point(18, 115) };
         var nameMode = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(190, 110), Width = 205 };
-        nameMode.Items.AddRange(new object[] { "Solo iconos", "Al pasar el mouse", "Iconos con nombres" });
-        nameMode.SelectedIndex = config.NameMode switch { "None" => 0, "Written" => 2, _ => config.ShowNames ? 2 : 1 };
+        nameMode.Items.AddRange(new object[] { "Sin texto", "Mostrar al pasar el mouse" });
+        nameMode.SelectedIndex = config.NameMode == "None" ? 0 : 1;
         general.Controls.AddRange(new Control[] { top, hide, startup, names, nameMode });
         general.Controls.Add(new Label { Text = "Modo:", Location = new Point(18, 151), AutoSize = true });
         var dockMode = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(190, 147), Width = 205 };
@@ -269,18 +271,21 @@ public sealed class DockOptionsForm : Form
         languageChoice.Items.AddRange(new object[] { "Español (Chile)", "English", "Português (Brasil)" });
         languageChoice.SelectedIndex = DockLanguage.Normalize(config.Language) switch { "en" => 1, "pt" => 2, _ => 0 };
         generalRows.Controls.Add(FieldRow(new Label { Text = "Idioma / Language:", AutoSize = true }, languageChoice));
+        generalRows.Controls.Add(SectionTitle("Comportamiento", "Visibilidad e inicio automático."));
         generalRows.Controls.Add(top);
         generalRows.Controls.Add(hide);
         generalRows.Controls.Add(startup);
+        generalRows.Controls.Add(SectionTitle("Disposición", "Etiquetas y posición de la barra."));
         generalRows.Controls.Add(FieldRow(names, nameMode));
         generalRows.Controls.Add(FieldRow(new Label { Text = "Modo:", AutoSize = true }, dockMode));
         generalRows.Controls.Add(FieldRow(new Label { Text = "Ubicación:", AutoSize = true }, location));
+        generalRows.Controls.Add(SectionTitle("Botones del sistema", "Accesos rápidos a funciones de Windows."));
         generalRows.Controls.Add(FieldRow(powerTitle, lockButton, shutdown, restart));
         generalRows.Controls.Add(new Label { Text = "Al ocultarse queda una franja para recuperar la barra con el mouse.", AutoSize = true });
         generalRows.SizeChanged += (_, _) => FitRows(generalRows);
 
         var networkWidget = new CheckBox { Text = "Mostrar tráfico de red (conexión principal, cada segundo)", AutoSize = true, Checked = config.ShowNetworkTraffic };
-        generalRows.Controls.Add(new Label { Text = "Monitor de red", AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold) });
+        generalRows.Controls.Add(SectionTitle("Información del sistema", "Monitores que aparecerán en el Dock."));
         generalRows.Controls.Add(networkWidget);
         var cpuWidget = new CheckBox { Text = "Mostrar uso de CPU", AutoSize = true, Checked = config.ShowSystemUsage && config.ShowCpu };
         var ramWidget = new CheckBox { Text = "Mostrar uso de memoria RAM", AutoSize = true, Checked = config.ShowSystemUsage && config.ShowRam };
@@ -446,7 +451,7 @@ public sealed class DockOptionsForm : Form
             AlwaysOnTop = top.Checked;
             AutoHide = hide.Checked;
             StartWithWindows = startup.Checked;
-            NameMode = nameMode.SelectedIndex switch { 0 => "None", 2 => "Written", _ => "Tooltip" };
+            NameMode = nameMode.SelectedIndex == 0 ? "None" : "Tooltip";
             ShowNames = NameMode == "Written";
             DockMode = dockMode.SelectedItem?.ToString() ?? "Acoplada";
             ShowDiskWidget = widget.Checked;
@@ -613,6 +618,22 @@ public sealed class DockOptionsForm : Form
         page.Controls.Add(rows);
         page.Resize += (_, _) => FitRows(rows);
         return rows;
+    }
+
+    private static Control SectionTitle(string title, string description)
+    {
+        var group = new FlowLayoutPanel {
+            FlowDirection = FlowDirection.TopDown, WrapContents = false,
+            AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Padding = new Padding(8, 12, 4, 5), Margin = new Padding(0, 10, 0, 2)
+        };
+        group.Controls.Add(new Label { Text = title, AutoSize = true,
+            ForeColor = Color.FromArgb(27, 121, 169),
+            Font = new Font("Segoe UI Semibold", 11f, FontStyle.Bold) });
+        group.Controls.Add(new Label { Text = description, AutoSize = true,
+            ForeColor = Color.FromArgb(103, 115, 129),
+            Font = new Font("Segoe UI", 9f) });
+        return group;
     }
 
     private static FlowLayoutPanel FieldRow(params Control[] controls)
