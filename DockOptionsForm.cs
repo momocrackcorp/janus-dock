@@ -29,6 +29,7 @@ public sealed class DockOptionsForm : Form
     public bool ShowRestart { get; private set; }
     public int CriticalPercent { get; private set; }
     public int IconSize { get; private set; }
+    public int IconSpacing { get; private set; }
     public int BarWidth { get; private set; }
     public int BarHeight { get; private set; }
     public string IconStyle { get; private set; } = "Windows";
@@ -169,6 +170,11 @@ public sealed class DockOptionsForm : Form
         iconSlider.ValueChanged += (_, _) => { size.Value = iconSlider.Value; iconSizeLabel.Text = $"{iconSlider.Value} px"; };
         size.ValueChanged += (_, _) => { if (iconSlider.Value != (int)size.Value) iconSlider.Value = (int)size.Value; };
         appearanceRows.Controls.Add(FieldRow(new Label { Text = "Tamaño de iconos:", AutoSize = true }, iconSlider, iconSizeLabel, smallIcons));
+        var spacingSlider = new TrackBar { Minimum = 0, Maximum = 24, TickFrequency = 4, SmallChange = 1, LargeChange = 2, Width = 270, Value = Math.Clamp(config.IconSpacing, 0, 24) };
+        var spacingLabel = new Label { Text = $"{spacingSlider.Value} px", AutoSize = true };
+        spacingSlider.ValueChanged += (_, _) => spacingLabel.Text = $"{spacingSlider.Value} px";
+        appearanceRows.Controls.Add(FieldRow(new Label { Text = "Separación entre iconos:", AutoSize = true }, spacingSlider, spacingLabel));
+
         var barWidth = new NumericUpDown { Minimum = 64, Maximum = 300, Increment = 4, Width = 100, Value = Math.Clamp(config.Width, 64, 300) };
         var barHeight = new NumericUpDown { Minimum = 48, Maximum = 160, Increment = 4, Width = 100, Value = Math.Clamp(config.HorizontalHeight, 48, 160) };
         var animation = new CheckBox { Text = "Activar efecto lupa al pasar el mouse", AutoSize = true, Checked = config.HoverAnimation };
@@ -417,6 +423,7 @@ public sealed class DockOptionsForm : Form
             ShowSystemUsage = ShowCpu || ShowRam;
             NetworkAtEnd = networkAtEnd.Checked;
             IconSize = (int)size.Value;
+            IconSpacing = spacingSlider.Value;
             BarWidth = (int)barWidth.Value;
             BarHeight = (int)barHeight.Value;
             IconStyle = iconStyle.SelectedIndex == 1 ? "Lucide" : "Windows";
