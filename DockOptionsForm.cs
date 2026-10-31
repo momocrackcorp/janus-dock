@@ -26,6 +26,7 @@ public sealed class DockOptionsForm : Form
     public bool HoverAnimation { get; private set; }
     public string HoverEffect { get; private set; } = "Lupa";
     public int ZoomPercent { get; private set; } = 280;
+    public bool ShowLock { get; private set; }
     public bool ShowShutdown { get; private set; }
     public bool ShowRestart { get; private set; }
     public int CriticalPercent { get; private set; }
@@ -256,9 +257,10 @@ public sealed class DockOptionsForm : Form
         if (location.SelectedIndex < 0) location.SelectedIndex = 0;
         general.Controls.Add(location);
         var powerTitle = new Label { Text = "Botones de energía en la barra:", AutoSize = true, Location = new Point(18, 292) };
+        var lockButton = new CheckBox { Text = "Bloquear", AutoSize = true, Checked = config.ShowLock };
         var shutdown = new CheckBox { Text = "Apagar", AutoSize = true, Location = new Point(240, 292), Checked = config.ShowShutdown };
         var restart = new CheckBox { Text = "Reiniciar", AutoSize = true, Location = new Point(335, 292), Checked = config.ShowRestart };
-        general.Controls.AddRange(new Control[] { powerTitle, shutdown, restart });
+        general.Controls.AddRange(new Control[] { powerTitle, lockButton, shutdown, restart });
         // Responsive layout: labels and inputs occupy separate rows so Windows 10
         // at 200% DPI cannot make them overlap. The page scrolls if necessary.
         general.Controls.Clear();
@@ -464,6 +466,7 @@ public sealed class DockOptionsForm : Form
             HoverEffect = hoverEffect.SelectedIndex == 0 ? "Ninguno" : hoverEffect.SelectedIndex == 1 ? "Foco" : "Lupa";
             HoverAnimation = HoverEffect == "Lupa";
             ZoomPercent = zoomValues[Math.Max(0, zoomChoice.SelectedIndex)];
+            ShowLock = lockButton.Checked;
             ShowShutdown = shutdown.Checked;
             ShowRestart = restart.Checked;
             CriticalPercent = (int)critical.Value;
