@@ -542,6 +542,27 @@ public sealed class DockOptionsForm : Form
         }
         MoveFromSection(appearanceRows, accessRows, accessesSection);
         MoveFromSection(generalRows, systemRows, monitorsSection);
+
+        // Compact overview in General. Detailed CPU/RAM and disk options remain
+        // in Sistema; these switches operate the same underlying settings.
+        var quickNetwork = new CheckBox { Text = "Mostrar tráfico de red",
+            Checked = networkWidget.Checked, AutoSize = true };
+        var quickUsage = new CheckBox { Text = "Mostrar uso de CPU y RAM",
+            Checked = cpuWidget.Checked && ramWidget.Checked, AutoSize = true };
+        var quickNetworkEnd = new CheckBox { Text = "Anclar tráfico junto a botones de energía",
+            Checked = networkAtEnd.Checked, AutoSize = true };
+        quickNetwork.CheckedChanged += (_, _) => networkWidget.Checked = quickNetwork.Checked;
+        networkWidget.CheckedChanged += (_, _) => quickNetwork.Checked = networkWidget.Checked;
+        quickUsage.CheckedChanged += (_, _) => { cpuWidget.Checked = quickUsage.Checked; ramWidget.Checked = quickUsage.Checked; };
+        void SyncUsageQuick() => quickUsage.Checked = cpuWidget.Checked && ramWidget.Checked;
+        cpuWidget.CheckedChanged += (_, _) => SyncUsageQuick();
+        ramWidget.CheckedChanged += (_, _) => SyncUsageQuick();
+        quickNetworkEnd.CheckedChanged += (_, _) => networkAtEnd.Checked = quickNetworkEnd.Checked;
+        networkAtEnd.CheckedChanged += (_, _) => quickNetworkEnd.Checked = networkAtEnd.Checked;
+        generalRows.Controls.Add(SectionTitle("Información del sistema", "Indicadores compactos en la barra."));
+        generalRows.Controls.Add(quickNetwork);
+        generalRows.Controls.Add(quickUsage);
+        generalRows.Controls.Add(quickNetworkEnd);
         accessRows.SizeChanged += (_, _) => FitRows(accessRows);
         systemRows.SizeChanged += (_, _) => FitRows(systemRows);
 
@@ -550,6 +571,17 @@ public sealed class DockOptionsForm : Form
         PackCards(accessRows);
         PackCards(systemRows);
         PackCards(aboutRows);
+        // Four real cards arranged in two columns on desktop-width windows,
+        // with a responsive single-column fallback on narrow screens.
+        var generalDashboard = new Panel {
+            Name = "GeneralDashboard", BackColor = Color.FromArgb(229, 236, 244),
+            Margin = Padding.Empty
+        };
+        var generalCards = generalRows.Controls.OfType<SettingsCardPanel>().ToArray();
+        if (generalCards.Length != 4)
+            throw new InvalidOperationException("La página General requiere cuatro tarjetas.");
+        foreach (var card in generalCards) generalDashboard.Controls.Add(card);
+        generalRows.Controls.Add(generalDashboard);
         // Refit cards after modern controls are installed at runtime.
         Shown += (_, _) => {
             InstallModernSelectors(this);
@@ -571,7 +603,7 @@ public sealed class DockOptionsForm : Form
         Shown += (_, _) =>
         {
             var area = Screen.FromControl(this).WorkingArea;
-            Size = new Size(Math.Min(1100, area.Width - 16), Math.Min(760, area.Height - 16));
+            Size = new Size(Math.Min(1240, area.Width - 16), Math.Min(795, area.Height - 16));
             Location = new Point(area.Left + Math.Max(0, (area.Width - Width) / 2), area.Top + Math.Max(0, (area.Height - Height) / 2));
             bar.Height = Math.Max(64, apply.PreferredSize.Height + 20);
             FitRows(generalRows);
@@ -898,11 +930,46 @@ public sealed class DockOptionsForm : Form
             .Sum(x => x.Height + x.Margin.Vertical) + 2;
     }
 
+    private static void FitGeneralDashboard(Panel dashboard, int availableWidth)
+    {
+        dashboard.Width = Math.Max(300, availableWidth - 14);
+        var cards = dashboard.Controls.OfType<SettingsCardPanel>().ToArray();
+        if (cards.Length != 4) return;
+        const int gap = 14;
+        bool doubleColumn = dashboard.Width >= 780;
+        int cellWidth = doubleColumn ? (dashboard.Width - gap) / 2 : dashboard.Width;
+        foreach (var card in cards)
+        {
+            card.Margin = Padding.Empty;
+            FitCard(card, cellWidth + 22);
+        }
+        if (doubleColumn)
+        {
+            // Row 1: behaviour + arrangement. Row 2: system actions + monitors.
+            int topHeight = Math.Max(cards[0].Height, cards[1].Height);
+            cards[0].Location = new Point(0, 0);
+            cards[1].Location = new Point(cellWidth + gap, 0);
+            cards[2].Location = new Point(0, topHeight + gap);
+            cards[3].Location = new Point(cellWidth + gap, topHeight + gap);
+            dashboard.Height = topHeight + gap + Math.Max(cards[2].Height, cards[3].Height) + 3;
+        }
+        else
+        {
+            int y = 0;
+            foreach (var card in cards)
+            {
+                card.Location = new Point(0, y);
+                y += card.Height + gap;
+            }
+            dashboard.Height = y;
+        }
+    }
+
     private static void FitRows(FlowLayoutPanel rows)
     {
         var page = rows.Parent;
         if (page == null) return;
-        int width = Math.Max(290, Math.Min(820, page.ClientSize.Width - 28));
+        int width = Math.Max(290, Math.Min(1080, page.ClientSize.Width - 28));
         rows.Width = width;
         foreach (Control control in rows.Controls)
         {
@@ -951,6 +1018,8 @@ public sealed class DockOptionsForm : Form
                     if (child is Label rowLabel) rowLabel.MaximumSize = new Size(Math.Max(225, width - 38), 0);
         }
         foreach (SettingsCardPanel card in rows.Controls.OfType<SettingsCardPanel>()) FitCard(card, width);
+        foreach (Panel dashboard in rows.Controls.OfType<Panel>().Where(p => p.Name == "GeneralDashboard"))
+            FitGeneralDashboard(dashboard, width - 5);
         rows.PerformLayout();
         rows.Height = rows.Controls.Cast<Control>().Sum(x => x.Height + x.Margin.Vertical) + rows.Padding.Vertical + 10;
     }
