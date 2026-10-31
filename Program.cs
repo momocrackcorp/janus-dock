@@ -168,6 +168,7 @@ public class Dock : Form, IMessageFilter
         settings.Width = Math.Clamp(settings.Width, 64, 300);
         settings.HorizontalHeight = Math.Clamp(settings.HorizontalHeight, 48, 160);
         settings.IconSize = Math.Clamp(settings.IconSize, 16, 96);
+        settings.IconSpacing = Math.Clamp(settings.IconSpacing, 0, 24);
         settings.ZoomPercent = Math.Clamp(settings.ZoomPercent, 150, 340);
         if (settings.ShowNames && settings.NameMode == "Tooltip") settings.NameMode = "Written";
         if (settings.DockMode != "Flotante") settings.DockMode = "Acoplada";
@@ -373,25 +374,6 @@ public class Dock : Form, IMessageFilter
         if (path == "janus:documents") return ShellFolderIcon(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments));
         if (path == "janus:settings") return LucideDockIcons.Load(path, light)!; // Consistent gear fallback, not generic application icon.
         if (path == "janus:downloads") return ShellFolderIcon(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"));
-        // For known installed apps (Office and browsers), prefer their actual
-        // executable icon. Some Start Menu links point to a generic launcher,
-        // causing the same placeholder icon to repeat in the Windows style.
-        var knownApp = CommonApps.Catalog.FirstOrDefault(app =>
-            app.Hints.Any(h => Path.GetFileNameWithoutExtension(path).Contains(h, StringComparison.OrdinalIgnoreCase)) ||
-            Path.GetFileName(path).Equals(app.Exe, StringComparison.OrdinalIgnoreCase));
-        if (knownApp != null)
-        {
-            string? installed = CommonApps.LocateExecutable(knownApp);
-            if (installed != null)
-            {
-                try
-                {
-                    using var realIcon = Icon.ExtractAssociatedIcon(installed);
-                    if (realIcon != null) return realIcon.ToBitmap();
-                }
-                catch { }
-            }
-        }
         // Resolve the underlying target/icon of .lnk rather than asking the shell for
         // the shortcut composite (which contains the arrow overlay).
         if (Path.GetExtension(path).Equals(".lnk", StringComparison.OrdinalIgnoreCase))
@@ -502,7 +484,7 @@ public class Dock : Form, IMessageFilter
             if (control is Button b) { b.Image?.Dispose(); (b.Tag as Image)?.Dispose(); }
             control.Dispose();
         }
-        int width = Horizontal ? Math.Max(30, settings.IconSize + 8) : Math.Max(30, settings.Width - 18);
+        int width = Horizontal ? Math.Max(22, settings.IconSize + 2) : Math.Max(30, settings.Width - 18);
         int energySlot = Math.Max(settings.IconSize + 12, (int)Math.Ceiling(settings.IconSize * (settings.HoverAnimation ? 1.8 : 1.0)) + 8);
         energyPanel.Width = Horizontal ? (energySlot + 4) * 2 + 12 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 185 : 0) : Math.Max(55, settings.Width - 10);
         energyPanel.Height = Horizontal ? Math.Max(48, settings.IconSize + 20) : (energySlot + 4) * 2 + 12 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 184 : 0);
