@@ -377,19 +377,6 @@ public class Dock : Form, IMessageFilter
         // the shortcut composite (which contains the arrow overlay).
         if (Path.GetExtension(path).Equals(".lnk", StringComparison.OrdinalIgnoreCase))
         {
-            // Ask Windows Shell to resolve the actual shortcut icon, including
-            // packaged applications and shortcuts whose targets are not plain EXEs.
-            try
-            {
-                IntPtr status = SHGetFileInfo(path, 0, out var shortcutInfo,
-                    (uint)Marshal.SizeOf<SHFILEINFO>(), SHGFI_ICON | SHGFI_LARGEICON);
-                if (status != IntPtr.Zero && shortcutInfo.hIcon != IntPtr.Zero)
-                {
-                    try { using var icon = (Icon)Icon.FromHandle(shortcutInfo.hIcon).Clone(); return icon.ToBitmap(); }
-                    finally { DestroyIcon(shortcutInfo.hIcon); }
-                }
-            }
-            catch { }
             try
             {
                 var obj = new ShellLink();
@@ -431,6 +418,19 @@ public class Dock : Form, IMessageFilter
             }
             catch { }
         }
+            // Ask Windows Shell to resolve the actual shortcut icon, including
+            // packaged applications and shortcuts whose targets are not plain EXEs.
+            try
+            {
+                IntPtr status = SHGetFileInfo(path, 0, out var shortcutInfo,
+                    (uint)Marshal.SizeOf<SHFILEINFO>(), SHGFI_ICON | SHGFI_LARGEICON);
+                if (status != IntPtr.Zero && shortcutInfo.hIcon != IntPtr.Zero)
+                {
+                    try { using var icon = (Icon)Icon.FromHandle(shortcutInfo.hIcon).Clone(); return icon.ToBitmap(); }
+                    finally { DestroyIcon(shortcutInfo.hIcon); }
+                }
+            }
+            catch { }
         try
         {
             if (path.StartsWith("janus:", StringComparison.OrdinalIgnoreCase))
@@ -483,7 +483,7 @@ public class Dock : Form, IMessageFilter
             if (control is Button b) { b.Image?.Dispose(); (b.Tag as Image)?.Dispose(); }
             control.Dispose();
         }
-        int width = Horizontal ? Math.Max(60, (int)Math.Ceiling(settings.IconSize * (settings.HoverAnimation ? 1.8 : 1.0)) + 12) : Math.Max(55, settings.Width - 18);
+        int width = Horizontal ? Math.Max(30, settings.IconSize + 8) : Math.Max(30, settings.Width - 18);
         int energySlot = Math.Max(settings.IconSize + 12, (int)Math.Ceiling(settings.IconSize * (settings.HoverAnimation ? 1.8 : 1.0)) + 8);
         energyPanel.Width = Horizontal ? (energySlot + 4) * 2 + 12 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 185 : 0) : Math.Max(55, settings.Width - 10);
         energyPanel.Height = Horizontal ? Math.Max(48, settings.IconSize + 20) : (energySlot + 4) * 2 + 12 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 184 : 0);
@@ -549,7 +549,7 @@ public class Dock : Form, IMessageFilter
             var btn = new ZoomShortcutButton
             {
                 Width = width,
-                Height = Math.Max(settings.IconSize + (settings.NameMode == "Written" ? 45 : 14), (int)Math.Ceiling(settings.IconSize * (settings.HoverAnimation ? 1.8 : 1.0)) + (settings.NameMode == "Written" ? 30 : 8)),
+                Height = settings.IconSize + (settings.NameMode == "Written" ? 40 : 12),
                 SourceIcon = GetIcon(item.Path),
                 BaseIconSize = settings.IconSize,
                 ZoomEnabled = settings.HoverAnimation,
