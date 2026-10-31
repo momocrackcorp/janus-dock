@@ -61,7 +61,7 @@ public sealed class DigitalClockControl : Control
         return path;
     }
 
-    static void DrawDigit(Graphics g, char digit, float x, float y, float w, float h)
+    static void DrawDigit(Graphics g, char digit, float x, float y, float w, float h, bool engraved = false)
     {
         int[] masks = { 0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F };
         int value = digit is >= '0' and <= '9' ? masks[digit - '0'] : 0;
@@ -76,8 +76,10 @@ public sealed class DigitalClockControl : Control
             new(x, y + t, t, h/2 - t),
             new(x + t, y + h/2 - t/2, w - t*2, t)
         };
-        using var ink = new SolidBrush(Color.FromArgb(24, 29, 25));
-        using var ghost = new SolidBrush(Color.FromArgb(23, 65, 67, 58));
+        using var ink = new SolidBrush(engraved
+            ? Color.FromArgb(229, 231, 230) : Color.FromArgb(24, 29, 25));
+        using var ghost = new SolidBrush(engraved
+            ? Color.FromArgb(15, 18, 18) : Color.FromArgb(23, 65, 67, 58));
         for (int i = 0; i < segments.Length; i++)
             g.FillRectangle((value & (1 << i)) != 0 ? ink : ghost, segments[i]);
     }
@@ -131,13 +133,15 @@ public sealed class DigitalClockControl : Control
 
         if (ShowDate)
         {
+            // The white engraved date uses the same seven-segment design as
+            // the approved screenshot, not a separate pill or text label.
             string date = now.ToString("dd-MM", CultureInfo.InvariantCulture);
-            using var dateFont = new Font("Consolas", 21, FontStyle.Bold, GraphicsUnit.Pixel);
-            using var recess = new SolidBrush(Color.FromArgb(52, 57, 55));
-            using var letters = new SolidBrush(Color.FromArgb(231, 233, 231));
-            // Engraved lettering directly on black; no oval or horizontal rules.
-            g.DrawString(date, dateFont, recess, 40.5f, 75.4f);
-            g.DrawString(date, dateFont, letters, 39, 73.5f);
+            float[] x = { 40f, 56f, 80f, 96f };
+            int[] k = { 0, 1, 3, 4 };
+            for (int i = 0; i < 4; i++)
+                DrawDigit(g, date[k[i]], x[i], 74, 12, 19, engraved: true);
+            using var dash = new SolidBrush(Color.FromArgb(226, 229, 228));
+            g.FillRectangle(dash, 70, 82, 8, 2.5f);
         }
         if (ShowSticker)
         {
