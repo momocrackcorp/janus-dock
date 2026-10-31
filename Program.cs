@@ -306,10 +306,10 @@ public class Dock : Form, IMessageFilter
         footer.BackColor = BackColor;
         panel.BackColor = BackColor;
         energyPanel.BackColor = BackColor;
+        energyPanel.HorizontalBar = Horizontal;
         energyPanel.CapsuleColor = settings.IconStyle == "Lucide"
             ? Color.FromArgb(225, 236, 243)
             : (BackColor.GetBrightness() > .54f ? ControlPaint.Dark(BackColor, .08f) : ControlPaint.Light(BackColor, .16f));
-        energyPanel.CapsuleBorder = Color.FromArgb(85, ForeColor);
         energyPanel.Invalidate();
         grip.BackColor = light ? Color.FromArgb(210, 216, 226) : Color.FromArgb(66, 71, 82);
         foreach (var button in new[] { add, options })
@@ -580,8 +580,8 @@ public class Dock : Form, IMessageFilter
         int width = Horizontal ? Math.Max(22, (int)Math.Round(settings.IconSize * 0.78)) : Math.Max(24, settings.Width - 18);
         int energySlot = Math.Max(24, settings.IconSize + 2);
         int powerCount = (settings.ShowLock ? 1 : 0) + (settings.ShowShutdown ? 1 : 0) + (settings.ShowRestart ? 1 : 0);
-        energyPanel.Width = Horizontal ? Math.Max(1, powerCount) * (energySlot + settings.IconSpacing) + 24 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 185 : 0) : Math.Max(55, settings.Width - 10);
-        energyPanel.Height = Horizontal ? Math.Max(48, settings.HorizontalHeight - 4) : Math.Max(1, powerCount) * (energySlot + settings.IconSpacing) + 24 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 184 : 0);
+        energyPanel.Width = Horizontal ? Math.Max(1, powerCount) * (energySlot + settings.IconSpacing) + 24 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 185 : 0) : settings.Width;
+        energyPanel.Height = Horizontal ? settings.HorizontalHeight : Math.Max(1, powerCount) * (energySlot + settings.IconSpacing) + 18 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 184 : 0);
         foreach (var item in settings.Items.ToList())
         {
             bool isEnergy = item.Path is "janus:lock" or "janus:shutdown" or "janus:restart";
@@ -688,7 +688,7 @@ public class Dock : Form, IMessageFilter
                 btn.FocusEnabled = settings.HoverEffect == "Foco";
                 btn.Width = Horizontal ? width : Math.Max(24, settings.Width - 18);
                 btn.Height = settings.IconSize + (settings.NameMode == "Written" ? 40 : 12);
-                btn.Margin = Horizontal ? new Padding(settings.IconSpacing / 2 + 5, Math.Max(0, (energyPanel.Height - btn.Height) / 2), settings.IconSpacing - settings.IconSpacing / 2, 0) : new Padding(1, settings.IconSpacing / 2 + 5, 1, settings.IconSpacing - settings.IconSpacing / 2);
+                btn.Margin = Horizontal ? new Padding(settings.IconSpacing / 2, Math.Max(0, (energyPanel.Height - btn.Height) / 2), settings.IconSpacing - settings.IconSpacing / 2, 0) : new Padding(1, settings.IconSpacing / 2, 1, settings.IconSpacing - settings.IconSpacing / 2);
             }
             destination.Controls.Add(btn);
         }
@@ -981,6 +981,8 @@ public class Dock : Form, IMessageFilter
     {
         panel.FlowDirection = Horizontal ? FlowDirection.LeftToRight : FlowDirection.TopDown;
         energyPanel.FlowDirection = Horizontal ? FlowDirection.LeftToRight : FlowDirection.TopDown;
+        energyPanel.HorizontalBar = Horizontal;
+        energyPanel.Padding = Horizontal ? new Padding(16, 0, 6, 0) : new Padding(0, 7, 0, 3);
         energyPanel.Dock = Horizontal ? DockStyle.Right : DockStyle.Bottom;
         // A dedicated end zone leaves power controls far from ordinary shortcuts.
         energyPanel.BringToFront();
