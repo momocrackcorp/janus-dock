@@ -470,11 +470,12 @@ public class Dock : Form, IMessageFilter
                         if (settings.HiddenDiskLetters.Contains(drive.Name.Substring(0, 2), StringComparer.OrdinalIgnoreCase)) continue;
                         var view = new DiskUsageControl(drive, Color.FromArgb(settings.DiskColors.TryGetValue(drive.Name.Substring(0,2).ToUpperInvariant(), out int individual) ? individual : settings.DiskColorArgb), settings.CriticalPercent, true)
                         {
-                            Width = Horizontal ? Math.Max(36, settings.IconSize + 12) : Math.Max(36, settings.Width - 16),
-                            Height = Math.Max(34, Math.Min(settings.IconSize + 12, Horizontal ? settings.HorizontalHeight - 4 : settings.Width - 8)),
+                            Width = Horizontal ? Math.Max(48, settings.IconSize + 22) : Math.Max(36, settings.Width - 16),
+                            Height = Math.Max(34, Math.Min(settings.IconSize + 18, Horizontal ? settings.HorizontalHeight - 4 : settings.Width - 8)),
                             IconPixels = settings.IconSize, UseLucide = settings.IconStyle == "Lucide",
+                            ZoomEnabled = settings.HoverAnimation, ZoomFactor = settings.ZoomPercent / 100f,
                             BackColor = BackColor, ForeColor = ForeColor,
-                            Margin = new Padding(0, 1, 0, 1)
+                            Margin = Horizontal ? new Padding(2, Math.Max(0, (settings.HorizontalHeight - Math.Max(34, Math.Min(settings.IconSize + 18, settings.HorizontalHeight - 4))) / 2), 2, 0) : new Padding(0, 1, 0, 1)
                         };
                         var diskMenu = DockMenuStyle.Create(light, Color.FromArgb(58, 173, 201));
                         diskMenu.Items.Add("Mover bloque de discos hacia arriba", null, (_, _) => Move(item, -1));
@@ -557,8 +558,8 @@ public class Dock : Form, IMessageFilter
                 // Keep the native/lucide bitmap square; button dimensions need not be.
                 btn.ImageAlign = ContentAlignment.MiddleCenter;
                 btn.Width = Horizontal ? energySlot : Math.Max(42, settings.Width - 20);
-                btn.Height = Horizontal ? Math.Max(40, settings.IconSize + 14) : energySlot;
-                btn.Margin = new Padding(2);
+                btn.Height = Horizontal ? Math.Min(Math.Max(40, settings.IconSize + 14), Math.Max(40, settings.HorizontalHeight - 8)) : energySlot;
+                btn.Margin = Horizontal ? new Padding(2, Math.Max(0, (energyPanel.Height - btn.Height) / 2), 2, 0) : new Padding(2);
             }
             destination.Controls.Add(btn);
         }
