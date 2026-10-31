@@ -55,7 +55,7 @@ public sealed class DockOptionsForm : Form
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 9);
         StyleWindowsControls(this);
-        Shown += (_, _) => { StyleWindowsControls(this); InstallModernSelectors(this); InstallModernToggles(this); };
+        Shown += (_, _) => { InstallModernSelectors(this); InstallModernToggles(this); };
         // Fluent-style navigation: real pages, no legacy tab headers.
         ClientSize = new Size(990, 740);
         MinimumSize = new Size(770, 570);
@@ -319,6 +319,7 @@ public sealed class DockOptionsForm : Form
         var languageChoice = new ComboBox { Name = "LanguageChoice", DropDownStyle = ComboBoxStyle.DropDownList, Width = 270 };
         languageChoice.Items.AddRange(new object[] { "Español (Chile)", "English", "Português (Brasil)" });
         languageChoice.SelectedIndex = DockLanguage.Normalize(config.Language) switch { "en" => 1, "pt" => 2, _ => 0 };
+        generalRows.Controls.Add(SectionTitle("Idioma", "Idioma de la interfaz."));
         generalRows.Controls.Add(FieldRow(new Label { Text = "Idioma / Language:", AutoSize = true }, languageChoice));
         generalRows.Controls.Add(SectionTitle("Comportamiento", "Visibilidad e inicio automático."));
         generalRows.Controls.Add(top);
@@ -540,6 +541,12 @@ public sealed class DockOptionsForm : Form
         accessRows.SizeChanged += (_, _) => FitRows(accessRows);
         systemRows.SizeChanged += (_, _) => FitRows(systemRows);
 
+        PackCards(generalRows);
+        PackCards(appearanceRows);
+        PackCards(accessRows);
+        PackCards(systemRows);
+        PackCards(aboutRows);
+
         var bar = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 64, FlowDirection = FlowDirection.RightToLeft, WrapContents = false, Padding = new Padding(8), AutoScroll = false };
         Controls.Add(bar); bar.BringToFront();
         var cancel = new Button { Text = "Cancelar", AutoSize = true, MinimumSize = new Size(110, 36), DialogResult = DialogResult.Cancel };
@@ -725,8 +732,9 @@ public sealed class DockOptionsForm : Form
         var rows = new FlowLayoutPanel
         {
             FlowDirection = FlowDirection.TopDown, WrapContents = false,
-            AutoScroll = false, Padding = new Padding(10), Margin = Padding.Empty,
-            Location = Point.Empty, Width = Math.Max(340, page.ClientSize.Width - 24),
+            AutoScroll = false, Padding = new Padding(15, 12, 10, 12), Margin = Padding.Empty,
+            BackColor = Color.FromArgb(246, 249, 253),
+            Location = Point.Empty, Width = Math.Max(340, page.ClientSize.Width - 16),
             Height = 630, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
         };
         page.Controls.Add(rows);
@@ -737,6 +745,7 @@ public sealed class DockOptionsForm : Form
     private static Control SectionTitle(string title, string description)
     {
         var group = new FlowLayoutPanel {
+            Name = "SettingsSectionTitle",
             FlowDirection = FlowDirection.TopDown, WrapContents = false,
             AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink,
             Padding = new Padding(8, 12, 4, 5), Margin = new Padding(0, 10, 0, 2)
@@ -754,18 +763,86 @@ public sealed class DockOptionsForm : Form
     {
         var row = new FlowLayoutPanel
         {
-            AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            FlowDirection = FlowDirection.LeftToRight, WrapContents = true,
-            Margin = new Padding(0, 3, 0, 8), Padding = Padding.Empty,
-            MinimumSize = new Size(250, 36)
+            Name = "SettingsFieldRow",
+            AutoSize = false, Height = 48,
+            FlowDirection = FlowDirection.LeftToRight, WrapContents = false,
+            Margin = new Padding(0, 2, 0, 5), Padding = Padding.Empty,
+            MinimumSize = new Size(250, 48)
         };
         foreach (var control in controls)
         {
-            control.Margin = new Padding(3, 5, 12, 5);
+            control.Margin = new Padding(3, 6, 10, 4);
+            if (control == controls[0] && control is Label mainLabel)
+            {
+                mainLabel.AutoSize = false;
+                mainLabel.Width = 202;
+                mainLabel.Height = 32;
+                mainLabel.TextAlign = ContentAlignment.MiddleLeft;
+            }
             if (control is ComboBox combo) combo.Width = Math.Min(combo.Width, 235);
             row.Controls.Add(control);
         }
         return row;
+    }
+
+    private static void PackCards(FlowLayoutPanel rows)
+    {
+        var source = rows.Controls.Cast<Control>().ToArray();
+        rows.Controls.Clear();
+        SettingsCardPanel? card = null;
+        foreach (Control control in source)
+        {
+            if (card == null || control.Name == "SettingsSectionTitle")
+            {
+                card = new SettingsCardPanel();
+                rows.Controls.Add(card);
+            }
+            card.Controls.Add(control);
+        }
+    }
+
+    private static void FitCard(SettingsCardPanel card, int parentWidth)
+    {
+        card.Width = Math.Max(300, parentWidth - 22);
+        int usable = Math.Max(260, card.Width - card.Padding.Horizontal - 10);
+        foreach (Control child in card.Controls)
+        {
+            if (child is FlowLayoutPanel layout)
+            {
+                if (layout.Name == "SettingsFieldRow")
+                {
+                    layout.Width = usable;
+                    layout.Height = Math.Max(48, layout.Font.Height * 3);
+                }
+                else if (layout.Name == "SettingsSectionTitle")
+                {
+                    layout.MaximumSize = new Size(usable, 0);
+                    layout.PerformLayout();
+                }
+                else if (layout.Controls.Count > 0 && layout.Controls[0] is Button)
+                {
+                    layout.Width = usable;
+                    layout.Height = 96;
+                }
+                else
+                {
+                    layout.Width = usable;
+                }
+            }
+            if (child is ListBox list) list.Width = usable;
+            if (child is Label label) label.MaximumSize = new Size(usable, 0);
+            if (child is FlowLayoutPanel diskFlow &&
+                diskFlow.Controls.OfType<Panel>().Any())
+            {
+                diskFlow.Width = usable;
+                diskFlow.Height = 290;
+                foreach (Panel line in diskFlow.Controls.OfType<Panel>())
+                    line.Width = Math.Max(800, usable - 10);
+            }
+        }
+        card.PerformLayout();
+        card.Height = card.Padding.Vertical + card.Controls.Cast<Control>()
+            .Sum(x => x.Height + x.Margin.Vertical) + 8;
     }
 
     private static void FitRows(FlowLayoutPanel rows)
@@ -820,6 +897,7 @@ public sealed class DockOptionsForm : Form
                 foreach (Control child in flow.Controls)
                     if (child is Label rowLabel) rowLabel.MaximumSize = new Size(Math.Max(225, width - 38), 0);
         }
+        foreach (SettingsCardPanel card in rows.Controls.OfType<SettingsCardPanel>()) FitCard(card, width);
         rows.PerformLayout();
         rows.Height = rows.Controls.Cast<Control>().Sum(x => x.Height + x.Margin.Vertical) + rows.Padding.Vertical + 36;
     }
