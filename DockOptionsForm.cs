@@ -109,6 +109,7 @@ public sealed class DockOptionsForm : Form
                 button.Font = new Font("Segoe UI", 10, index == selected ? FontStyle.Bold : FontStyle.Regular);
             }
             pages[selected].BringToFront();
+            if (pages[selected].Tag is FlowLayoutPanel activeRows) FitRows(activeRows);
         }
         for (int index = 0; index < navNames.Length; index++)
         {
@@ -582,6 +583,7 @@ public sealed class DockOptionsForm : Form
             FitRows(accessRows);
             FitRows(systemRows);
             FitRows(aboutRows);
+            ShowPage(initialTab == "Apariencia" ? 1 : initialTab == "Acerca de" ? 4 : 0);
         };
         void CaptureSettings()
         {
@@ -776,6 +778,7 @@ public sealed class DockOptionsForm : Form
             Height = 630, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
         };
         page.Controls.Add(rows);
+        page.Tag = rows;
         header.BringToFront();
         page.Resize += (_, _) => FitRows(rows);
         return rows;
