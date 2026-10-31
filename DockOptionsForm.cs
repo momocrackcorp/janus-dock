@@ -272,7 +272,8 @@ public sealed class DockOptionsForm : Form
         appearanceRows.Controls.Add(FieldRow(new Label { Text = "Ampliación de la lupa:", AutoSize = true }, zoomChoice));
 
 
-        appearanceRows.Controls.Add(SectionTitle("Organizar accesos", "Arrastra o utiliza los controles para ordenar."));
+        var accessesSection = SectionTitle("Organizar accesos", "Arrastra o utiliza los controles para ordenar.");
+        appearanceRows.Controls.Add(accessesSection);
         orderList.Height = 170;
         appearanceRows.Controls.Add(orderList);
         actions.FlowDirection = FlowDirection.LeftToRight;
@@ -328,12 +329,18 @@ public sealed class DockOptionsForm : Form
         generalRows.Controls.Add(FieldRow(new Label { Text = "Modo:", AutoSize = true }, dockMode));
         generalRows.Controls.Add(FieldRow(new Label { Text = "Ubicación:", AutoSize = true }, location));
         generalRows.Controls.Add(SectionTitle("Botones del sistema", "Accesos rápidos a funciones de Windows."));
-        generalRows.Controls.Add(FieldRow(powerTitle, lockButton, shutdown, restart));
+        lockButton.Text = "Mostrar botón Bloquear";
+        shutdown.Text = "Mostrar botón Apagar";
+        restart.Text = "Mostrar botón Reiniciar";
+        generalRows.Controls.Add(lockButton);
+        generalRows.Controls.Add(shutdown);
+        generalRows.Controls.Add(restart);
         generalRows.Controls.Add(new Label { Text = "Al ocultarse queda una franja para recuperar la barra con el mouse.", AutoSize = true });
         generalRows.SizeChanged += (_, _) => FitRows(generalRows);
 
         var networkWidget = new CheckBox { Text = "Mostrar tráfico de red (conexión principal, cada segundo)", AutoSize = true, Checked = config.ShowNetworkTraffic };
-        generalRows.Controls.Add(SectionTitle("Información del sistema", "Monitores que aparecerán en el Dock."));
+        var monitorsSection = SectionTitle("Información del sistema", "Monitores que aparecerán en el Dock.");
+        generalRows.Controls.Add(monitorsSection);
         generalRows.Controls.Add(networkWidget);
         var cpuWidget = new CheckBox { Text = "Mostrar uso de CPU", AutoSize = true, Checked = config.ShowSystemUsage && config.ShowCpu };
         var ramWidget = new CheckBox { Text = "Mostrar uso de memoria RAM", AutoSize = true, Checked = config.ShowSystemUsage && config.ShowRam };
@@ -441,7 +448,7 @@ public sealed class DockOptionsForm : Form
 
         // Disk settings use the same scrollable stack for 200% DPI.
         // Disk options now belong to General: keep disk colors and threshold intact.
-        generalRows.Controls.Add(new Label { Text = "Indicadores de discos", AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold) });
+        generalRows.Controls.Add(SectionTitle("Indicadores de discos", "Selecciona qué unidades mostrar y sus colores."));
         generalRows.Controls.Add(widget);
         generalRows.Controls.Add(widgetLabel);
         generalRows.Controls.Add(FieldRow(new Label { Text = "Avisar desde (%):", AutoSize = true }, critical));
@@ -518,6 +525,21 @@ public sealed class DockOptionsForm : Form
         aboutRows.SizeChanged += (_, _) => FitRows(aboutRows);
 
 
+        // Separate the functional panels from the appearance configuration.
+        var accessRows = PageRows(accessPage);
+        var systemRows = PageRows(systemPage);
+        void MoveFromSection(FlowLayoutPanel source, FlowLayoutPanel target, Control section)
+        {
+            int start = source.Controls.GetChildIndex(section);
+            // Controls order in FlowLayoutPanel is the logical top-to-bottom order.
+            var items = source.Controls.Cast<Control>().Skip(start).ToArray();
+            foreach (var control in items) target.Controls.Add(control);
+        }
+        MoveFromSection(appearanceRows, accessRows, accessesSection);
+        MoveFromSection(generalRows, systemRows, monitorsSection);
+        accessRows.SizeChanged += (_, _) => FitRows(accessRows);
+        systemRows.SizeChanged += (_, _) => FitRows(systemRows);
+
         var bar = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 64, FlowDirection = FlowDirection.RightToLeft, WrapContents = false, Padding = new Padding(8), AutoScroll = false };
         Controls.Add(bar); bar.BringToFront();
         var cancel = new Button { Text = "Cancelar", AutoSize = true, MinimumSize = new Size(110, 36), DialogResult = DialogResult.Cancel };
@@ -533,6 +555,8 @@ public sealed class DockOptionsForm : Form
             bar.Height = Math.Max(64, apply.PreferredSize.Height + 20);
             FitRows(generalRows);
             FitRows(appearanceRows);
+            FitRows(accessRows);
+            FitRows(systemRows);
             FitRows(aboutRows);
         };
         void CaptureSettings()
