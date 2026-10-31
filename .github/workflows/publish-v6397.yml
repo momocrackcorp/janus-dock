@@ -1,0 +1,80 @@
+name: Publicar JANUS Dock 6.3.97
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/publish-v6397.yml']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Generar icono
+        shell: pwsh
+        run: ./generate-icon.ps1
+      - name: Compilar versiones portatiles
+        shell: pwsh
+        run: |
+          dotnet publish JanusDock.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o dist-compact
+          if ($LASTEXITCODE -ne 0) { throw "Fallo version liviana" }
+          dotnet publish JanusDock.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o dist-standalone
+          if ($LASTEXITCODE -ne 0) { throw "Fallo version autonoma" }
+      - name: Instalar Inno Setup
+        shell: pwsh
+        run: choco install innosetup -y --no-progress
+      - name: Construir instalador JANUS Dock 6.3.97
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (!(Test-Path $iscc)) { throw "Inno Setup no disponible" }
+          & $iscc installer\JanusDock.iss
+          if ($LASTEXITCODE -ne 0) { throw "Fallo instalador" }
+      - name: Preparar archivos y hashes
+        shell: pwsh
+        run: |
+          Compress-Archive dist-compact/JanusDock.exe JANUS-Dock-Liviano-Windows-x64.zip
+          Compress-Archive dist-standalone/JanusDock.exe JANUS-Dock-Autonomo-Windows-x64.zip
+          $files = @("JANUS-Dock-Liviano-Windows-x64.zip", "JANUS-Dock-Autonomo-Windows-x64.zip", "installer-output/JANUS-Dock-Setup-6.3.97-Autonomo.exe")
+          foreach ($file in $files) { if (!(Test-Path $file)) { throw "Falta archivo: $file" } }
+          $files | ForEach-Object { Get-FileHash $_ -Algorithm SHA256 } | ForEach-Object { "$($_.Hash.ToLowerInvariant())  $(Split-Path $_.Path -Leaf)" } | Set-Content SHA256SUMS.txt
+      - name: Publicar Release 6.3.97
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          @'
+          # JANUS Dock 6.3.97
+          
+          Barra de accesos personalizable para Windows 10/11 (x64).
+          
+          ## Descargas
+          - **JANUS-Dock-Setup-6.3.97-Autonomo.exe**: recomendado, con .NET incluido, acceso en Inicio y opción de arranque con Windows.
+          - **JANUS-Dock-Autonomo-Windows-x64.zip**: versión portátil con .NET incluido.
+          - **JANUS-Dock-Liviano-Windows-x64.zip**: portátil, requiere .NET 8 Desktop Runtime x64.
+          - **SHA256SUMS.txt**: hashes de verificación.
+          
+          ## Novedades
+          - Disco con iconos Windows y Lucide, barra de ocupacion y letra centrada.
+          - Clic sobre el disco abre su unidad en Explorador; tooltip con capacidad y espacio libre.
+          - Efecto lupa en iconos de disco y mejor alineacion vertical.
+          - Ctrl + rueda del mouse ajusta iconos entre 16 y 96 px.
+          - CPU y RAM independientes, RAM total dentro de su icono y detalles al pasar el mouse.
+          - Red compacta: subida arriba y bajada abajo, promedio de 60 segundos.
+          - Opciones y Acerca de actualizados.
+
+          ## Actualizar desde una version anterior
+          Cierra JANUS Dock antes de ejecutar el instalador 6.3.97. Este usa el mismo
+          identificador de aplicacion y la misma carpeta que las versiones anteriores;
+          la configuracion personal se conserva en AppData.
+
+          El boton Buscar actualizaciones abre la ultima Release en GitHub.
+          La instalacion automatica desde la aplicacion todavia no esta implementada.
+
+          Proyecto Momocrackcorp · Ñuble, Chile.
+          '@ | Set-Content notes.md -Encoding utf8
+          gh release create v6.3.97 --repo "${{ github.repository }}" --target "${{ github.sha }}" --title "JANUS Dock v6.3.97" --notes-file notes.md JANUS-Dock-Liviano-Windows-x64.zip JANUS-Dock-Autonomo-Windows-x64.zip installer-output/JANUS-Dock-Setup-6.3.97-Autonomo.exe SHA256SUMS.txt
+          if ($LASTEXITCODE -ne 0) { throw "No se pudo publicar la release" }
