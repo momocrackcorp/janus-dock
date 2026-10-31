@@ -39,7 +39,20 @@ public sealed class DigitalClockControl : Control
                 .GetManifestResourceStream("JanusDock.CasioWhite.png");
             if (stream == null) return null;
             using var loaded = Image.FromStream(stream);
-            return new Bitmap(loaded);
+            var aged = new Bitmap(loaded);
+            // Bone-white silk-screen paint, faded and subtly worn.
+            // Preserve transparency; no opaque rectangle behind the decal.
+            for (int y = 0; y < aged.Height; y++)
+                for (int x = 0; x < aged.Width; x++)
+                {
+                    Color pixel = aged.GetPixel(x, y);
+                    if (pixel.A == 0) continue;
+                    int grain = (x * 37 + y * 19 + x * y * 7) % 67;
+                    double opacity = grain < 3 ? .25 : grain < 12 ? .53 : .72;
+                    int alpha = Math.Clamp((int)Math.Round(pixel.A * opacity), 0, 255);
+                    aged.SetPixel(x, y, Color.FromArgb(alpha, 231, 225, 208));
+                }
+            return aged;
         }
         catch { return null; }
     }
@@ -93,6 +106,38 @@ public sealed class DigitalClockControl : Control
         if (Width < 2 || Height < 2) return;
         Graphics g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
+        if (!HorizontalBar)
+        {
+            // On vertical docks this is plain text on the dock background,
+            // never a miniature LCD display or a black capsule.
+            g.Clear(BackColor);
+            DateTime verticalNow = DateTime.Now;
+            string time = verticalNow.ToString(Hour24 ? "HH:mm" : "hh:mm", CultureInfo.InvariantCulture);
+            string suffix = !Hour24 && ShowAmPm ? verticalNow.ToString("tt", CultureInfo.InvariantCulture) : "";
+            Color foreground = BackColor.GetBrightness() > .55f
+                ? Color.FromArgb(26, 35, 48) : Color.FromArgb(232, 237, 243);
+            var flags = TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter |
+                        TextFormatFlags.NoPadding | TextFormatFlags.SingleLine;
+            using var face = new Font("Segoe UI", Math.Clamp(Width / 5.6f, 11f, 19f),
+                FontStyle.Bold, GraphicsUnit.Pixel);
+            TextRenderer.DrawText(g, time, face, new Rectangle(0, 2, Width, 28), foreground, flags);
+            int dateY = 35;
+            if (suffix.Length != 0)
+            {
+                using var suffixFace = new Font("Segoe UI", 10, FontStyle.Regular, GraphicsUnit.Pixel);
+                TextRenderer.DrawText(g, suffix, suffixFace, new Rectangle(0, 27, Width, 16),
+                    foreground, flags);
+                dateY = 48;
+            }
+            if (ShowDate)
+            {
+                using var dateFace = new Font("Consolas", Math.Clamp(Width / 7.5f, 10f, 13f),
+                    FontStyle.Regular, GraphicsUnit.Pixel);
+                TextRenderer.DrawText(g, verticalNow.ToString("dd-MM", CultureInfo.InvariantCulture),
+                    dateFace, new Rectangle(0, dateY, Width, 19), foreground, flags);
+            }
+            return;
+        }
         g.Clear(Color.FromArgb(9, 10, 11));
 
         // Virtual coordinates: 244 x 104 for horizontal capsule.
@@ -106,13 +151,13 @@ public sealed class DigitalClockControl : Control
         g.DrawLine(divider, 3.5f, 18, 3.5f, 86);
 
         // Light gray-green LCD embedded in the same black housing.
-        var shadow = new RectangleF(19, 11, 213, 57);
+        var shadow = new RectangleF(19, 16, 213, 49);
         using (var shadowShape = RoundedRectangle(shadow, 15))
         using (var darkBorder = new Pen(Color.FromArgb(40, 44, 42), 4.1f))
         {
             g.DrawPath(darkBorder, shadowShape);
         }
-        var lcdRect = new RectangleF(20.5f, 12.5f, 210, 54);
+        var lcdRect = new RectangleF(20.5f, 17.5f, 210, 46);
         using (var lcdShape = RoundedRectangle(lcdRect, 14))
         using (var lcdFill = new LinearGradientBrush(lcdRect,
                    Color.FromArgb(200, 206, 191), Color.FromArgb(174, 183, 167),
@@ -127,13 +172,13 @@ public sealed class DigitalClockControl : Control
         string digits = now.ToString(Hour24 ? "HHmm" : "hhmm", CultureInfo.InvariantCulture);
         string suffix = !Hour24 && ShowAmPm ? now.ToString("tt", CultureInfo.InvariantCulture) : "";
         float[] digitX = { 52, 81, 122, 151 };
-        for (int i = 0; i < 4; i++) DrawDigit(g, digits[i], digitX[i], 25, 26, 33);
+        for (int i = 0; i < 4; i++) DrawDigit(g, digits[i], digitX[i], 26, 24, 29);
         using var ink = new SolidBrush(Color.FromArgb(24, 29, 25));
-        g.FillEllipse(ink, 114, 34, 3.8f, 3.8f);
-        g.FillEllipse(ink, 114, 48, 3.8f, 3.8f);
+        g.FillEllipse(ink, 111, 34, 3.4f, 3.4f);
+        g.FillEllipse(ink, 111, 46, 3.4f, 3.4f);
         if (suffix.Length > 0)
-            using (var suffixFont = new Font("Segoe UI", 17, FontStyle.Bold, GraphicsUnit.Pixel))
-                g.DrawString(suffix, suffixFont, ink, 185, 39);
+            using (var suffixFont = new Font("Segoe UI", 14, FontStyle.Bold, GraphicsUnit.Pixel))
+                g.DrawString(suffix, suffixFont, ink, 185, 38);
 
         if (ShowDate)
         {
@@ -159,7 +204,7 @@ public sealed class DigitalClockControl : Control
             else
             {
                 using var brandFont = new Font("Arial Black", 19, FontStyle.Bold, GraphicsUnit.Pixel);
-                using var white = new SolidBrush(Color.White);
+                using var white = new SolidBrush(Color.FromArgb(174, 231, 225, 208));
                 g.DrawString("CASIO", brandFont, white, 124, 75);
             }
         }

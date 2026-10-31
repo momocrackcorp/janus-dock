@@ -630,8 +630,9 @@ public class Dock : Form, IMessageFilter
                 ? 16 + powerCount * (width + settings.IconSpacing) + 8 + embeddedClockWidth
                 : Math.Max(1, powerCount) * (energySlot + settings.IconSpacing) + 24
             : settings.Width;
-        energyPanel.Height = Horizontal ? settings.HorizontalHeight + (settings.ShowDigitalClock ? 4 : 0)
-                                        : Math.Max(1, powerCount) * (energySlot + settings.IconSpacing) + 18;
+        // Flush with the dock, without adding height to the Windows AppBar.
+        energyPanel.Height = Horizontal ? settings.HorizontalHeight
+            : Math.Max(1, powerCount) * (energySlot + settings.IconSpacing) + 18;
         // Reflect clock activation immediately, even when AppBar geometry
         // remains unchanged and SetOrientation() is not called.
         energyPanel.Padding = Horizontal
@@ -800,14 +801,14 @@ public class Dock : Form, IMessageFilter
             var terminalButton = new Button
             {
                 Text = ">_",
-                Width = Horizontal ? 40 : Math.Max(36, settings.Width - 18),
-                Height = 38,
+                Width = Horizontal ? 30 : Math.Min(34, Math.Max(28, settings.Width - 16)),
+                Height = 29,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(39, 48, 66),
                 ForeColor = Color.FromArgb(195, 213, 231),
-                Font = new Font("Consolas", 13, FontStyle.Bold),
+                Font = new Font("Consolas", 10f, FontStyle.Bold),
                 Margin = Horizontal
-                    ? new Padding(4, Math.Max(0, (settings.HorizontalHeight - 38) / 2), 6, 0)
+                    ? new Padding(3, Math.Max(0, (settings.HorizontalHeight - 29) / 2), 4, 0)
                     : new Padding(4, 3, 4, 3),
                 AccessibleName = settings.TerminalMode == "CMD" ? "Abrir CMD" : "Abrir Terminal"
             };
@@ -866,7 +867,8 @@ public class Dock : Form, IMessageFilter
                 Hour24 = settings.ClockFormat == "24",
                 ShowAmPm = settings.ShowClockAmPm,
                 Width = Horizontal ? embeddedClockWidth : settings.Width,
-                Height = Horizontal ? settings.HorizontalHeight + 4 : 126,
+                Height = Horizontal ? settings.HorizontalHeight
+                    : (settings.ShowClockDate ? 77 : 52),
                 Margin = Horizontal ? new Padding(8, 0, 0, 0) : Padding.Empty,
                 BackColor = Horizontal ? energyPanel.CapsuleColor : BackColor
             };
@@ -884,7 +886,8 @@ public class Dock : Form, IMessageFilter
             else clockArea.Controls.Add(clock);
         }
         clockArea.Width = Horizontal ? 0 : settings.Width;
-        clockArea.Height = Horizontal ? settings.HorizontalHeight : 126;
+        clockArea.Height = Horizontal ? settings.HorizontalHeight
+            : (settings.ShowClockDate ? 77 : 52);
         clockArea.Visible = settings.ShowDigitalClock && !Horizontal;
         energyPanel.Visible = energyPanel.Controls.Count > 0;
         networkArea.Visible = networkArea.Controls.Count > 0;
@@ -901,7 +904,6 @@ public class Dock : Form, IMessageFilter
         panel.ResumeLayout();
         AlignFooter();
         if (IsHandleCreated && !resizeActive) Position();
-        else if (IsHandleCreated) UpdateRoundCornerRegion();
     }
     ContextMenuStrip MakeDockMenu()
     {
@@ -1012,8 +1014,7 @@ public class Dock : Form, IMessageFilter
         // Keep the AppBar reservation stable for ordinary visual/widget edits.
         // Re-registering on every checkbox change can shift the bar away from its edge.
         bool reDock = settings.DockMode != dlg.DockMode || settings.Edge != dlg.Edge ||
-            settings.Width != dlg.BarWidth || settings.HorizontalHeight != dlg.BarHeight ||
-            (Horizontal && settings.ShowDigitalClock != dlg.ShowDigitalClock);
+            settings.Width != dlg.BarWidth || settings.HorizontalHeight != dlg.BarHeight;
         if (reDock) UnregisterBar();
         settings.Language = dlg.Language;
         settings.AlwaysOnTop = dlg.AlwaysOnTop;
@@ -1230,35 +1231,6 @@ public class Dock : Form, IMessageFilter
         }
         if (shouldExpand == collapsed) { collapsed = !collapsed; Position(); }
     }
-    void UpdateRoundCornerRegion()
-    {
-        var previous = Region;
-        if (!Horizontal || !settings.ShowDigitalClock || collapsed ||
-            settings.DockMode == "Flotante" || Width < energyPanel.Width + 8 || Height < 15)
-        {
-            Region = null;
-            previous?.Dispose();
-            return;
-        }
-        // Keep the main bar at its selected height while the black round
-        // corner extends two pixels above and two below it.
-        var area = new Region(new Rectangle(0, 2, Width, Math.Max(1, Height - 4)));
-        float radius = (Height - 2) / 2f;
-        float diameter = radius * 2f;
-        float x = Width - energyPanel.Width;
-        using (var capsule = new System.Drawing.Drawing2D.GraphicsPath())
-        {
-            capsule.AddArc(x, 1, diameter, diameter, 180, 90);
-            capsule.AddLine(x + radius, 1, Width, 1);
-            capsule.AddLine(Width, 1, Width, Height - 1);
-            capsule.AddLine(Width, Height - 1, x + radius, Height - 1);
-            capsule.AddArc(x, Height - diameter - 1, diameter, diameter, 90, 90);
-            capsule.CloseFigure();
-            area.Union(capsule);
-        }
-        Region = area;
-        previous?.Dispose();
-    }
     void Position()
     {
         if (repositioning) return;
@@ -1273,7 +1245,7 @@ public class Dock : Form, IMessageFilter
                 return;
             }
             int thickness = collapsed ? RevealStrip
-                : Horizontal ? settings.HorizontalHeight + (settings.ShowDigitalClock ? 4 : 0) : settings.Width;
+                : Horizontal ? settings.HorizontalHeight : settings.Width;
             var d = Data();
             // Query from physical screen bounds, not WorkingArea: the latter
             // already includes our own AppBar reservation and would drift upward
@@ -1298,7 +1270,14 @@ public class Dock : Form, IMessageFilter
                 SHAppBarMessage(ABM_SETPOS, ref d);
             }
             Bounds = Rectangle.FromLTRB(d.rc.left, d.rc.top, d.rc.right, d.rc.bottom);
-            UpdateRoundCornerRegion();
+            // Undo the earlier protruding-window mask. The dock always
+            // touches the screen edge across its full configured thickness.
+            if (Region != null)
+            {
+                var previous = Region;
+                Region = null;
+                previous.Dispose();
+            }
             panel.Visible = !collapsed;
             footer.Width = Horizontal ? 80 : settings.Width;
             // Do not overwrite the compact sizes assigned by Render().

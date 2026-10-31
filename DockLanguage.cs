@@ -37,6 +37,7 @@ internal static class DockLanguage
         ["Diseño CPU / RAM:"] = ("CPU / RAM design:", "Estilo CPU / RAM:"),
         ["Mostrar fecha bajo el reloj (dd-MM)"] = ("Show date below clock (dd-MM)", "Mostrar data abaixo do relógio (dd-MM)"),
         ["Mostrar calcomanía CASIO blanca"] = ("Show white CASIO decal", "Mostrar logotipo CASIO branco"),
+        ["Mostrar calcomanía CASIO blanco hueso"] = ("Show aged ivory CASIO decal", "Mostrar logotipo CASIO marfim envelhecido"),
         ["Anclar tráfico junto a los botones de energía (derecha / abajo)"] = ("Place network traffic next to power buttons", "Posicionar tráfego de rede junto aos botões de energia"),
         ["Indicadores de discos"] = ("Disk indicators", "Indicadores de discos"),
         ["Mostrar indicador de uso de discos en la barra"] = ("Show disk usage indicators on the dock", "Mostrar indicadores de disco na barra"),
