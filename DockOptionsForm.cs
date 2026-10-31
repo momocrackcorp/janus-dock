@@ -851,7 +851,7 @@ public sealed class DockOptionsForm : Form
                 if (layout.Name == "SettingsFieldRow")
                 {
                     layout.Width = usable;
-                    layout.Height = Math.Max(48, layout.Font.Height * 3);
+                    layout.Height = layout.Controls.OfType<TrackBar>().Any() ? 68 : Math.Max(50, layout.Font.Height * 3);
                 }
                 else if (layout.Name == "SettingsSectionTitle")
                 {
