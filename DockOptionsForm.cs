@@ -951,17 +951,43 @@ public sealed class DockOptionsForm : Form
                 if (layout.Name == "SettingsFieldRow")
                 {
                     layout.Width = usable;
-                    // Prevent clipped selectors when two dashboard columns are shown.
-                    if (layout.Controls.Count == 2 && layout.Controls[0] is Label caption)
+                    // Responsive sizing for labels, sliders and selectors.
+                    // Keep every setting inside its card in two-column mode.
+                    var fields = layout.Controls.Cast<Control>().ToArray();
+                    if (fields.Length > 1 && fields[0] is Label caption)
                     {
-                        var selector = layout.Controls[1];
-                        if (selector is ComboBox || selector is ModernSelector)
+                        bool sliderRow = fields.Any(c => c is TrackBar);
+                        if (sliderRow)
                         {
-                            caption.Width = Math.Clamp(usable / 3, 95, 180);
-                            selector.Width = Math.Clamp(usable - caption.Width - 27, 130, 235);
+                            caption.Width = Math.Clamp(usable / 3, 90, 148);
+                            var slider = fields.OfType<TrackBar>().First();
+                            int otherWidth = fields
+                                .Where(c => c != caption && c != slider)
+                                .Sum(c => c.Width + c.Margin.Horizontal);
+                            slider.Width = Math.Max(100, usable - caption.Width -
+                                caption.Margin.Horizontal - slider.Margin.Horizontal - otherWidth - 10);
+                        }
+                        else if (fields.Length >= 3)
+                        {
+                            caption.Width = Math.Clamp(usable / 4, 78, 115);
+                            var selector = fields.Skip(1).FirstOrDefault(c =>
+                                c is ComboBox || c is ModernSelector);
+                            if (selector != null)
+                            {
+                                int others = fields.Where(c => c != selector && c != caption)
+                                    .Sum(c => c.Width + c.Margin.Horizontal);
+                                selector.Width = Math.Max(105, usable - caption.Width -
+                                    caption.Margin.Horizontal - selector.Margin.Horizontal - others - 7);
+                            }
+                        }
+                        else if (fields[1] is ComboBox || fields[1] is ModernSelector)
+                        {
+                            caption.Width = Math.Clamp(usable / 3, 95, 145);
+                            fields[1].Width = Math.Clamp(usable - caption.Width - 30, 120, 235);
                         }
                     }
-                    layout.Height = layout.Controls.OfType<TrackBar>().Any() ? 58 : Math.Max(42, layout.Font.Height * 2 + 10);
+                    layout.Height = layout.Controls.OfType<TrackBar>().Any() ? 58 :
+                        Math.Max(42, layout.Font.Height * 2 + 10);
                 }
                 else if (layout.Name == "SettingsSectionTitle")
                 {
@@ -1044,7 +1070,7 @@ public sealed class DockOptionsForm : Form
         if (cards.Length != 4) return;
         // Controls are added in order: Iconos, Barra, Efectos, Notas.
         const int gap = 14;
-        bool columns = dashboard.Width >= 760;
+        bool columns = dashboard.Width >= 825;
         int columnWidth = columns ? (dashboard.Width - gap) / 2 : dashboard.Width;
         foreach (var card in cards)
         {
