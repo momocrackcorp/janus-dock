@@ -90,7 +90,6 @@ Las compilaciones automatizadas pueden consultarse en [GitHub Actions](https://g
 
 Los siguientes iconos se atribuyen a sus autores originales en **[Flaticon](https://www.flaticon.com/)**:
 
-- **Bloquear:** [Pixel perfect](https://www.flaticon.com/authors/pixel-perfect) — Flaticon.
 - **Reiniciar / Reset:** [Roundicons](https://www.flaticon.com/authors/roundicons) — Flaticon.
 - **Apagar / Encendido:** [Uniconlabs](https://www.flaticon.com/authors/uniconlabs) — Flaticon.
 
