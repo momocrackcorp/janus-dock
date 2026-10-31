@@ -19,6 +19,8 @@ public sealed class DockOptionsForm : Form
     public bool ShowCpu { get; private set; } = true;
     public bool ShowRam { get; private set; } = true;
     public bool ShowDigitalClock { get; private set; }
+    public bool ShowClockDate { get; private set; } = true;
+    public bool ShowClockSticker { get; private set; } = true;
     public string UsageLayout { get; private set; } = "Vertical";
     public bool NetworkAtEnd { get; private set; }
     public bool StartWithWindows { get; private set; }
@@ -396,6 +398,17 @@ public sealed class DockOptionsForm : Form
         generalRows.Controls.Add(networkAtEnd);
         var digitalClock = new CheckBox { Text = "Mostrar reloj digital LCD (12 h, AM/PM)", AutoSize = true, Checked = config.ShowDigitalClock };
         generalRows.Controls.Add(digitalClock);
+        var clockDate = new CheckBox { Text = "Mostrar fecha bajo el reloj (dd-MM)", AutoSize = true, Checked = config.ShowClockDate };
+        var clockSticker = new CheckBox { Text = "Mostrar calcomanía CASIO blanca", AutoSize = true, Checked = config.ShowClockSticker };
+        void UpdateClockDependents()
+        {
+            clockDate.Enabled = digitalClock.Checked;
+            clockSticker.Enabled = digitalClock.Checked;
+        }
+        digitalClock.CheckedChanged += (_, _) => UpdateClockDependents();
+        UpdateClockDependents();
+        generalRows.Controls.Add(clockDate);
+        generalRows.Controls.Add(clockSticker);
         var widget = new CheckBox { Text = "Mostrar indicador de uso de discos en la barra", Checked = config.ShowDiskWidget, Location = new Point(18, 20), AutoSize = true };
         var diskColors = new Dictionary<string,int>(config.DiskColors, StringComparer.OrdinalIgnoreCase);
         var hiddenDisks = new HashSet<string>(config.HiddenDiskLetters ?? new List<string>(), StringComparer.OrdinalIgnoreCase);
@@ -665,6 +678,8 @@ public sealed class DockOptionsForm : Form
             ShowCpu = cpuWidget.Checked;
             ShowRam = ramWidget.Checked;
             ShowDigitalClock = digitalClock.Checked;
+            ShowClockDate = clockDate.Checked;
+            ShowClockSticker = clockSticker.Checked;
             UsageLayout = usageLayout.SelectedIndex == 1 ? "Horizontal" : "Vertical";
             ShowSystemUsage = ShowCpu || ShowRam;
             NetworkAtEnd = networkAtEnd.Checked;

@@ -1,93 +1,160 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Globalization;
+using System.Reflection;
 using System.Windows.Forms;
 
 namespace JanusDock;
 
 /// <summary>
-/// Optional, read-only retro LCD clock for the Dock. The display is based on
-/// the Windows local clock and never modifies the system time.
+/// LCD inset, engraved day-month and the user's actual transparent white logo.
+/// The horizontal layout is based on the approved 500 x 120 reference crop;
+/// its virtual drawing coordinates scale to the configured dock thickness.
 /// </summary>
 public sealed class DigitalClockControl : Control
 {
     readonly System.Windows.Forms.Timer timer = new() { Interval = 1000 };
+    static readonly Image? CasioWordmark = LoadWordmark();
     public bool HorizontalBar { get; }
+    public bool ShowDate { get; set; } = true;
+    public bool ShowSticker { get; set; } = true;
 
     public DigitalClockControl(bool horizontalBar)
     {
         HorizontalBar = horizontalBar;
         DoubleBuffered = true;
-        Size = horizontalBar ? new Size(136, 54) : new Size(86, 90);
+        Size = horizontalBar ? new Size(122, 52) : new Size(86, 126);
         timer.Tick += (_, _) => RefreshTime();
         RefreshTime();
         timer.Start();
     }
 
+    static Image? LoadWordmark()
+    {
+        try
+        {
+            using var stream = typeof(DigitalClockControl).Assembly
+                .GetManifestResourceStream("JanusDock.CasioWhite.png");
+            if (stream == null) return null;
+            using var loaded = Image.FromStream(stream);
+            return new Bitmap(loaded);
+        }
+        catch { return null; }
+    }
+
     void RefreshTime()
     {
         AccessibleName = "Reloj digital";
-        AccessibleDescription = DateTime.Now.ToString("hh:mm tt", CultureInfo.InvariantCulture);
+        AccessibleDescription = DateTime.Now.ToString("hh:mm tt, dd-MM", CultureInfo.InvariantCulture);
         Invalidate();
+    }
+
+    static GraphicsPath RoundedRectangle(RectangleF bounds, float radius)
+    {
+        float d = radius * 2;
+        var path = new GraphicsPath();
+        path.AddArc(bounds.Left, bounds.Top, d, d, 180, 90);
+        path.AddArc(bounds.Right - d, bounds.Top, d, d, 270, 90);
+        path.AddArc(bounds.Right - d, bounds.Bottom - d, d, d, 0, 90);
+        path.AddArc(bounds.Left, bounds.Bottom - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
     }
 
     static void DrawDigit(Graphics g, char digit, float x, float y, float w, float h)
     {
         int[] masks = { 0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F };
-        int value = digit >= '0' && digit <= '9' ? masks[digit - '0'] : 0;
-        const float t = 2.7f;
+        int value = digit is >= '0' and <= '9' ? masks[digit - '0'] : 0;
+        float t = Math.Max(2.6f, w * .12f);
         RectangleF[] segments =
         {
-            new(x + t, y, w - 2*t, t),
+            new(x + t, y, w - t*2, t),
             new(x + w - t, y + t, t, h/2 - t),
             new(x + w - t, y + h/2, t, h/2 - t),
-            new(x + t, y + h - t, w - 2*t, t),
+            new(x + t, y + h - t, w - t*2, t),
             new(x, y + h/2, t, h/2 - t),
             new(x, y + t, t, h/2 - t),
-            new(x + t, y + h/2 - t/2, w - 2*t, t)
+            new(x + t, y + h/2 - t/2, w - t*2, t)
         };
-        using var on = new SolidBrush(Color.FromArgb(29, 35, 30));
-        using var off = new SolidBrush(Color.FromArgb(28, 62, 67, 56));
-        for (int i = 0; i < 7; i++)
-            g.FillRectangle((value & (1 << i)) != 0 ? on : off, segments[i]);
+        using var ink = new SolidBrush(Color.FromArgb(24, 29, 25));
+        using var ghost = new SolidBrush(Color.FromArgb(23, 65, 67, 58));
+        for (int i = 0; i < segments.Length; i++)
+            g.FillRectangle((value & (1 << i)) != 0 ? ink : ghost, segments[i]);
     }
 
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
-        float vw = HorizontalBar ? 126 : 90;
-        float vh = HorizontalBar ? 44 : 76;
+        if (Width < 2 || Height < 2) return;
+        Graphics g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.Clear(Color.FromArgb(9, 10, 11));
+
+        // Virtual coordinates: 244 x 104 for horizontal capsule.
+        // Vertical orientation uses a scaled version of the same control.
+        const float vw = 244f, vh = 104f;
         float scale = Math.Min(Width / vw, Height / vh);
         if (scale <= 0) return;
-        var g = e.Graphics;
-        g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.TranslateTransform((Width - vw * scale) / 2, (Height - vh * scale) / 2);
+        g.TranslateTransform((Width - vw * scale) / 2f, (Height - vh * scale) / 2f);
         g.ScaleTransform(scale, scale);
-        using var border = new Pen(Color.FromArgb(72, 79, 73), 1.6f);
-        using var lcd = new SolidBrush(Color.FromArgb(180, 187, 169));
-        var frame = new RectangleF(1.5f, 3, vw - 3, vh - 6);
-        g.FillRectangle(lcd, frame);
-        g.DrawRectangle(border, frame.X, frame.Y, frame.Width, frame.Height);
+        using var divider = new Pen(Color.FromArgb(154, 158, 158), 2.1f);
+        g.DrawLine(divider, 3.5f, 18, 3.5f, 86);
+
+        // Light gray-green LCD embedded in the same black housing.
+        var shadow = new RectangleF(19, 11, 213, 57);
+        using (var shadowShape = RoundedRectangle(shadow, 15))
+        using (var darkBorder = new Pen(Color.FromArgb(40, 44, 42), 4.1f))
+        {
+            g.DrawPath(darkBorder, shadowShape);
+        }
+        var lcdRect = new RectangleF(20.5f, 12.5f, 210, 54);
+        using (var lcdShape = RoundedRectangle(lcdRect, 14))
+        using (var lcdFill = new LinearGradientBrush(lcdRect,
+                   Color.FromArgb(200, 206, 191), Color.FromArgb(174, 183, 167),
+                   LinearGradientMode.Vertical))
+        using (var frame = new Pen(Color.FromArgb(98, 106, 103), 1.5f))
+        {
+            g.FillPath(lcdFill, lcdShape);
+            g.DrawPath(frame, lcdShape);
+        }
 
         DateTime now = DateTime.Now;
-        string time = now.ToString("hhmm", CultureInfo.InvariantCulture);
-        string ampm = now.ToString("tt", CultureInfo.InvariantCulture);
-        float y = HorizontalBar ? 10 : 15;
-        float w = HorizontalBar ? 17 : 16;
-        float h = 24;
-        float[] positions = HorizontalBar ? new float[] { 8, 27, 56, 75 }
-                                          : new float[] { 4, 22, 50, 68 };
-        for (int i = 0; i < 4; i++) DrawDigit(g, time[i], positions[i], y, w, h);
-        using var ink = new SolidBrush(Color.FromArgb(29, 35, 30));
-        float dotX = HorizontalBar ? 49 : 43;
-        g.FillEllipse(ink, dotX, y + 7, 3, 3);
-        g.FillEllipse(ink, dotX, y + 17, 3, 3);
-        using var suffixFont = new Font("Segoe UI", HorizontalBar ? 10f : 11f,
-            FontStyle.Bold, GraphicsUnit.Pixel);
-        if (HorizontalBar)
-            g.DrawString(ampm, suffixFont, ink, 99, 22);
-        else
-            g.DrawString(ampm, suffixFont, ink, 33, 47);
+        string digits = now.ToString("hhmm", CultureInfo.InvariantCulture);
+        string suffix = now.ToString("tt", CultureInfo.InvariantCulture);
+        float[] digitX = { 52, 81, 122, 151 };
+        for (int i = 0; i < 4; i++) DrawDigit(g, digits[i], digitX[i], 25, 26, 33);
+        using var ink = new SolidBrush(Color.FromArgb(24, 29, 25));
+        g.FillEllipse(ink, 114, 34, 3.8f, 3.8f);
+        g.FillEllipse(ink, 114, 48, 3.8f, 3.8f);
+        using (var suffixFont = new Font("Segoe UI", 17, FontStyle.Bold, GraphicsUnit.Pixel))
+            g.DrawString(suffix, suffixFont, ink, 185, 39);
+
+        if (ShowDate)
+        {
+            string date = now.ToString("dd-MM", CultureInfo.InvariantCulture);
+            using var dateFont = new Font("Consolas", 21, FontStyle.Bold, GraphicsUnit.Pixel);
+            using var recess = new SolidBrush(Color.FromArgb(52, 57, 55));
+            using var letters = new SolidBrush(Color.FromArgb(231, 233, 231));
+            // Engraved lettering directly on black; no oval or horizontal rules.
+            g.DrawString(date, dateFont, recess, 40.5f, 75.4f);
+            g.DrawString(date, dateFont, letters, 39, 73.5f);
+        }
+        if (ShowSticker)
+        {
+            if (CasioWordmark != null)
+            {
+                var old = g.InterpolationMode;
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                g.DrawImage(CasioWordmark, new RectangleF(124, 78, 106, 19));
+                g.InterpolationMode = old;
+            }
+            else
+            {
+                using var brandFont = new Font("Arial Black", 19, FontStyle.Bold, GraphicsUnit.Pixel);
+                using var white = new SolidBrush(Color.White);
+                g.DrawString("CASIO", brandFont, white, 124, 75);
+            }
+        }
     }
 
     protected override void Dispose(bool disposing)

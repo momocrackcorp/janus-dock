@@ -49,7 +49,7 @@ Para actualizar desde 6.3.97 o una versión anterior, **cierra JANUS Dock y ejec
 - **Organización:** cambiar el orden de los accesos y modificar el tamaño de iconos entre **16 y 96 px**; también con **Ctrl + rueda** sobre el Dock.
 - **Discos:** iconos Windows o Lucide, colores configurables, ocupación y detalle de capacidad en el tooltip.
 - **Indicadores:** tráfico de red, CPU y RAM, con actualización periódica y presentación compacta.
-- **Reloj LCD opcional:** reloj digital estilo retro con hora real en formato de 12 horas (hh:mm AM/PM). Se puede mostrar u ocultar en **General → Información del sistema**, o esconder con clic derecho sobre el propio reloj.
+- **Reloj LCD opcional:** reloj digital estilo retro con hora real en formato de 12 horas (hh:mm AM/PM), integrado en la cápsula negra de los botones de energía. **Fecha dd-MM** en relieve bajo el reloj y **calcomanía CASIO blanca** (convertida desde el archivo proporcionado, sin fondo) opcionales e independientes. Ambas opciones solo se habilitan si el reloj está activo, en **General → Información del sistema**. El reloj también puede ocultarse con clic derecho.
 - **Personalización:** barra según los colores de Windows o con color propio; selectores, interruptores y tarjetas modernos.
 - **Idiomas:** español de Chile, inglés y portugués de Brasil (algunas traducciones siguen en desarrollo).
 - **Inicio y visibilidad:** mantener encima, ocultar automáticamente e iniciar con Windows.
