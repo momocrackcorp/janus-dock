@@ -55,11 +55,11 @@ public sealed class DockOptionsForm : Form
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 9);
         StyleWindowsControls(this);
-        Shown += (_, _) => { InstallModernSelectors(this); InstallModernToggles(this); };
+
         // Fluent-style navigation: real pages, no legacy tab headers.
         ClientSize = new Size(1080, 720);
         MinimumSize = new Size(790, 550);
-        BackColor = Color.FromArgb(246, 249, 253);
+        BackColor = Color.FromArgb(229, 236, 244);
         var root = new TableLayoutPanel {
             Dock = DockStyle.Fill, BackColor = BackColor,
             ColumnCount = 2, RowCount = 1, Margin = Padding.Empty, Padding = Padding.Empty
@@ -70,7 +70,7 @@ public sealed class DockOptionsForm : Form
         Controls.Add(root);
         var sidebar = new Panel {
             Name = "SettingsSidebar", Dock = DockStyle.Fill, Width = 190,
-            BackColor = Color.FromArgb(235, 243, 251)
+            BackColor = Color.FromArgb(210, 224, 238)
         };
         var pageHost = new Panel { Dock = DockStyle.Fill, BackColor = BackColor };
         root.Controls.Add(sidebar, 0, 0);
@@ -342,8 +342,23 @@ public sealed class DockOptionsForm : Form
         var languageChoice = new ComboBox { Name = "LanguageChoice", DropDownStyle = ComboBoxStyle.DropDownList, Width = 270 };
         languageChoice.Items.AddRange(new object[] { "Español (Chile)", "English", "Português (Brasil)" });
         languageChoice.SelectedIndex = DockLanguage.Normalize(config.Language) switch { "en" => 1, "pt" => 2, _ => 0 };
-        generalRows.Controls.Add(SectionTitle("Idioma", "Idioma de la interfaz."));
-        generalRows.Controls.Add(FieldRow(new Label { Text = "Idioma / Language:", AutoSize = true }, languageChoice));
+        // Place the language selector in the upper right, outside the cards.
+        var languageHeader = general.Controls.OfType<Panel>()
+            .FirstOrDefault(p => p.Dock == DockStyle.Top);
+        if (languageHeader != null)
+        {
+            languageChoice.Width = 220;
+            languageChoice.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            languageChoice.Margin = Padding.Empty;
+            languageHeader.Controls.Add(languageChoice);
+            void AlignLanguage()
+            {
+                languageChoice.Location = new Point(
+                    Math.Max(320, languageHeader.ClientSize.Width - languageChoice.Width - 18), 16);
+            }
+            languageHeader.Resize += (_, _) => AlignLanguage();
+            AlignLanguage();
+        }
         generalRows.Controls.Add(SectionTitle("Comportamiento", "Visibilidad e inicio automático."));
         generalRows.Controls.Add(top);
         generalRows.Controls.Add(hide);
@@ -535,6 +550,16 @@ public sealed class DockOptionsForm : Form
         PackCards(accessRows);
         PackCards(systemRows);
         PackCards(aboutRows);
+        // Refit cards after modern controls are installed at runtime.
+        Shown += (_, _) => {
+            InstallModernSelectors(this);
+            InstallModernToggles(this);
+            FitRows(generalRows);
+            FitRows(appearanceRows);
+            FitRows(accessRows);
+            FitRows(systemRows);
+            FitRows(aboutRows);
+        };
 
         var bar = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 64, FlowDirection = FlowDirection.RightToLeft, WrapContents = false, Padding = new Padding(8), AutoScroll = false };
         Controls.Add(bar); bar.BringToFront();
@@ -720,8 +745,8 @@ public sealed class DockOptionsForm : Form
     {
         page.AutoScroll = true;
         var header = new Panel {
-            Dock = DockStyle.Top, Height = 92,
-            BackColor = Color.FromArgb(246, 249, 253)
+            Dock = DockStyle.Top, Height = 82,
+            BackColor = Color.FromArgb(229, 236, 244)
         };
         string description = page.Name switch {
             "General" => "Comportamiento y funciones principales del Dock.",
@@ -743,9 +768,9 @@ public sealed class DockOptionsForm : Form
         var rows = new FlowLayoutPanel
         {
             FlowDirection = FlowDirection.TopDown, WrapContents = false,
-            AutoScroll = false, Padding = new Padding(15, 12, 10, 12), Margin = Padding.Empty,
+            AutoScroll = false, Padding = new Padding(13, 6, 10, 8), Margin = Padding.Empty,
             BackColor = Color.FromArgb(246, 249, 253),
-            Location = new Point(0, 92), Width = Math.Max(340, page.ClientSize.Width - 16),
+            Location = new Point(0, 82), Width = Math.Max(340, page.ClientSize.Width - 16),
             Height = 630, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
         };
         page.Controls.Add(rows);
@@ -761,7 +786,7 @@ public sealed class DockOptionsForm : Form
             Name = "SettingsSectionTitle",
             FlowDirection = FlowDirection.TopDown, WrapContents = false,
             AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Padding = new Padding(8, 12, 4, 5), Margin = new Padding(0, 10, 0, 2)
+            Padding = new Padding(8, 3, 4, 1), Margin = new Padding(0, 0, 0, 2)
         };
         group.Controls.Add(new Label { Text = title, AutoSize = true,
             ForeColor = Color.FromArgb(27, 121, 169),
@@ -777,14 +802,14 @@ public sealed class DockOptionsForm : Form
         var row = new FlowLayoutPanel
         {
             Name = "SettingsFieldRow",
-            AutoSize = false, Height = 48,
+            AutoSize = false, Height = 42,
             FlowDirection = FlowDirection.LeftToRight, WrapContents = false,
-            Margin = new Padding(0, 2, 0, 5), Padding = Padding.Empty,
-            MinimumSize = new Size(250, 48)
+            Margin = new Padding(0, 0, 0, 2), Padding = Padding.Empty,
+            MinimumSize = new Size(250, 42)
         };
         foreach (var control in controls)
         {
-            control.Margin = new Padding(3, 6, 10, 4);
+            control.Margin = new Padding(3, 3, 10, 2);
             if (control == controls[0] && control is Label mainLabel)
             {
                 mainLabel.AutoSize = false;
@@ -825,7 +850,7 @@ public sealed class DockOptionsForm : Form
                 if (layout.Name == "SettingsFieldRow")
                 {
                     layout.Width = usable;
-                    layout.Height = layout.Controls.OfType<TrackBar>().Any() ? 68 : Math.Max(50, layout.Font.Height * 3);
+                    layout.Height = layout.Controls.OfType<TrackBar>().Any() ? 58 : Math.Max(42, layout.Font.Height * 2 + 10);
                 }
                 else if (layout.Name == "SettingsSectionTitle")
                 {
@@ -846,7 +871,7 @@ public sealed class DockOptionsForm : Form
             {
                 toggle.RightAligned = true;
                 toggle.Width = usable;
-                toggle.Height = Math.Max(38, toggle.Font.Height + 20);
+                toggle.Height = Math.Max(34, toggle.Font.Height + 16);
                 toggle.Invalidate();
             }
             if (child is ListBox list) list.Width = usable;
@@ -862,7 +887,7 @@ public sealed class DockOptionsForm : Form
         }
         card.PerformLayout();
         card.Height = card.Padding.Vertical + card.Controls.Cast<Control>()
-            .Sum(x => x.Height + x.Margin.Vertical) + 8;
+            .Sum(x => x.Height + x.Margin.Vertical) + 2;
     }
 
     private static void FitRows(FlowLayoutPanel rows)
@@ -919,7 +944,7 @@ public sealed class DockOptionsForm : Form
         }
         foreach (SettingsCardPanel card in rows.Controls.OfType<SettingsCardPanel>()) FitCard(card, width);
         rows.PerformLayout();
-        rows.Height = rows.Controls.Cast<Control>().Sum(x => x.Height + x.Margin.Vertical) + rows.Padding.Vertical + 36;
+        rows.Height = rows.Controls.Cast<Control>().Sum(x => x.Height + x.Margin.Vertical) + rows.Padding.Vertical + 10;
     }
 
     public static bool IsStartupEnabled()
