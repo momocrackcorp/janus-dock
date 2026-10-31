@@ -414,6 +414,10 @@ public sealed class DockOptionsForm : Form
         info.MaximumSize = new Size(480, 0);
         aboutRows.Controls.Add(appIcon);
         aboutRows.Controls.Add(info);
+        aboutRows.Controls.Add(new Label {
+            Text = "Créditos de iconos (Flaticon)\nBloquear: Pixel perfect\nReiniciar: Roundicons\nApagar: Uniconlabs",
+            AutoSize = true, MaximumSize = new Size(480, 0)
+        });
         updates.AutoSize = true;
         aboutRows.Controls.Add(updates);
         aboutRows.SizeChanged += (_, _) => FitRows(aboutRows);
