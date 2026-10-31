@@ -24,7 +24,7 @@ public sealed class DockOptionsForm : Form
     public Dictionary<string,int> DiskColors { get; private set; } = new(StringComparer.OrdinalIgnoreCase);
     public List<string> HiddenDiskLetters { get; private set; } = new();
     public bool HoverAnimation { get; private set; }
-    public string HoverEffect { get; private set; } = "Lupa"; = true;
+    public string HoverEffect { get; private set; } = "Lupa";
     public int ZoomPercent { get; private set; } = 280;
     public bool ShowShutdown { get; private set; }
     public bool ShowRestart { get; private set; }
