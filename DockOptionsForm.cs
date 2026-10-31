@@ -70,11 +70,11 @@ public sealed class DockOptionsForm : Form
         root.Controls.Add(pageHost);
         root.Controls.Add(sidebar);
         sidebar.BringToFront();
-        var general = new Panel { Dock = DockStyle.Fill, BackColor = BackColor };
-        var appearance = new Panel { Dock = DockStyle.Fill, BackColor = BackColor };
-        var accessPage = new Panel { Dock = DockStyle.Fill, BackColor = BackColor };
-        var systemPage = new Panel { Dock = DockStyle.Fill, BackColor = BackColor };
-        var about = new Panel { Dock = DockStyle.Fill, BackColor = BackColor };
+        var general = new Panel { Name = "General", Dock = DockStyle.Fill, BackColor = BackColor };
+        var appearance = new Panel { Name = "Apariencia", Dock = DockStyle.Fill, BackColor = BackColor };
+        var accessPage = new Panel { Name = "Accesos", Dock = DockStyle.Fill, BackColor = BackColor };
+        var systemPage = new Panel { Name = "Sistema", Dock = DockStyle.Fill, BackColor = BackColor };
+        var about = new Panel { Name = "Acerca de", Dock = DockStyle.Fill, BackColor = BackColor };
         var pages = new[] { general, appearance, accessPage, systemPage, about };
         foreach (var page in pages) { pageHost.Controls.Add(page); page.Visible = false; }
         sidebar.Controls.Add(new Label {
@@ -729,15 +729,37 @@ public sealed class DockOptionsForm : Form
     private static FlowLayoutPanel PageRows(ScrollableControl page)
     {
         page.AutoScroll = true;
+        var header = new Panel {
+            Dock = DockStyle.Top, Height = 92,
+            BackColor = Color.FromArgb(246, 249, 253)
+        };
+        string description = page.Name switch {
+            "General" => "Comportamiento y funciones principales del Dock.",
+            "Apariencia" => "Personaliza el aspecto visual del Dock.",
+            "Accesos" => "Organiza las aplicaciones y los separadores.",
+            "Sistema" => "Monitores de red, CPU, memoria y discos.",
+            _ => "Proyecto, versión, imagen y créditos."
+        };
+        header.Controls.Add(new Label {
+            Text = page.Name, Location = new Point(22, 15), AutoSize = true,
+            Font = new Font("Segoe UI Semibold", 20, FontStyle.Bold),
+            ForeColor = Color.FromArgb(24, 41, 65)
+        });
+        header.Controls.Add(new Label {
+            Text = description, Location = new Point(24, 55), AutoSize = true,
+            Font = new Font("Segoe UI", 10), ForeColor = Color.FromArgb(91, 110, 132)
+        });
+        page.Controls.Add(header);
         var rows = new FlowLayoutPanel
         {
             FlowDirection = FlowDirection.TopDown, WrapContents = false,
             AutoScroll = false, Padding = new Padding(15, 12, 10, 12), Margin = Padding.Empty,
             BackColor = Color.FromArgb(246, 249, 253),
-            Location = Point.Empty, Width = Math.Max(340, page.ClientSize.Width - 16),
+            Location = new Point(0, 92), Width = Math.Max(340, page.ClientSize.Width - 16),
             Height = 630, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
         };
         page.Controls.Add(rows);
+        header.BringToFront();
         page.Resize += (_, _) => FitRows(rows);
         return rows;
     }
