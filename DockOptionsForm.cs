@@ -666,6 +666,9 @@ public sealed class DiskUsageControl : Control
     string mediaType = "";
     public bool UseLucide { get; set; }
     public int IconPixels { get; set; } = 40;
+    public bool ZoomEnabled { get; set; } = true;
+    public float ZoomFactor { get; set; } = 1.8f;
+    bool hovered;
     static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Task<string>> MediaCache = new();
     readonly string details;
     readonly bool compact;
@@ -678,6 +681,8 @@ public sealed class DiskUsageControl : Control
         if (compactMode)
         {
             Cursor = Cursors.Hand;
+            MouseEnter += (_, _) => { hovered = true; Invalidate(); };
+            MouseLeave += (_, _) => { hovered = false; Invalidate(); };
             Click += (_, _) =>
             {
                 try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", rootPath) { UseShellExecute = true }); }
@@ -748,7 +753,7 @@ public sealed class DiskUsageControl : Control
 
         // The disk itself is the usage indicator: Windows is a shaded device,
         // Lucide is an outline device. Both scale with IconPixels.
-        float baseSize = Math.Min(Math.Min(IconPixels, Width - 8), Height - 7);
+        float baseSize = Math.Min(Math.Min(IconPixels * 1.20f * (hovered && ZoomEnabled ? ZoomFactor : 1f), Width - 4), Height - 4);
         float sz = Math.Max(15f, baseSize);
         float x = (Width - sz) / 2f, y = (Height - sz) / 2f;
         g.TranslateTransform(x, y);
