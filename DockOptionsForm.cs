@@ -553,8 +553,23 @@ public sealed class DockOptionsForm : Form
             Checked = networkAtEnd.Checked, AutoSize = true };
         quickNetwork.CheckedChanged += (_, _) => networkWidget.Checked = quickNetwork.Checked;
         networkWidget.CheckedChanged += (_, _) => quickNetwork.Checked = networkWidget.Checked;
-        quickUsage.CheckedChanged += (_, _) => { cpuWidget.Checked = quickUsage.Checked; ramWidget.Checked = quickUsage.Checked; };
-        void SyncUsageQuick() => quickUsage.Checked = cpuWidget.Checked && ramWidget.Checked;
+        bool syncingUsage = false;
+        quickUsage.CheckedChanged += (_, _) =>
+        {
+            if (syncingUsage) return;
+            syncingUsage = true;
+            bool enabled = quickUsage.Checked;
+            cpuWidget.Checked = enabled;
+            ramWidget.Checked = enabled;
+            syncingUsage = false;
+        };
+        void SyncUsageQuick()
+        {
+            if (syncingUsage) return;
+            syncingUsage = true;
+            quickUsage.Checked = cpuWidget.Checked && ramWidget.Checked;
+            syncingUsage = false;
+        }
         cpuWidget.CheckedChanged += (_, _) => SyncUsageQuick();
         ramWidget.CheckedChanged += (_, _) => SyncUsageQuick();
         quickNetworkEnd.CheckedChanged += (_, _) => networkAtEnd.Checked = quickNetworkEnd.Checked;
