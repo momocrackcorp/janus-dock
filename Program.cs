@@ -36,6 +36,7 @@ public class DockSettings
     public bool ShowSystemUsage { get; set; } = false;
     public bool ShowCpu { get; set; } = true;
     public bool ShowRam { get; set; } = true;
+    public bool ShowDigitalClock { get; set; } = false;
     public string UsageLayout { get; set; } = "Vertical";
     public bool NetworkAtEnd { get; set; } = false;
     public int DiskColorArgb { get; set; } = Color.FromArgb(48, 130, 222).ToArgb();
@@ -146,6 +147,7 @@ public class Dock : Form, IMessageFilter
     // the Dock background while the energy capsule owns the outer edge.
     // Keeping both on the form avoids nested DockStyle.Fill/Z-order overlap.
     readonly Panel networkArea = new() { Visible = false };
+    readonly Panel clockArea = new() { Visible = false };
     readonly RoundedEnergyPanel energyPanel = new()
     {
         FlowDirection = FlowDirection.TopDown, WrapContents = false,
@@ -206,6 +208,7 @@ public class Dock : Form, IMessageFilter
         footer.Controls.Add(add);
         footer.Controls.Add(options);
         Controls.Add(panel);
+        Controls.Add(clockArea);
         Controls.Add(networkArea);
         Controls.Add(energyPanel);
         Controls.Add(footer);
@@ -314,6 +317,7 @@ public class Dock : Form, IMessageFilter
         footer.BackColor = BackColor;
         panel.BackColor = BackColor;
         networkArea.BackColor = BackColor;
+        clockArea.BackColor = BackColor;
         energyPanel.BackColor = BackColor;
         energyPanel.HorizontalBar = Horizontal;
         energyPanel.CapsuleColor = settings.IconStyle == "Lucide"
@@ -571,8 +575,14 @@ public class Dock : Form, IMessageFilter
         // from an older saved Items list.
         SyncPowerButtons();
         panel.SuspendLayout();
+        clockArea.SuspendLayout();
         networkArea.SuspendLayout();
         energyPanel.SuspendLayout();
+        foreach (var oldClock in clockArea.Controls.Cast<Control>().ToArray())
+        {
+            clockArea.Controls.Remove(oldClock);
+            oldClock.Dispose();
+        }
         foreach (var existingNetwork in networkArea.Controls.Cast<Control>().ToArray())
         {
             networkArea.Controls.Remove(existingNetwork);
@@ -772,32 +782,43 @@ public class Dock : Form, IMessageFilter
             }
             else panel.Controls.Add(network);
         }
+        if (settings.ShowDigitalClock)
+        {
+            var clock = new DigitalClockControl(Horizontal)
+            {
+                Dock = DockStyle.Fill,
+                Margin = Padding.Empty,
+                BackColor = BackColor
+            };
+            var clockMenu = DockMenuStyle.Create(light, Color.FromArgb(58, 173, 201));
+            clockMenu.Items.Add("Ocultar reloj digital", null, (_, _) =>
+            {
+                settings.ShowDigitalClock = false;
+                Store();
+                Render();
+            });
+            clockMenu.Items.Add("Opciones del reloj...", null, (_, _) => ShowOptions("General"));
+            clock.ContextMenuStrip = clockMenu;
+            clockArea.Controls.Add(clock);
+        }
+        clockArea.Width = Horizontal ? 136 : settings.Width;
+        clockArea.Height = Horizontal ? settings.HorizontalHeight : 90;
+        clockArea.Visible = settings.ShowDigitalClock;
         energyPanel.Visible = energyPanel.Controls.Count > 0;
         networkArea.Visible = networkArea.Controls.Count > 0;
         networkArea.Width = Horizontal ? 176 : settings.Width;
         networkArea.Height = Horizontal ? settings.HorizontalHeight : 184;
         // Keep the original, independent rounded capsule at the screen edge.
         // Network occupies the adjacent strip, never the capsule itself.
+        clockArea.BringToFront();
         networkArea.BringToFront();
         energyPanel.BringToFront();
         energyPanel.ResumeLayout();
         networkArea.ResumeLayout();
+        clockArea.ResumeLayout();
         panel.ResumeLayout();
         AlignFooter();
         if (IsHandleCreated && !resizeActive) Position();
-    }
-    ToolStripMenuItem DrivesMenu()
-    {
-        var menu = new ToolStripMenuItem("Agregar unidad de disco");
-        foreach (var drive in DriveInfo.GetDrives())
-        {
-            string path = drive.Name;
-            string label;
-            try { label = drive.IsReady ? $"{drive.VolumeLabel} ({path.TrimEnd('\\')})" : $"Unidad {path.TrimEnd('\\')} (no disponible)"; }
-            catch { label = path; }
-            menu.DropDownItems.Add(label, null, (_, _) => Add(path));
-        }
-        return menu;
     }
     ContextMenuStrip MakeDockMenu()
     {
@@ -830,7 +851,6 @@ public class Dock : Form, IMessageFilter
                 common.DropDownItems.Add(group);
             }
             addMenu.DropDownItems.Add(common);
-            addMenu.DropDownItems.Add(DrivesMenu());
             var sys = new ToolStripMenuItem("Carpetas del sistema");
             sys.DropDownItems.Add("Este equipo", null, (_, _) => Add("shell:MyComputerFolder"));
             sys.DropDownItems.Add("Mis documentos", null, (_, _) => Add("janus:documents"));
@@ -922,6 +942,7 @@ public class Dock : Form, IMessageFilter
         settings.ShowSystemUsage = dlg.ShowSystemUsage;
         settings.ShowCpu = dlg.ShowCpu;
         settings.ShowRam = dlg.ShowRam;
+        settings.ShowDigitalClock = dlg.ShowDigitalClock;
         settings.UsageLayout = dlg.UsageLayout;
         settings.NetworkAtEnd = dlg.NetworkAtEnd;
         settings.DiskColorArgb = dlg.DiskColorArgb;
@@ -1038,10 +1059,12 @@ public class Dock : Form, IMessageFilter
         energyPanel.FlowDirection = Horizontal ? FlowDirection.LeftToRight : FlowDirection.TopDown;
         energyPanel.HorizontalBar = Horizontal;
         energyPanel.Padding = Horizontal ? new Padding(16, 0, 6, 0) : new Padding(0, 7, 0, 3);
+        clockArea.Dock = Horizontal ? DockStyle.Right : DockStyle.Bottom;
         networkArea.Dock = Horizontal ? DockStyle.Right : DockStyle.Bottom;
         energyPanel.Dock = Horizontal ? DockStyle.Right : DockStyle.Bottom;
         // Docking follows z-order: energy first at the outer edge,
         // network second immediately beside it and shortcuts fill the rest.
+        clockArea.BringToFront();
         networkArea.BringToFront();
         energyPanel.BringToFront();
         panel.Dock = DockStyle.Fill;

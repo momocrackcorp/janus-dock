@@ -18,6 +18,7 @@ public sealed class DockOptionsForm : Form
     public bool ShowSystemUsage { get; private set; }
     public bool ShowCpu { get; private set; } = true;
     public bool ShowRam { get; private set; } = true;
+    public bool ShowDigitalClock { get; private set; }
     public string UsageLayout { get; private set; } = "Vertical";
     public bool NetworkAtEnd { get; private set; }
     public bool StartWithWindows { get; private set; }
@@ -146,7 +147,7 @@ public sealed class DockOptionsForm : Form
         appearance.Controls.Add(new Label { Text = "Arrastra filas para ordenarlas o utiliza los botones. Guardar aplica los cambios.", Location = new Point(22, 200), AutoSize = true });
         var ordered = config.Items.Select(i => new DockItem { Name = i.Name, Path = i.Path, IsSeparator = i.IsSeparator, IsDiskWidget = i.IsDiskWidget }).ToList();
         var history = new Stack<List<DockItem>>();
-        var orderList = new ListBox { Location = new Point(22, 226), Size = new Size(365, 130), AllowDrop = true, IntegralHeight = false, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
+        var orderList = new ListBox { Name = "AccessOrderList", Location = new Point(22, 226), Size = new Size(365, 350), AllowDrop = true, IntegralHeight = false, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
         string LabelFor(DockItem i) => i.IsSeparator ? "──────── Separador ────────" : i.IsDiskWidget ? "▣ Indicadores de discos" : i.Path == "janus:shutdown" ? "⏻ Apagar" : i.Path == "janus:restart" ? "↻ Reiniciar" : (string.IsNullOrWhiteSpace(i.Name) ? i.Path : i.Name);
         void RefreshOrder(int selected)
         {
@@ -393,6 +394,8 @@ public sealed class DockOptionsForm : Form
             new Label { Text = "Distribución CPU / RAM:", AutoSize = true }, usageLayout));
         var networkAtEnd = new CheckBox { Text = "Anclar tráfico al costado de los botones de energía", AutoSize = true, Checked = config.NetworkAtEnd };
         generalRows.Controls.Add(networkAtEnd);
+        var digitalClock = new CheckBox { Text = "Mostrar reloj digital LCD (12 h, AM/PM)", AutoSize = true, Checked = config.ShowDigitalClock };
+        generalRows.Controls.Add(digitalClock);
         var widget = new CheckBox { Text = "Mostrar indicador de uso de discos en la barra", Checked = config.ShowDiskWidget, Location = new Point(18, 20), AutoSize = true };
         var diskColors = new Dictionary<string,int>(config.DiskColors, StringComparer.OrdinalIgnoreCase);
         var hiddenDisks = new HashSet<string>(config.HiddenDiskLetters ?? new List<string>(), StringComparer.OrdinalIgnoreCase);
@@ -400,7 +403,8 @@ public sealed class DockOptionsForm : Form
         var critical = new NumericUpDown { Location = new Point(150, 84), Width = 80, Minimum = 70, Maximum = 99, Value = Math.Clamp(config.CriticalPercent, 70, 99) };
         var diskPanel = new FlowLayoutPanel
         {
-            Width = 755, Height = 285, AutoScroll = true,
+            Name = "DiskUnitsList",
+            Width = 755, Height = 420, AutoScroll = true,
             FlowDirection = FlowDirection.TopDown, WrapContents = false,
             Padding = new Padding(5)
         };
@@ -497,13 +501,13 @@ public sealed class DockOptionsForm : Form
         generalRows.Controls.Add(widget);
         generalRows.Controls.Add(widgetLabel);
         generalRows.Controls.Add(FieldRow(new Label { Text = "Avisar desde (%):", AutoSize = true }, critical));
-        diskPanel.Height = 300;
+        diskPanel.Height = 420;
         diskPanel.AutoScroll = true;
         generalRows.Controls.Add(diskPanel);
 
         var appVersion = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version;
         string versionText = appVersion == null ? "versión desconocida" : $"v{appVersion.Major}.{appVersion.Minor}.{appVersion.Build}";
-        var info = new Label { Text = $"JANUS Dock — {versionText}\n\nBarra de accesos para Windows 10/11.\nConfiguración moderna: General, Apariencia, Accesos y Sistema.\nDiscos, red y CPU/RAM con distribución configurable.\nEfectos Ninguno / Foco / Lupa y colores personalizables.\nBotones de energía, idiomas e inicio con Windows.\n\nC# · Windows Forms · .NET 8\nMomocrackcorp · Ñuble, Chile\nAutoría: Omar Aguila", Location = new Point(104, 20), Size = new Size(520, 280) };
+        var info = new Label { Text = $"JANUS Dock — {versionText}\\n\\nJANUS Dock surge como una alternativa para recuperar una forma flexible de organizar tus accesos: en Windows 11 la barra de tareas ya no puede trasladarse a los bordes superior y laterales como en versiones anteriores.\\n\\nSu objetivo es facilitar la visualización, organización y apertura de aplicaciones, carpetas, documentos y unidades de disco desde una barra independiente y personalizable.\\n\\nTambién permite observar el uso de CPU, RAM, discos y red, consultar un reloj digital opcional y usar acciones rápidas del sistema. Sus opciones de apariencia, posición e inicio automático buscan mantener el escritorio ordenado y la información importante siempre a mano.\\n\\nC# · Windows Forms · .NET 8\\nMomocrackcorp · Ñuble, Chile\\nAutoría: Omar Aguila", Location = new Point(104, 20), Size = new Size(520, 400) };
         var appIcon = new PictureBox { Location = new Point(20, 25), Size = new Size(64, 64), SizeMode = PictureBoxSizeMode.Zoom };
         try { using var ico = Icon.ExtractAssociatedIcon(Application.ExecutablePath); appIcon.Image = ico?.ToBitmap() ?? SystemIcons.Application.ToBitmap(); }
         catch { appIcon.Image = SystemIcons.Application.ToBitmap(); }
@@ -660,6 +664,7 @@ public sealed class DockOptionsForm : Form
             ShowNetworkTraffic = networkWidget.Checked;
             ShowCpu = cpuWidget.Checked;
             ShowRam = ramWidget.Checked;
+            ShowDigitalClock = digitalClock.Checked;
             UsageLayout = usageLayout.SelectedIndex == 1 ? "Horizontal" : "Vertical";
             ShowSystemUsage = ShowCpu || ShowRam;
             NetworkAtEnd = networkAtEnd.Checked;
@@ -985,15 +990,21 @@ public sealed class DockOptionsForm : Form
                 toggle.Height = Math.Max(34, toggle.Font.Height + 16);
                 toggle.Invalidate();
             }
-            if (child is ListBox list) list.Width = usable;
+            if (child is ListBox list)
+            {
+                list.Width = usable;
+                if (list.Name == "AccessOrderList" && card.Parent is FlowLayoutPanel accessRows &&
+                    accessRows.Parent?.Name == "Accesos")
+                    list.Height = Math.Clamp(accessRows.Parent.ClientSize.Height - 235, 280, 530);
+            }
             if (child is Label label) label.MaximumSize = new Size(usable, 0);
-            if (child is FlowLayoutPanel diskFlow &&
-                diskFlow.Controls.OfType<Panel>().Any())
+            if (child is FlowLayoutPanel diskFlow && diskFlow.Name == "DiskUnitsList")
             {
                 diskFlow.Width = usable;
-                diskFlow.Height = 290;
+                if (card.Parent is FlowLayoutPanel diskRows && diskRows.Parent?.Name == "Sistema")
+                    diskFlow.Height = Math.Clamp(diskRows.Parent.ClientSize.Height - 245, 340, 560);
                 foreach (Panel line in diskFlow.Controls.OfType<Panel>())
-                    line.Width = Math.Max(800, usable - 10);
+                    line.Width = Math.Max(760, usable - 20);
             }
         }
         card.PerformLayout();
