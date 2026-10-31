@@ -237,7 +237,13 @@ public class Dock : Form, IMessageFilter
         themeTimer.Tick += (_, _) =>
         {
             bool next = IsLightTheme();
-            if (next != light) { light = next; ApplyTheme(); Render(); }
+            Color nextBarColor = TaskbarColor();
+            if (next != light || BackColor.ToArgb() != nextBarColor.ToArgb())
+            {
+                light = next;
+                ApplyTheme();
+                Render();
+            }
         };
         themeTimer.Start();
         hideTimer.Tick += (_, _) => UpdateAutoHide();
@@ -271,7 +277,10 @@ public class Dock : Form, IMessageFilter
             int raw = Convert.ToInt32(key?.GetValue("ColorizationColor", 0));
             if (raw == 0) return surface;
             var accent = Color.FromArgb((raw >> 16) & 255, (raw >> 8) & 255, raw & 255);
-            double mix = light ? 0.10 : 0.18;
+            // Respect Windows "Show accent color on Start and taskbar" preference.
+            using var personalization = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
+            bool useAccentOnTaskbar = Convert.ToInt32(personalization?.GetValue("ColorPrevalence", 0)) != 0;
+            double mix = useAccentOnTaskbar ? 0.72 : (light ? 0.10 : 0.18);
             return Color.FromArgb((int)(surface.R*(1-mix)+accent.R*mix), (int)(surface.G*(1-mix)+accent.G*mix), (int)(surface.B*(1-mix)+accent.B*mix));
         }
         catch { return surface; }
