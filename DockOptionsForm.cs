@@ -769,7 +769,7 @@ public sealed class DockOptionsForm : Form
         {
             FlowDirection = FlowDirection.TopDown, WrapContents = false,
             AutoScroll = false, Padding = new Padding(13, 6, 10, 8), Margin = Padding.Empty,
-            BackColor = Color.FromArgb(246, 249, 253),
+            BackColor = Color.FromArgb(229, 236, 244),
             Location = new Point(0, 82), Width = Math.Max(340, page.ClientSize.Width - 16),
             Height = 630, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
         };
