@@ -21,7 +21,7 @@ public class DockSettings
     public int Width { get; set; } = 88;
     public int HorizontalHeight { get; set; } = 64;
     public int IconSize { get; set; } = 40;
-    public int IconSpacing { get; set; } = 8;
+    public int IconSpacing { get; set; } = 4;
     public string IconStyle { get; set; } = "Windows";
     public bool ShowNames { get; set; } = false;
     public string NameMode { get; set; } = "Tooltip";
@@ -502,7 +502,8 @@ public class Dock : Form, IMessageFilter
             if (control is Button b) { b.Image?.Dispose(); (b.Tag as Image)?.Dispose(); }
             control.Dispose();
         }
-        int width = Horizontal ? Math.Max(22, settings.IconSize - 8) : Math.Max(30, settings.Width - 18);
+        // Use a fixed, tight icon cell. Hover effects paint inside the cell and never reserve extra space.
+        int width = Math.Max(24, settings.IconSize + 2);
         int energySlot = Math.Max(settings.IconSize + 12, (int)Math.Ceiling(settings.IconSize * (settings.HoverAnimation ? 1.8 : 1.0)) + 8);
         energyPanel.Width = Horizontal ? (energySlot + 4) * 2 + 12 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 185 : 0) : Math.Max(55, settings.Width - 10);
         energyPanel.Height = Horizontal ? Math.Max(48, settings.IconSize + 20) : (energySlot + 4) * 2 + 12 + (settings.ShowNetworkTraffic && settings.NetworkAtEnd ? 184 : 0);
