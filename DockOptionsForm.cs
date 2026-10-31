@@ -34,6 +34,8 @@ public sealed class DockOptionsForm : Form
     public int BarWidth { get; private set; }
     public int BarHeight { get; private set; }
     public string IconStyle { get; private set; } = "Windows";
+    public string BarColorMode { get; private set; } = "Windows";
+    public int CustomBarColorArgb { get; private set; } = System.Drawing.Color.FromArgb(36, 57, 64).ToArgb();
     public List<DockItem> OrderedItems { get; private set; } = new();
     public string Edge { get; private set; } = "Derecha";
     const string RunPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
@@ -162,6 +164,24 @@ public sealed class DockOptionsForm : Form
         appearance.Controls.Clear();
         var appearanceRows = PageRows(appearance);
         appearanceRows.Controls.Add(FieldRow(new Label { Text = "Estilo de los iconos:", AutoSize = true }, iconStyle));
+        var barColorMode = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 220 };
+        barColorMode.Items.AddRange(new object[] { "Tema de Windows", "Color personalizado", "Clásico (Windows 95/98/2000/ME)" });
+        barColorMode.SelectedIndex = config.BarColorMode == "Custom" ? 1 : config.BarColorMode == "Classic" ? 2 : 0;
+        int selectedBarArgb = config.CustomBarColorArgb;
+        var chooseBarColor = new Button { Text = "Elegir color...", AutoSize = true, MinimumSize = new Size(125, 36), BackColor = Color.FromArgb(selectedBarArgb) };
+        chooseBarColor.ForeColor = chooseBarColor.BackColor.GetBrightness() > .55f ? Color.Black : Color.White;
+        chooseBarColor.Click += (_, _) =>
+        {
+            using var dialog = new ColorDialog { FullOpen = true, Color = Color.FromArgb(selectedBarArgb) };
+            if (dialog.ShowDialog(this) != DialogResult.OK) return;
+            selectedBarArgb = dialog.Color.ToArgb();
+            chooseBarColor.BackColor = dialog.Color;
+            chooseBarColor.ForeColor = dialog.Color.GetBrightness() > .55f ? Color.Black : Color.White;
+        };
+        chooseBarColor.Enabled = barColorMode.SelectedIndex == 1;
+        barColorMode.SelectedIndexChanged += (_, _) => chooseBarColor.Enabled = barColorMode.SelectedIndex == 1;
+        appearanceRows.Controls.Add(FieldRow(new Label { Text = "Color de la barra:", AutoSize = true }, barColorMode, chooseBarColor));
+
         // Icon size belongs with all other appearance settings.
         var size = new NumericUpDown { Minimum = 16, Maximum = 96, Increment = 8, Value = Math.Clamp(config.IconSize, 16, 96), Width = 95 };
         var smallIcons = new CheckBox { Text = "Iconos pequeños (24 px)", AutoSize = true, Checked = config.IconSize <= 24 };
@@ -434,6 +454,8 @@ public sealed class DockOptionsForm : Form
             BarWidth = (int)barWidth.Value;
             BarHeight = (int)barHeight.Value;
             IconStyle = iconStyle.SelectedIndex == 1 ? "Lucide" : "Windows";
+            BarColorMode = barColorMode.SelectedIndex == 1 ? "Custom" : barColorMode.SelectedIndex == 2 ? "Classic" : "Windows";
+            CustomBarColorArgb = selectedBarArgb;
             OrderedItems = new List<DockItem>(ordered);
             Edge = (string)location.SelectedItem!;
             DiskColorArgb = config.DiskColorArgb;
