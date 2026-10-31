@@ -1011,26 +1011,11 @@ public class Dock : Form, IMessageFilter
             Bounds = Rectangle.FromLTRB(d.rc.left, d.rc.top, d.rc.right, d.rc.bottom);
             panel.Visible = !collapsed;
             footer.Width = Horizontal ? 80 : settings.Width;
-            // Match current bar thickness while preserving space for hover zoom.
-            int mainWidth = Horizontal
-                ? Math.Max(60, (int)Math.Ceiling(settings.IconSize * (settings.HoverAnimation ? 1.8 : 1.0)) + 12)
-                : Math.Max(55, thickness - 18);
-            int mainHeight = Horizontal
-                ? Math.Max(40, thickness - 8)
-                : Math.Max(settings.IconSize + (settings.NameMode == "Written" ? 45 : 14),
-                    (int)Math.Ceiling(settings.IconSize * (settings.HoverAnimation ? 1.8 : 1.0)) + (settings.NameMode == "Written" ? 30 : 8));
-            foreach (Control c in panel.Controls)
-            {
-                if (c is ZoomShortcutButton b)
-                {
-                    b.Width = mainWidth;
-                    b.Height = mainHeight;
-                }
-                else if (c is DiskUsageControl drive)
-                    drive.Width = Horizontal ? 72 : Math.Max(65, thickness - 16);
-                else if (c is Panel separator)
-                    separator.Width = Horizontal ? 18 : Math.Max(30, thickness - 25);
-            }
+            // Do not overwrite the compact sizes assigned by Render().
+            // In particular, AppBar positioning must not expand icon cells to
+            // the hover-zoom size (that caused the docked-only spacing bug).
+            // Only the dock window is repositioned here; controls keep their sizes.
+
         }
         finally { repositioning = false; }
     }
