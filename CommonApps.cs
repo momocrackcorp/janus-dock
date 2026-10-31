@@ -63,6 +63,36 @@ internal static class CommonApps
             }
         return null;
     }
+    // Prefer the real program binary when resolving its icon.
+    // Start menu shortcuts may launch a generic Office/bootstrapper host.
+    internal static string? LocateExecutable(Entry app)
+    {
+        string[] roots = {
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
+        };
+        string[] relative = app.Exe.ToLowerInvariant() switch {
+            "msedge.exe" => new[] { "Microsoft/Edge/Application/msedge.exe" },
+            "chrome.exe" => new[] { "Google/Chrome/Application/chrome.exe" },
+            "brave.exe" => new[] { "BraveSoftware/Brave-Browser/Application/brave.exe" },
+            "firefox.exe" => new[] { "Mozilla Firefox/firefox.exe" },
+            _ => new[] {
+                "Microsoft Office/root/Office16/" + app.Exe,
+                "Microsoft Office/Office16/" + app.Exe,
+                "Microsoft Office/Office15/" + app.Exe
+            }
+        };
+        foreach (var root in roots)
+            foreach (var relativePath in relative)
+            {
+                try {
+                    string candidate = Path.Combine(root, relativePath);
+                    if (File.Exists(candidate)) return candidate;
+                } catch { }
+            }
+        return null;
+    }
     internal static string? IconType(string path)
     {
         string basename = Path.GetFileName(path).ToLowerInvariant();
