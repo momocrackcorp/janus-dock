@@ -22,13 +22,42 @@ internal static class PowerImages
   g.FillRectangle(white, 35, 65, 58, 38);
   return bmp;
  }
+ static Image DrawFallback(bool restart)
+ {
+  var bmp = new Bitmap(128, 128);
+  using var g = Graphics.FromImage(bmp);
+  g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+  using var background = new SolidBrush(restart ? Color.FromArgb(46, 190, 166) : Color.FromArgb(245, 64, 58));
+  using var line = new Pen(Color.White, 14) { StartCap = System.Drawing.Drawing2D.LineCap.Round, EndCap = System.Drawing.Drawing2D.LineCap.Round };
+  g.FillEllipse(background, 4, 4, 120, 120);
+  if (restart)
+  {
+   g.DrawArc(line, 31, 31, 66, 66, -65, 315);
+   g.DrawLine(line, 95, 41, 95, 19);
+   g.DrawLine(line, 95, 19, 110, 35);
+  }
+  else
+  {
+   g.DrawArc(line, 30, 28, 68, 68, -48, 276);
+   g.DrawLine(line, 64, 23, 64, 65);
+  }
+  return bmp;
+ }
  public static Image Load(string action)
  {
   if (action == "janus:lock") return DrawLock();
   string encoded = action == "janus:restart" ? Restart : Shutdown;
-  using var stream = new MemoryStream(Convert.FromBase64String(encoded));
-  using var image = Image.FromStream(stream);
-  return new Bitmap(image);
+  try
+  {
+   using var stream = new MemoryStream(Convert.FromBase64String(encoded));
+   using var image = Image.FromStream(stream, false, true);
+   return new Bitmap(image);
+  }
+  catch (Exception)
+  {
+   // Invalid embedded image must never stop JANUS Dock from launching.
+   return DrawFallback(action == "janus:restart");
+  }
  }
  public static Image Load(bool shutdown) => Load(shutdown ? "janus:shutdown" : "janus:restart");
 }
