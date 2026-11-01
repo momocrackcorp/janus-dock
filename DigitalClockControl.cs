@@ -245,12 +245,13 @@ public sealed class DigitalClockControl : Control
             {
                 var old = g.InterpolationMode;
                 g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                // 10% smaller than the prior wordmark and centered beneath
-                // the LCD, not beneath the entire energy capsule.
+                // 10% smaller than the prior wordmark, centered beneath
+                // the LCD, with an extra ~2 visible pixels of breathing room
+                // above the wordmark (without clipping the Dock bottom).
                 const float logoWidth = 92.54f;
                 const float lcdCenterX = 124f;
                 g.DrawImage(CasioWordmark, new RectangleF(
-                    lcdCenterX - logoWidth / 2f, 79f, logoWidth, 16.59f));
+                    lcdCenterX - logoWidth / 2f, 83f, logoWidth, 16.59f));
                 g.InterpolationMode = old;
             }
             else
@@ -266,7 +267,7 @@ public sealed class DigitalClockControl : Control
                     FormatFlags = StringFormatFlags.NoWrap
                 };
                 g.DrawString("CASIO", brandFont, white,
-                    new RectangleF(77.7f, 77f, 92.6f, 19f), centered);
+                    new RectangleF(77.7f, 81f, 92.6f, 19f), centered);
             }
         }
     }
