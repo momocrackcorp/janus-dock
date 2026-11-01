@@ -469,8 +469,10 @@ public sealed class DockOptionsForm : Form
                 await MediaBridgeInstaller.InstallAsync(progress);
                 installMedia.Text = "Componente instalado";
                 mediaStatus.Text = "Listo: ahora se mostrará canción y artista.";
-                // Recreate the media control so it loads the newly installed v2.
-                SchedulePreview();
+                // Apply once after the download so the Dock's media control
+                // restarts with the new bridge without requiring an app restart.
+                CaptureSettings();
+                ApplyRequested?.Invoke(this);
                 return true;
             }
             catch (Exception ex)
