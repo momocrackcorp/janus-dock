@@ -73,22 +73,25 @@ internal static class Program
             {
                 var session = Current();
                 lastSession = session;
-                if (session == null) Console.WriteLine("STATE\t0\t");
+                if (session == null) Console.WriteLine("STATE\t0\t\t");
                 else
                 {
                     bool playing = Playing(session);
-                    string title = "";
+                    string title = "", artist = "";
                     try
                     {
                         var metadata = await session.TryGetMediaPropertiesAsync();
-                        title = metadata?.Title ?? "";
+                        title = metadata?.Title?.Trim() ?? "";
+                        artist = metadata?.Artist?.Trim() ?? "";
                     }
                     catch { }
+                    // Protocol v2: state, playback, Base64 title and Base64 artist.
                     Console.WriteLine("STATE\t" + (playing ? "1" : "0") + "\t" +
-                        Convert.ToBase64String(Encoding.UTF8.GetBytes(title)));
+                        Convert.ToBase64String(Encoding.UTF8.GetBytes(title)) + "\t" +
+                        Convert.ToBase64String(Encoding.UTF8.GetBytes(artist)));
                 }
             }
-            catch { Console.WriteLine("STATE\t0\t"); }
+            catch { Console.WriteLine("STATE\t0\t\t"); }
             finally { gate.Release(); }
             await Task.Delay(850);
         }

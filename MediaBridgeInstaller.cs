@@ -14,29 +14,34 @@ namespace JanusDock;
 /// </summary>
 public static class MediaBridgeInstaller
 {
-    const string Version = "media-support-v1";
-    const string PackageName = "JANUS-MediaBridge-v1.zip";
+    const string Version = "media-support-v2";
+    const string PackageName = "JANUS-MediaBridge-v2.zip";
     const string ExeName = "JanusMediaBridge.exe";
     const string ReleaseUrl =
         "https://github.com/momocrackcorp/janus-dock/releases/download/" + Version + "/";
 
-    public static string DirectoryPath => Path.Combine(
+    static string Root => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "JANUS", "Dock", "MediaBridge", "v1");
+        "JANUS", "Dock", "MediaBridge");
+    public static string DirectoryPath => Path.Combine(Root, "v2");
+    static string CurrentExePath => Path.Combine(DirectoryPath, ExeName);
+    static string PreviousExePath => Path.Combine(Root, "v1", ExeName);
 
-    public static string ExePath => Path.Combine(DirectoryPath, ExeName);
-    public static bool IsInstalled
+    static bool ValidFile(string path)
     {
-        get
-        {
-            try { return File.Exists(ExePath) && new FileInfo(ExePath).Length > 100_000; }
-            catch { return false; }
-        }
+        try { return File.Exists(path) && new FileInfo(path).Length > 100_000; }
+        catch { return false; }
     }
+
+    public static bool IsCurrentInstalled => ValidFile(CurrentExePath);
+    public static bool HasPreviousVersion => ValidFile(PreviousExePath);
+    public static bool IsInstalled => IsCurrentInstalled || HasPreviousVersion;
+    // Keep v1 operating until the user installs v2.
+    public static string ExePath => IsCurrentInstalled ? CurrentExePath : PreviousExePath;
 
     public static async Task InstallAsync(IProgress<string>? progress = null)
     {
-        if (IsInstalled) return;
+        if (IsCurrentInstalled) return;
         Directory.CreateDirectory(DirectoryPath);
         progress?.Report("Descargando componente multimedia desde GitHub...");
         using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(3) };
@@ -60,13 +65,13 @@ public static class MediaBridgeInstaller
             x.FullName == ExeName && x.Length > 100_000);
         if (file == null)
             throw new InvalidDataException("El componente descargado no contiene el archivo esperado.");
-        string temporary = ExePath + ".download";
+        string temporary = CurrentExePath + ".download";
         try
         {
             using (var input = file.Open())
             using (var output = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None))
                 await input.CopyToAsync(output);
-            File.Move(temporary, ExePath, overwrite: true);
+            File.Move(temporary, CurrentExePath, overwrite: true);
         }
         finally
         {

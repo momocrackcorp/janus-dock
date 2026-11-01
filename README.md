@@ -70,6 +70,10 @@ En **Acerca de → Buscar actualizaciones en GitHub** se abre la última versió
 
 > **Tamaño:** desde esta revisión el proyecto principal vuelve a `net8.0-windows`, sin incluir las bibliotecas WinRT grandes. El componente externo Media Bridge utiliza las APIs Windows.Media.Control; se obtiene una vez mediante una Release separada de GitHub. La edición Autónoma sigue siendo mayor por contener el runtime de .NET.
 
+### Artista en el monitor multimedia
+
+Media Bridge v2 consulta `Title` y `Artist` de las sesiones de Windows y muestra **«Canción — Artista»** durante ocho segundos al comenzar, reanudar o cambiar de pista. Si el reproductor no expone el artista, muestra solo el título. El puente v1 sigue funcionando hasta que el usuario pulse **General → Botones del sistema → Actualizar componente multimedia**. La actualización v2 se descarga una sola vez en `%LOCALAPPDATA%\\JANUS\\Dock\\MediaBridge\\v2`.
+
 ## Requisitos
 
 - Windows **10 u 11, 64 bits**.

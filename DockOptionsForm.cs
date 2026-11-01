@@ -441,22 +441,25 @@ public sealed class DockOptionsForm : Form
         generalRows.Controls.Add(mediaEnabled);
         var mediaStatus = new Label
         {
-            Text = MediaBridgeInstaller.IsInstalled
-                ? "Componente multimedia instalado (una sola descarga)."
-                : "Componente multimedia opcional: no instalado.",
+            Text = MediaBridgeInstaller.IsCurrentInstalled
+                ? "Componente multimedia actualizado: canción y artista."
+                : MediaBridgeInstaller.HasPreviousVersion
+                    ? "Actualización disponible: ahora muestra también el artista."
+                    : "Componente multimedia opcional: no instalado.",
             AutoSize = true,
             ForeColor = Color.FromArgb(70, 91, 114)
         };
         var installMedia = new Button
         {
-            Text = "Descargar componente multimedia",
+            Text = MediaBridgeInstaller.HasPreviousVersion && !MediaBridgeInstaller.IsCurrentInstalled
+                ? "Actualizar componente multimedia" : "Descargar componente multimedia",
             AutoSize = true, MinimumSize = new Size(205, 32),
-            Enabled = !MediaBridgeInstaller.IsInstalled
+            Enabled = !MediaBridgeInstaller.IsCurrentInstalled
         };
         bool busyInstalling = false;
         async Task<bool> EnsureMediaAsync()
         {
-            if (MediaBridgeInstaller.IsInstalled) return true;
+            if (MediaBridgeInstaller.IsCurrentInstalled) return true;
             if (busyInstalling) return false;
             busyInstalling = true;
             installMedia.Enabled = false;
@@ -465,7 +468,9 @@ public sealed class DockOptionsForm : Form
             {
                 await MediaBridgeInstaller.InstallAsync(progress);
                 installMedia.Text = "Componente instalado";
-                mediaStatus.Text = "Listo. Se guardará en AppData local y no se descargará otra vez.";
+                mediaStatus.Text = "Listo: ahora se mostrará canción y artista.";
+                // Recreate the media control so it loads the newly installed v2.
+                SchedulePreview();
                 return true;
             }
             catch (Exception ex)
@@ -480,7 +485,7 @@ public sealed class DockOptionsForm : Form
             finally
             {
                 busyInstalling = false;
-                installMedia.Enabled = !MediaBridgeInstaller.IsInstalled;
+                installMedia.Enabled = !MediaBridgeInstaller.IsCurrentInstalled;
             }
         }
         installMedia.Click += async (_, _) =>

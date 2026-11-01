@@ -25,6 +25,7 @@ public sealed class MediaTransportControl : Control
     Process? helper;
     bool playing;
     string title = "";
+    string artist = "";
     bool hadState;
     public event EventHandler<string>? TrackStarted;
 
@@ -99,19 +100,28 @@ public sealed class MediaTransportControl : Control
             return;
         }
         if (!message.StartsWith("STATE\t", StringComparison.Ordinal)) return;
-        var sections = message.Split('\t', 3);
-        if (sections.Length != 3) return;
+        // Accept v1 (title only) as well as v2 (title + artist).
+        var sections = message.Split('\t', 4);
+        if (sections.Length < 3) return;
         bool nextPlaying = sections[1] == "1";
-        string nextTitle = "";
+        string nextTitle = "", nextArtist = "";
         try { nextTitle = Encoding.UTF8.GetString(Convert.FromBase64String(sections[2])); }
         catch { }
+        if (sections.Length >= 4)
+        {
+            try { nextArtist = Encoding.UTF8.GetString(Convert.FromBase64String(sections[3])); }
+            catch { }
+        }
         bool shouldShow = nextPlaying && !string.IsNullOrWhiteSpace(nextTitle) &&
-            (!hadState || !playing || nextTitle != title);
+            (!hadState || !playing || nextTitle != title || nextArtist != artist);
         playing = nextPlaying;
         title = nextTitle;
+        artist = nextArtist;
         hadState = true;
         Invalidate();
-        if (shouldShow) TrackStarted?.Invoke(this, nextTitle);
+        if (shouldShow)
+            TrackStarted?.Invoke(this, string.IsNullOrWhiteSpace(nextArtist)
+                ? nextTitle : nextTitle + " — " + nextArtist);
     }
 
     void SendCommand(string command, byte fallback)
