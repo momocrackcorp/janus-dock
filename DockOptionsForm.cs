@@ -558,7 +558,7 @@ public sealed class DockOptionsForm : Form
         generalRows.Controls.Add(FieldRow(new Label { Text = "Formato del reloj:", AutoSize = true }, clockFormat));
         var clockAmPm = new CheckBox { Text = "Mostrar AM/PM (solo 12 h)", AutoSize = true, Checked = config.ShowClockAmPm };
         generalRows.Controls.Add(clockAmPm);
-        var clockDate = new CheckBox { Text = "Mostrar fecha bajo el reloj (dd-MM)", AutoSize = true, Checked = config.ShowClockDate };
+        var clockDate = new CheckBox { Text = "Mostrar fecha (DD-MM)", AutoSize = true, Checked = config.ShowClockDate };
         var clockSticker = new CheckBox { Text = "Mostrar calcomanía", AutoSize = true, Checked = config.ShowClockSticker };
         void UpdateClockDependents()
         {

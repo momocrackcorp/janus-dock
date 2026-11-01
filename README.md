@@ -34,7 +34,7 @@
 - **Reproductor en la barra:** anterior, **Play/Pausa**, detener, siguiente, volumen − y volumen +, en un conjunto compacto. Reproducción y volumen mediante controles multimedia de Windows.
 - **Título y artista:** muestra «Canción — Artista» durante **8 segundos** al iniciar, reanudar o cambiar de pista, cuando el reproductor comparte los datos con Windows.
 - **JANUS Media Bridge v2 opcional:** instalación/actualización desde **Opciones → General → Botones del sistema**. El complemento se descarga desde nuestra Release de GitHub, se comprueba con SHA-256 y se almacena en `%LOCALAPPDATA%\JANUS\Dock\MediaBridge\v2`. Se descarga una vez y el Dock principal permanece liviano. Si tienes v1, puedes actualizar a v2 desde la misma opción. El SDK de desarrollo no se instala en tu PC.
-- **Reloj:** digital LCD estilo retro o solo texto; 12/24 h, AM/PM, fecha y calcomanía opcionales. Corregida la aparición del reloj al ocultar o mostrar el tráfico de red.
+- **Reloj:** digital LCD estilo Casio retro o solo texto; 12/24 h, DD-MM en la esquina superior del LCD, AM y PM con indicador activo resaltado en modo 12 h y calcomanía opcional reducida y centrada bajo el LCD. Corregida la aparición del reloj al ocultar o mostrar el tráfico de red.
 - **Round corner:** cápsula redondeada de energía y reloj en el extremo derecho, integrada al alto de la barra; tráfico de red independiente a su izquierda.
 - **Tráfico de red:** modo «Texto + icono Lucide» o «Gráfico», velocidad de subida/bajada, fondo oscuro o mismo color de barra.
 - **CPU y RAM:** medidores circulares o clásicos, independientes y compactos.

@@ -45,6 +45,7 @@ internal static class DockLanguage
         ["Abrir con:"] = ("Open with:", "Abrir com:"),
         ["Diseño CPU / RAM:"] = ("CPU / RAM design:", "Estilo CPU / RAM:"),
         ["Mostrar fecha bajo el reloj (dd-MM)"] = ("Show date below clock (dd-MM)", "Mostrar data abaixo do relógio (dd-MM)"),
+        ["Mostrar fecha (DD-MM)"] = ("Show date (DD-MM)", "Mostrar data (DD-MM)"),
         ["Mostrar calcomanía CASIO blanca"] = ("Show white CASIO decal", "Mostrar logotipo CASIO branco"),
         ["Mostrar calcomanía CASIO blanco hueso"] = ("Show aged ivory CASIO decal", "Mostrar logotipo CASIO marfim envelhecido"),
         ["Mostrar calcomanía"] = ("Show decal", "Mostrar decalque"),

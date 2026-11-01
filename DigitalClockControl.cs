@@ -190,20 +190,43 @@ public sealed class DigitalClockControl : Control
 
         DateTime now = DateTime.Now;
         string digits = now.ToString(Hour24 ? "HHmm" : "hhmm", CultureInfo.InvariantCulture);
-        string suffix = !Hour24 && ShowAmPm
-            ? now.ToString("tt", CultureInfo.InvariantCulture) : "";
+        bool showPeriod = !Hour24 && ShowAmPm;
+        bool isAm = now.Hour < 12;
 
-        // Lower row: four clear seven-segment digits, the colon and AM/PM.
+        // Lower row: four clear seven-segment digits and a colon.
+        // In 12-hour mode, AM and PM stay visible with the active one highlighted.
         float[] digitX = { 37f, 67f, 119f, 149f };
         for (int i = 0; i < 4; i++)
             DrawDigit(g, digits[i], digitX[i], 36f, 26f, 31f);
         using var ink = new SolidBrush(Color.FromArgb(24, 29, 25));
         g.FillEllipse(ink, 106.5f, 46f, 4f, 4f);
         g.FillEllipse(ink, 106.5f, 56f, 4f, 4f);
-        if (suffix.Length > 0)
-            using (var suffixFont = new Font("Segoe UI", 11f,
-                       FontStyle.Bold, GraphicsUnit.Pixel))
-                g.DrawString(suffix, suffixFont, ink, 194f, 51f);
+        if (showPeriod)
+        {
+            // Fixed AM/PM indicators inspired by the approved preview:
+            // the active period is ivory on a dark rounded capsule; the
+            // inactive one remains a subtle LCD ghost. Never show both as
+            // active, and hide both in 24-hour mode or if disabled.
+            using var periodFont = new Font("Segoe UI", 12.5f,
+                FontStyle.Bold, GraphicsUnit.Pixel);
+            using var activeFill = new SolidBrush(Color.FromArgb(27, 34, 30));
+            using var activeText = new SolidBrush(Color.FromArgb(231, 237, 219));
+            using var inactiveText = new SolidBrush(Color.FromArgb(105, 115, 104));
+            using var centered = new StringFormat
+            {
+                Alignment = StringAlignment.Center,
+                LineAlignment = StringAlignment.Center,
+                FormatFlags = StringFormatFlags.NoWrap
+            };
+            var amArea = new RectangleF(179.5f, 46f, 22f, 19f);
+            var pmArea = new RectangleF(202f, 46f, 22f, 19f);
+            using (var selected = RoundedRectangle(isAm ? amArea : pmArea, 4.7f))
+                g.FillPath(activeFill, selected);
+            g.DrawString("AM", periodFont, isAm ? activeText : inactiveText,
+                amArea, centered);
+            g.DrawString("PM", periodFont, isAm ? inactiveText : activeText,
+                pmArea, centered);
+        }
 
         if (ShowDate)
         {
@@ -222,16 +245,28 @@ public sealed class DigitalClockControl : Control
             {
                 var old = g.InterpolationMode;
                 g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                // 3% smaller, shifted right 2 virtual pixels: keep the C
-                // clear of the engraved date without changing the round size.
-                g.DrawImage(CasioWordmark, new RectangleF(126f, 78.3f, 102.82f, 18.43f));
+                // 10% smaller than the prior wordmark and centered beneath
+                // the LCD, not beneath the entire energy capsule.
+                const float logoWidth = 92.54f;
+                const float lcdCenterX = 124f;
+                g.DrawImage(CasioWordmark, new RectangleF(
+                    lcdCenterX - logoWidth / 2f, 79f, logoWidth, 16.59f));
                 g.InterpolationMode = old;
             }
             else
             {
-                using var brandFont = new Font("Arial Black", 18.43f, FontStyle.Bold, GraphicsUnit.Pixel);
+                // Text fallback matches the centered, smaller decal.
+                using var brandFont = new Font("Arial Black", 16.6f,
+                    FontStyle.Bold, GraphicsUnit.Pixel);
                 using var white = new SolidBrush(Color.FromArgb(174, 231, 225, 208));
-                g.DrawString("CASIO", brandFont, white, 126, 75.3f);
+                using var centered = new StringFormat
+                {
+                    Alignment = StringAlignment.Center,
+                    LineAlignment = StringAlignment.Center,
+                    FormatFlags = StringFormatFlags.NoWrap
+                };
+                g.DrawString("CASIO", brandFont, white,
+                    new RectangleF(77.7f, 77f, 92.6f, 19f), centered);
             }
         }
     }
