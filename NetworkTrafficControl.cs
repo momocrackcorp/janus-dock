@@ -188,7 +188,7 @@ public sealed class NetworkTrafficControl : Control
         var downColor = Color.FromArgb(63, 215, 138);
         var upColor = Color.FromArgb(105, 177, 245);
         var labelColor = ForeColor;
-        using var textFont = new Font("Segoe UI", Horizontal ? 9f : 9.5f, FontStyle.Bold);
+        using var legacyFont = new Font("Segoe UI", Horizontal ? 9f : 9.5f, FontStyle.Bold);
         using var smallFont = new Font("Segoe UI", 8f);
         using var signalPen = new Pen(Color.FromArgb(236, 191, 82), 2.8f);
         // Retro five-step signal strength silhouette; purely decorative,
@@ -202,14 +202,14 @@ public sealed class NetworkTrafficControl : Control
             int textX = 42;
             int lineHeight = Math.Max(16, Height / 2);
             int textWidth = Math.Max(40, Width - textX - 4);
-            TextRenderer.DrawText(g, "↑ " + Format(up), textFont, new Rectangle(textX, 0, textWidth, lineHeight), upColor, flags);
-            TextRenderer.DrawText(g, "↓ " + Format(down), textFont, new Rectangle(textX, lineHeight, textWidth, lineHeight), downColor, flags);
+            TextRenderer.DrawText(g, "↑ " + Format(up), legacyFont, new Rectangle(textX, 0, textWidth, lineHeight), upColor, flags);
+            TextRenderer.DrawText(g, "↓ " + Format(down), legacyFont, new Rectangle(textX, lineHeight, textWidth, lineHeight), downColor, flags);
         }
         else
         {
-            TextRenderer.DrawText(g, "↓", textFont, new Rectangle(0, 40, Width, 22), downColor, TextFormatFlags.HorizontalCenter);
+            TextRenderer.DrawText(g, "↓", legacyFont, new Rectangle(0, 40, Width, 22), downColor, TextFormatFlags.HorizontalCenter);
             TextRenderer.DrawText(g, Format(down).Replace(" ", "\n"), smallFont, new Rectangle(0, 62, Width, 43), labelColor, TextFormatFlags.HorizontalCenter | TextFormatFlags.WordBreak);
-            TextRenderer.DrawText(g, "↑", textFont, new Rectangle(0, 108, Width, 22), upColor, TextFormatFlags.HorizontalCenter);
+            TextRenderer.DrawText(g, "↑", legacyFont, new Rectangle(0, 108, Width, 22), upColor, TextFormatFlags.HorizontalCenter);
             TextRenderer.DrawText(g, Format(up).Replace(" ", "\n"), smallFont, new Rectangle(0, 130, Width, 43), labelColor, TextFormatFlags.HorizontalCenter | TextFormatFlags.WordBreak);
         }
     }
