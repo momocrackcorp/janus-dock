@@ -15,6 +15,8 @@ public sealed class NetworkTrafficControl : Control
     readonly Queue<(DateTime End, double Seconds, double Received, double Sent)> history = new();
     const double WindowSeconds = 60;
     public bool Horizontal { get; }
+    public string DisplayMode { get; set; } = "Texto";
+    static readonly Image? NetworkIcon = LucideDockIcons.Load("janus:network-status", false);
     public NetworkTrafficControl(bool horizontal)
     {
         Horizontal = horizontal;
@@ -104,6 +106,50 @@ public sealed class NetworkTrafficControl : Control
         base.OnPaint(e);
         var g = e.Graphics;
         g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        if (DisplayMode == "Texto")
+        {
+            // Minimal network readout: true Lucide network symbol, plus
+            // only the send/receive arrows and values. No signal bars.
+            if (Horizontal)
+            {
+                using var surfacePath = new System.Drawing.Drawing2D.GraphicsPath();
+                int r = Math.Min(11, Height / 4);
+                surfacePath.AddArc(2, 2, r * 2, r * 2, 180, 90);
+                surfacePath.AddArc(Width - 2 - r * 2, 2, r * 2, r * 2, 270, 90);
+                surfacePath.AddArc(Width - 2 - r * 2, Height - 2 - r * 2, r * 2, r * 2, 0, 90);
+                surfacePath.AddArc(2, Height - 2 - r * 2, r * 2, r * 2, 90, 90);
+                surfacePath.CloseFigure();
+                using var background = new SolidBrush(Color.FromArgb(26, 32, 45));
+                g.FillPath(background, surfacePath);
+                if (NetworkIcon != null)
+                    g.DrawImage(NetworkIcon, new Rectangle(9, (Height - 25) / 2, 25, 25));
+                using var textFont = new Font("Segoe UI", 11.5f, FontStyle.Bold, GraphicsUnit.Point);
+                var flags = TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding |
+                    TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis;
+                int mid = Height / 2;
+                TextRenderer.DrawText(g, "↑ " + Format(up), textFont,
+                    new Rectangle(42, 1, Math.Max(25, Width - 46), mid - 1),
+                    Color.FromArgb(48, 204, 239), flags);
+                TextRenderer.DrawText(g, "↓ " + Format(down), textFont,
+                    new Rectangle(42, mid, Math.Max(25, Width - 46), Height - mid - 1),
+                    Color.FromArgb(78, 227, 126), flags);
+            }
+            else
+            {
+                if (NetworkIcon != null)
+                    g.DrawImage(NetworkIcon, new Rectangle((Width - 26) / 2, 6, 26, 26));
+                using var textFont = new Font("Segoe UI", 9f, FontStyle.Bold);
+                var flags = TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding |
+                    TextFormatFlags.WordBreak;
+                TextRenderer.DrawText(g, "↑ " + Format(up), textFont,
+                    new Rectangle(2, 45, Width - 4, 52),
+                    Color.FromArgb(48, 204, 239), flags);
+                TextRenderer.DrawText(g, "↓ " + Format(down), textFont,
+                    new Rectangle(2, 110, Width - 4, 52),
+                    Color.FromArgb(78, 227, 126), flags);
+            }
+            return;
+        }
         if (Horizontal)
         {
             // Independent monitor, always immediately LEFT of the end capsule.

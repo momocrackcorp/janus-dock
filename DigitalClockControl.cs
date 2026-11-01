@@ -194,12 +194,12 @@ public sealed class DigitalClockControl : Control
             // The white engraved date uses the same seven-segment design as
             // the approved screenshot, not a separate pill or text label.
             string date = now.ToString("dd-MM", CultureInfo.InvariantCulture);
-            float[] x = { 40f, 56f, 80f, 96f };
+            float[] x = { 33f, 49f, 73f, 89f };
             int[] k = { 0, 1, 3, 4 };
             for (int i = 0; i < 4; i++)
                 DrawDigit(g, date[k[i]], x[i], 74, 12, 19, engraved: true);
             using var dash = new SolidBrush(Color.FromArgb(226, 229, 228));
-            g.FillRectangle(dash, 70, 82, 8, 2.5f);
+            g.FillRectangle(dash, 63, 82, 8, 2.5f);
         }
         if (ShowSticker)
         {

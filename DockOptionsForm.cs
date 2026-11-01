@@ -15,6 +15,7 @@ public sealed class DockOptionsForm : Form
     public string DockMode { get; private set; } = "Acoplada";
     public bool ShowDiskWidget { get; private set; }
     public bool ShowNetworkTraffic { get; private set; }
+    public string NetworkDisplayMode { get; private set; } = "Texto";
     public bool ShowSystemUsage { get; private set; }
     public bool ShowCpu { get; private set; } = true;
     public bool ShowRam { get; private set; } = true;
@@ -400,6 +401,12 @@ public sealed class DockOptionsForm : Form
         var monitorsSection = SectionTitle("Información del sistema", "Monitores que aparecerán en el Dock.");
         generalRows.Controls.Add(monitorsSection);
         generalRows.Controls.Add(networkWidget);
+        var networkMode = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 185 };
+        networkMode.Items.AddRange(new object[] { "Texto + icono", "Gráfico" });
+        networkMode.SelectedIndex = config.NetworkDisplayMode == "Gráfico" ? 1 : 0;
+        networkMode.Enabled = networkWidget.Checked;
+        networkWidget.CheckedChanged += (_, _) => networkMode.Enabled = networkWidget.Checked;
+        generalRows.Controls.Add(FieldRow(new Label { Text = "Visualización de red:", AutoSize = true }, networkMode));
         var cpuWidget = new CheckBox { Text = "Mostrar uso de CPU", AutoSize = true, Checked = config.ShowSystemUsage && config.ShowCpu };
         var ramWidget = new CheckBox { Text = "Mostrar uso de memoria RAM", AutoSize = true, Checked = config.ShowSystemUsage && config.ShowRam };
         generalRows.Controls.Add(cpuWidget);
@@ -423,7 +430,7 @@ public sealed class DockOptionsForm : Form
         var clockAmPm = new CheckBox { Text = "Mostrar AM/PM (solo 12 h)", AutoSize = true, Checked = config.ShowClockAmPm };
         generalRows.Controls.Add(clockAmPm);
         var clockDate = new CheckBox { Text = "Mostrar fecha bajo el reloj (dd-MM)", AutoSize = true, Checked = config.ShowClockDate };
-        var clockSticker = new CheckBox { Text = "Mostrar calcomanía CASIO blanco hueso", AutoSize = true, Checked = config.ShowClockSticker };
+        var clockSticker = new CheckBox { Text = "Mostrar calcomanía", AutoSize = true, Checked = config.ShowClockSticker };
         void UpdateClockDependents()
         {
             clockDate.Enabled = digitalClock.Checked;
@@ -713,6 +720,7 @@ public sealed class DockOptionsForm : Form
             DockMode = dockMode.SelectedItem?.ToString() ?? "Acoplada";
             ShowDiskWidget = widget.Checked;
             ShowNetworkTraffic = networkWidget.Checked;
+            NetworkDisplayMode = networkMode.SelectedIndex == 1 ? "Gráfico" : "Texto";
             ShowCpu = cpuWidget.Checked;
             ShowRam = ramWidget.Checked;
             ShowDigitalClock = digitalClock.Checked;

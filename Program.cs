@@ -33,6 +33,7 @@ public class DockSettings
     public bool AutoHide { get; set; } = false;
     public bool ShowDiskWidget { get; set; } = false;
     public bool ShowNetworkTraffic { get; set; } = false;
+    public string NetworkDisplayMode { get; set; } = "Texto";
     public bool ShowSystemUsage { get; set; } = false;
     public bool ShowCpu { get; set; } = true;
     public bool ShowRam { get; set; } = true;
@@ -198,6 +199,7 @@ public class Dock : Form, IMessageFilter
         settings.HiddenDiskLetters ??= new();
         settings.UsageLayout = "Horizontal";
         settings.ClockDisplayMode = settings.ClockDisplayMode == "Texto" ? "Texto" : "LCD";
+        settings.NetworkDisplayMode = settings.NetworkDisplayMode == "Gráfico" ? "Gráfico" : "Texto";
         settings.ClockFormat = settings.ClockFormat == "24" ? "24" : "12";
         settings.TerminalMode = settings.TerminalMode == "CMD" ? "CMD" : "Terminal";
         settings.UsageStyle = settings.UsageStyle == "Clásico" ? "Clásico" : "Circular";
@@ -633,7 +635,7 @@ public class Dock : Form, IMessageFilter
         // left. Date and sticker appear under the LCD on the same surface.
         energyPanel.Width = Horizontal
             ? embeddedClockWidth > 0
-                ? 16 + powerCount * (width + settings.IconSpacing) + 8 + embeddedClockWidth
+                ? 24 + powerCount * (width + settings.IconSpacing) + 8 + embeddedClockWidth
                 : Math.Max(1, powerCount) * (energySlot + settings.IconSpacing) + 24
             : settings.Width;
         // Flush with the dock, without adding height to the Windows AppBar.
@@ -643,7 +645,7 @@ public class Dock : Form, IMessageFilter
         // remains unchanged and SetOrientation() is not called.
         energyPanel.Padding = Horizontal
             ? settings.ShowDigitalClock && settings.ClockDisplayMode == "LCD"
-                ? new Padding(16, 0, 0, 0) : new Padding(16, 0, 6, 0)
+                ? new Padding(24, 0, 0, 0) : new Padding(16, 0, 6, 0)
             : new Padding(0, 7, 0, 3);
         foreach (var item in settings.Items.ToList())
         {
@@ -829,6 +831,7 @@ public class Dock : Form, IMessageFilter
         {
             var network = new NetworkTrafficControl(Horizontal)
             {
+                DisplayMode = settings.NetworkDisplayMode,
                 Width = Horizontal ? 190 : Math.Max(65, settings.Width - 14),
                 BackColor = BackColor,
                 ForeColor = ForeColor
@@ -1032,6 +1035,7 @@ public class Dock : Form, IMessageFilter
         settings.DockMode = dlg.DockMode;
         settings.ShowDiskWidget = dlg.ShowDiskWidget;
         settings.ShowNetworkTraffic = dlg.ShowNetworkTraffic;
+        settings.NetworkDisplayMode = dlg.NetworkDisplayMode;
         settings.ShowSystemUsage = dlg.ShowSystemUsage;
         settings.ShowCpu = dlg.ShowCpu;
         settings.ShowRam = dlg.ShowRam;
@@ -1161,7 +1165,7 @@ public class Dock : Form, IMessageFilter
         energyPanel.HorizontalBar = Horizontal;
         energyPanel.Padding = Horizontal
             ? settings.ShowDigitalClock && settings.ClockDisplayMode == "LCD"
-                ? new Padding(16, 0, 0, 0) : new Padding(16, 0, 6, 0)
+                ? new Padding(24, 0, 0, 0) : new Padding(16, 0, 6, 0)
             : new Padding(0, 7, 0, 3);
         endCluster.Dock = Horizontal ? DockStyle.Right : DockStyle.Bottom;
         networkArea.Dock = DockStyle.None;

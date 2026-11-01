@@ -9,8 +9,17 @@ namespace JanusDock;
 public sealed class RoundedEnergyPanel : FlowLayoutPanel
 {
     public Color CapsuleColor { get; set; } = Color.FromArgb(56, 76, 86);
-    public bool HorizontalBar { get; set; } = true;
-    public bool IntegratedClockStyle { get; set; }
+    bool horizontalBar = true, integratedClockStyle;
+    public bool HorizontalBar
+    {
+        get => horizontalBar;
+        set { if (horizontalBar == value) return; horizontalBar = value; UpdateShape(); Invalidate(); }
+    }
+    public bool IntegratedClockStyle
+    {
+        get => integratedClockStyle;
+        set { if (integratedClockStyle == value) return; integratedClockStyle = value; UpdateShape(); Invalidate(); }
+    }
 
     public RoundedEnergyPanel()
     {
@@ -21,32 +30,57 @@ public sealed class RoundedEnergyPanel : FlowLayoutPanel
         Padding = new Padding(0);
     }
 
+    private GraphicsPath CapsulePath()
+    {
+        var path = new GraphicsPath();
+        float radius = IntegratedClockStyle
+            ? (Height - 1f) / 2f : Math.Min(Height * .43f, 24f);
+        float d = radius * 2f;
+        // A round left end with a precisely square right edge.
+        path.AddArc(0, 0, d, d, 180, 90);
+        path.AddLine(radius, 0, Width - 1, 0);
+        path.AddLine(Width - 1, 0, Width - 1, Height - 1);
+        path.AddLine(Width - 1, Height - 1, radius, Height - 1);
+        path.AddArc(0, Height - 1 - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
+    }
+
+    private void UpdateShape()
+    {
+        var previous = Region;
+        if (!HorizontalBar || Width < 4 || Height < 4)
+            Region = null;
+        else
+        {
+            using var path = CapsulePath();
+            Region = new Region(path);
+        }
+        previous?.Dispose();
+    }
+
+    protected override void OnSizeChanged(EventArgs e)
+    {
+        base.OnSizeChanged(e);
+        UpdateShape();
+    }
+
     protected override void OnPaintBackground(PaintEventArgs e)
     {
-        e.Graphics.Clear(BackColor);
-        if (Width < 2 || Height < 2) return;
         e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        if (Width < 4 || Height < 4) return;
         using var fill = new SolidBrush(CapsuleColor);
         if (!HorizontalBar)
         {
             e.Graphics.FillRectangle(fill, ClientRectangle);
             return;
         }
-        // Only left end is rounded. The right end reaches the physical edge.
-        float radius = IntegratedClockStyle ? Math.Max(1f, (Height - 2) / 2f)
-                                            : Math.Min(Height * .43f, 24f);
-        float diameter = radius * 2;
-        using var path = new GraphicsPath();
-        path.AddArc(1, 1, diameter, diameter, 180, 90);
-        path.AddLine(radius + 1, 1, Width - 1, 1);
-        path.AddLine(Width - 1, 1, Width - 1, Height - 2);
-        path.AddLine(Width - 1, Height - 2, radius + 1, Height - 2);
-        path.AddArc(1, Height - diameter - 2, diameter, diameter, 90, 90);
-        path.CloseFigure();
+        using var path = CapsulePath();
+        // Match WinForms clipping to the curved surface so no rectangular
+        // background can leak out near the round's upper-left corner.
         e.Graphics.FillPath(fill, path);
         if (IntegratedClockStyle)
         {
-            // Subtle metal rim, no decorative horizontal rules below the date.
             using var rim = new Pen(Color.FromArgb(133, 141, 141), 1.15f);
             e.Graphics.DrawPath(rim, path);
         }

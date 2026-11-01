@@ -16,6 +16,7 @@ internal static class LucideDockIcons
             "janus:downloads" => "download",
             "janus:settings" => "settings",
             "janus:network" => "network",
+            "janus:network-status" => "network-status",
             "janus:shutdown" => "power",
             "janus:restart" => "restart",
             _ => ""
@@ -58,6 +59,7 @@ internal static class LucideDockIcons
             "download" => Color.FromArgb(110, 183, 247),
             "settings" => light ? Color.FromArgb(42, 78, 109) : Color.FromArgb(203, 211, 224),
             "network" => Color.FromArgb(242, 199, 79),
+            "network-status" => Color.FromArgb(135, 205, 240),
             "browser" => Color.FromArgb(93, 188, 241),
             "word" => Color.FromArgb(66, 145, 232),
             "excel" => Color.FromArgb(48, 190, 126),
@@ -123,6 +125,16 @@ internal static class LucideDockIcons
                 break;
             case "network":
                 for (int i = 0; i < 5; i++) Line(3 + i * 4, 21 - i * 4, 3 + i * 4, 21);
+                break;
+            case "network-status":
+                // Lucide network topology: three outlined nodes and connecting lines.
+                g.DrawRoundedRectangleCompat(pen, 9, 2, 6, 6, 1);
+                g.DrawRoundedRectangleCompat(pen, 2, 16, 6, 6, 1);
+                g.DrawRoundedRectangleCompat(pen, 16, 16, 6, 6, 1);
+                Line(12, 8, 12, 12);
+                Line(5, 12, 19, 12);
+                Line(5, 12, 5, 16);
+                Line(19, 12, 19, 16);
                 break;
             case "power":
                 // Preview style: open ring with a clean top power stem.
