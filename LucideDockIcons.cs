@@ -17,6 +17,7 @@ internal static class LucideDockIcons
             "janus:settings" => "settings",
             "janus:network" => "network",
             "janus:network-status" => "network-status",
+            "janus:terminal" => "square-terminal",
             "janus:shutdown" => "power",
             "janus:restart" => "restart",
             _ => ""
@@ -60,6 +61,8 @@ internal static class LucideDockIcons
             "settings" => light ? Color.FromArgb(42, 78, 109) : Color.FromArgb(203, 211, 224),
             "network" => Color.FromArgb(242, 199, 79),
             "network-status" => Color.FromArgb(135, 205, 240),
+            "square-terminal" => light ? Color.FromArgb(34, 55, 82)
+                                       : Color.FromArgb(195, 213, 231),
             "browser" => Color.FromArgb(93, 188, 241),
             "word" => Color.FromArgb(66, 145, 232),
             "excel" => Color.FromArgb(48, 190, 126),
@@ -125,6 +128,13 @@ internal static class LucideDockIcons
                 break;
             case "network":
                 for (int i = 0; i < 5; i++) Line(3 + i * 4, 21 - i * 4, 3 + i * 4, 21);
+                break;
+            case "square-terminal":
+                // Lucide square-terminal: outlined console with prompt and cursor.
+                g.DrawRoundedRectangleCompat(pen, 3, 3, 18, 18, 2);
+                Line(7, 9, 10, 12);
+                Line(10, 12, 7, 15);
+                Line(13, 15, 17, 15);
                 break;
             case "network-status":
                 // Lucide network topology: three outlined nodes and connecting lines.

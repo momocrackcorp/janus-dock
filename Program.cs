@@ -34,6 +34,9 @@ public class DockSettings
     public bool ShowDiskWidget { get; set; } = false;
     public bool ShowNetworkTraffic { get; set; } = false;
     public string NetworkDisplayMode { get; set; } = "Texto";
+    // The native Dock background is the default for compact text mode.
+    public string NetworkBackground { get; set; } = "Barra";
+    public bool ShowMediaControls { get; set; } = false;
     public bool ShowSystemUsage { get; set; } = false;
     public bool ShowCpu { get; set; } = true;
     public bool ShowRam { get; set; } = true;
@@ -200,6 +203,7 @@ public class Dock : Form, IMessageFilter
         settings.UsageLayout = "Horizontal";
         settings.ClockDisplayMode = settings.ClockDisplayMode == "Texto" ? "Texto" : "LCD";
         settings.NetworkDisplayMode = settings.NetworkDisplayMode == "Gráfico" ? "Gráfico" : "Texto";
+        settings.NetworkBackground = settings.NetworkBackground == "Oscuro" ? "Oscuro" : "Barra";
         settings.ClockFormat = settings.ClockFormat == "24" ? "24" : "12";
         settings.TerminalMode = settings.TerminalMode == "CMD" ? "CMD" : "Terminal";
         settings.UsageStyle = settings.UsageStyle == "Clásico" ? "Clásico" : "Circular";
@@ -790,7 +794,7 @@ public class Dock : Form, IMessageFilter
         {
             var terminalButton = new Button
             {
-                Text = ">_",
+                Text = "",
                 Width = Horizontal ? 30 : Math.Min(34, Math.Max(28, settings.Width - 16)),
                 Height = 29,
                 FlatStyle = FlatStyle.Flat,
@@ -803,6 +807,11 @@ public class Dock : Form, IMessageFilter
                 AccessibleName = settings.TerminalMode == "CMD" ? "Abrir CMD" : "Abrir Terminal"
             };
             terminalButton.FlatAppearance.BorderColor = Color.FromArgb(72, 86, 109);
+            // Lucide square-terminal outline, scaled to the existing 30x29 cell.
+            using (var vector = LucideDockIcons.Load("janus:terminal", light))
+                if (vector != null)
+                    terminalButton.Image = new Bitmap(vector, new Size(20, 20));
+            terminalButton.ImageAlign = ContentAlignment.MiddleCenter;
             var terminalTip = new ToolTip();
             terminalTip.SetToolTip(terminalButton,
                 settings.TerminalMode == "CMD" ? "Abrir Símbolo del sistema" : "Abrir Windows Terminal");
@@ -827,11 +836,28 @@ public class Dock : Form, IMessageFilter
             terminalButton.Disposed += (_, _) => terminalTip.Dispose();
             panel.Controls.Add(terminalButton);
         }
+        if (settings.ShowMediaControls)
+        {
+            var media = new MediaTransportControl(Horizontal)
+            {
+                Height = Horizontal ? Math.Max(32, settings.HorizontalHeight - 8) : 118,
+                Width = Horizontal ? 108 : Math.Max(60, settings.Width - 12),
+                Margin = Horizontal
+                    ? new Padding(3, 4, 4, 0) : new Padding(3, 5, 3, 5),
+                BackColor = BackColor,
+                ForeColor = ForeColor
+            };
+            var mediaMenu = DockMenuStyle.Create(light, Color.FromArgb(58, 173, 201));
+            mediaMenu.Items.Add("Opciones multimedia...", null, (_, _) => ShowOptions("General"));
+            media.ContextMenuStrip = mediaMenu;
+            panel.Controls.Add(media);
+        }
         if (settings.ShowNetworkTraffic)
         {
             var network = new NetworkTrafficControl(Horizontal)
             {
                 DisplayMode = settings.NetworkDisplayMode,
+                BackgroundMode = settings.NetworkBackground,
                 Width = Horizontal ? 190 : Math.Max(65, settings.Width - 14),
                 BackColor = BackColor,
                 ForeColor = ForeColor
@@ -1036,6 +1062,8 @@ public class Dock : Form, IMessageFilter
         settings.ShowDiskWidget = dlg.ShowDiskWidget;
         settings.ShowNetworkTraffic = dlg.ShowNetworkTraffic;
         settings.NetworkDisplayMode = dlg.NetworkDisplayMode;
+        settings.NetworkBackground = dlg.NetworkBackground;
+        settings.ShowMediaControls = dlg.ShowMediaControls;
         settings.ShowSystemUsage = dlg.ShowSystemUsage;
         settings.ShowCpu = dlg.ShowCpu;
         settings.ShowRam = dlg.ShowRam;

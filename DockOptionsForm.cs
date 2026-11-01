@@ -16,6 +16,8 @@ public sealed class DockOptionsForm : Form
     public bool ShowDiskWidget { get; private set; }
     public bool ShowNetworkTraffic { get; private set; }
     public string NetworkDisplayMode { get; private set; } = "Texto";
+    public string NetworkBackground { get; private set; } = "Barra";
+    public bool ShowMediaControls { get; private set; }
     public bool ShowSystemUsage { get; private set; }
     public bool ShowCpu { get; private set; } = true;
     public bool ShowRam { get; private set; } = true;
@@ -394,6 +396,12 @@ public sealed class DockOptionsForm : Form
         terminalChoice.Enabled = terminalEnabled.Checked;
         generalRows.Controls.Add(terminalEnabled);
         generalRows.Controls.Add(FieldRow(new Label { Text = "Abrir con:", AutoSize = true }, terminalChoice));
+        var mediaEnabled = new CheckBox
+        {
+            Text = "Mostrar controles multimedia",
+            AutoSize = true, Checked = config.ShowMediaControls
+        };
+        generalRows.Controls.Add(mediaEnabled);
         generalRows.Controls.Add(new Label { Text = "Al ocultarse queda una franja para recuperar la barra con el mouse.", AutoSize = true });
         generalRows.SizeChanged += (_, _) => FitRows(generalRows);
 
@@ -407,6 +415,15 @@ public sealed class DockOptionsForm : Form
         networkMode.Enabled = networkWidget.Checked;
         networkWidget.CheckedChanged += (_, _) => networkMode.Enabled = networkWidget.Checked;
         generalRows.Controls.Add(FieldRow(new Label { Text = "Visualización de red:", AutoSize = true }, networkMode));
+        var networkBackground = new ComboBox
+        { DropDownStyle = ComboBoxStyle.DropDownList, Width = 185 };
+        networkBackground.Items.AddRange(new object[] { "Mismo color de la barra", "Fondo oscuro" });
+        networkBackground.SelectedIndex = config.NetworkBackground == "Oscuro" ? 1 : 0;
+        networkBackground.Enabled = networkWidget.Checked;
+        networkWidget.CheckedChanged += (_, _) => networkBackground.Enabled = networkWidget.Checked;
+        generalRows.Controls.Add(FieldRow(
+            new Label { Text = "Fondo del monitor de red:", AutoSize = true },
+            networkBackground));
         var cpuWidget = new CheckBox { Text = "Mostrar uso de CPU", AutoSize = true, Checked = config.ShowSystemUsage && config.ShowCpu };
         var ramWidget = new CheckBox { Text = "Mostrar uso de memoria RAM", AutoSize = true, Checked = config.ShowSystemUsage && config.ShowRam };
         generalRows.Controls.Add(cpuWidget);
@@ -721,6 +738,8 @@ public sealed class DockOptionsForm : Form
             ShowDiskWidget = widget.Checked;
             ShowNetworkTraffic = networkWidget.Checked;
             NetworkDisplayMode = networkMode.SelectedIndex == 1 ? "Gráfico" : "Texto";
+            NetworkBackground = networkBackground.SelectedIndex == 1 ? "Oscuro" : "Barra";
+            ShowMediaControls = mediaEnabled.Checked;
             ShowCpu = cpuWidget.Checked;
             ShowRam = ramWidget.Checked;
             ShowDigitalClock = digitalClock.Checked;

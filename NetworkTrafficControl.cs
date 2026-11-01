@@ -16,6 +16,7 @@ public sealed class NetworkTrafficControl : Control
     const double WindowSeconds = 60;
     public bool Horizontal { get; }
     public string DisplayMode { get; set; } = "Texto";
+    public string BackgroundMode { get; set; } = "Barra";
     static readonly Image? NetworkIcon = LucideDockIcons.Load("janus:network-status", false);
     public NetworkTrafficControl(bool horizontal)
     {
@@ -105,6 +106,7 @@ public sealed class NetworkTrafficControl : Control
     {
         base.OnPaint(e);
         var g = e.Graphics;
+        g.Clear(BackColor);
         g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
         if (DisplayMode == "Texto")
         {
@@ -119,8 +121,11 @@ public sealed class NetworkTrafficControl : Control
                 surfacePath.AddArc(Width - 2 - r * 2, Height - 2 - r * 2, r * 2, r * 2, 0, 90);
                 surfacePath.AddArc(2, Height - 2 - r * 2, r * 2, r * 2, 90, 90);
                 surfacePath.CloseFigure();
-                using var background = new SolidBrush(Color.FromArgb(26, 32, 45));
-                g.FillPath(background, surfacePath);
+                if (BackgroundMode == "Oscuro")
+                {
+                    using var background = new SolidBrush(Color.FromArgb(26, 32, 45));
+                    g.FillPath(background, surfacePath);
+                }
                 if (NetworkIcon != null)
                     g.DrawImage(NetworkIcon, new Rectangle(9, (Height - 25) / 2, 25, 25));
                 using var textFont = new Font("Segoe UI", 11.5f, FontStyle.Bold, GraphicsUnit.Point);
@@ -161,8 +166,11 @@ public sealed class NetworkTrafficControl : Control
             panelShape.AddArc(Width - pad - corner * 2, Height - pad - corner * 2, corner * 2, corner * 2, 0, 90);
             panelShape.AddArc(pad, Height - pad - corner * 2, corner * 2, corner * 2, 90, 90);
             panelShape.CloseFigure();
-            using var surface = new SolidBrush(Color.FromArgb(26, 32, 45));
-            g.FillPath(surface, panelShape);
+            if (BackgroundMode == "Oscuro")
+            {
+                using var surface = new SolidBrush(Color.FromArgb(26, 32, 45));
+                g.FillPath(surface, panelShape);
+            }
             // Amber stepped bandwidth glyph, scaled to the dock height.
             int barBottom = Height - 8;
             int maxBar = Math.Max(15, Height - 16);
