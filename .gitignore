@@ -1,0 +1,17 @@
+# Generados por dotnet e Inno Setup (nunca subir binarios al repositorio)
+**/bin/
+**/obj/
+dist-compact/
+dist-standalone/
+dist-media/
+installer-output/
+*.user
+*.suo
+*.log
+*.tmp
+janus-dock.ico
+# Los ZIP, instaladores y hashes se generan y publican como assets de Releases
+JANUS-Dock-*.zip
+JANUS-Dock-Setup-*.exe
+JANUS-MediaBridge-*.zip
+SHA256SUMS.txt
