@@ -175,6 +175,14 @@ public class Dock : Form, IMessageFilter
     readonly System.Windows.Forms.Timer themeTimer = new() { Interval = 3000 };
     readonly System.Windows.Forms.Timer hideTimer = new() { Interval = 400 };
     readonly ToolTip diskInfoTip = new() { AutomaticDelay = 250, AutoPopDelay = 12000 };
+    // A short, non-layout-shifting 8-second track title overlay.
+    readonly Label mediaTrackTitle = new()
+    {
+        Visible = false, AutoSize = false, AutoEllipsis = true,
+        Height = 29, TextAlign = ContentAlignment.MiddleCenter,
+        Font = new Font("Segoe UI", 10.5f, FontStyle.Bold)
+    };
+    readonly System.Windows.Forms.Timer mediaTitleTimer = new() { Interval = 8000 };
     bool collapsed;
     const int RevealStrip = 6;
 
@@ -232,6 +240,13 @@ public class Dock : Form, IMessageFilter
         Controls.Add(endCluster);
         Controls.Add(footer);
         Controls.Add(grip);
+        Controls.Add(mediaTrackTitle);
+        mediaTitleTimer.Tick += (_, _) =>
+        {
+            mediaTitleTimer.Stop();
+            mediaTrackTitle.Visible = false;
+        };
+        FormClosed += (_, _) => mediaTitleTimer.Dispose();
         SetOrientation();
         panel.ContextMenuStrip = MakeDockMenu();
         grip.ContextMenuStrip = MakeDockMenu();
@@ -259,7 +274,7 @@ public class Dock : Form, IMessageFilter
         };
         grip.MouseUp += (_, _) => FinishResize();
         grip.MouseCaptureChanged += (_, _) => { if (resizeActive) FinishResize(); };
-        Resize += (_, _) => AlignFooter();
+        Resize += (_, _) => { AlignFooter(); PositionMediaTitle(); };
         DragEnter += EnterDrag;
         DragDrop += DropFiles;
         panel.AllowDrop = true;
@@ -339,6 +354,8 @@ public class Dock : Form, IMessageFilter
         networkArea.BackColor = BackColor;
         clockArea.BackColor = BackColor;
         energyPanel.BackColor = BackColor;
+        mediaTrackTitle.BackColor = BackColor;
+        mediaTrackTitle.ForeColor = ForeColor;
         energyPanel.HorizontalBar = Horizontal;
         energyPanel.IntegratedClockStyle = Horizontal && settings.ShowDigitalClock;
         energyPanel.CapsuleColor = energyPanel.IntegratedClockStyle
@@ -592,11 +609,51 @@ public class Dock : Form, IMessageFilter
         catch { }
         return (Image)SystemIcons.Application.ToBitmap();
     }
+    void PositionMediaTitle()
+    {
+        if (!Horizontal || mediaTrackTitle.IsDisposed) return;
+        int right = ClientSize.Width - (endCluster.Visible ? endCluster.Width : 0);
+        // Prefer unused center space so media title does not cover shortcuts.
+        int occupied = panel.Controls.Cast<Control>()
+            .Where(c => c.Visible).Select(c => c.Right).DefaultIfEmpty(0).Max();
+        int left = Math.Max(8, occupied + 10);
+        if (right - left < 160)
+        {
+            left = 8;
+            right = Math.Max(120, ClientSize.Width - 8);
+        }
+        int width = Math.Min(390, Math.Max(100, right - left - 8));
+        mediaTrackTitle.Bounds = new Rectangle(
+            Math.Max(0, left + (right - left - width) / 2),
+            Math.Max(0, (ClientSize.Height - mediaTrackTitle.Height) / 2),
+            width, 29);
+    }
+
+    void ShowMediaTitle(string title)
+    {
+        if (IsDisposed || Disposing || collapsed || !settings.ShowMediaControls ||
+            string.IsNullOrWhiteSpace(title)) return;
+        if (InvokeRequired)
+        {
+            BeginInvoke(new Action(() => ShowMediaTitle(title)));
+            return;
+        }
+        if (!Horizontal) return; // A vertical Dock cannot fit a complete song title.
+        mediaTrackTitle.Text = title;
+        PositionMediaTitle();
+        mediaTrackTitle.Visible = true;
+        mediaTrackTitle.BringToFront();
+        mediaTitleTimer.Stop();
+        mediaTitleTimer.Start(); // Exactly 8 seconds for each new track or resume.
+    }
+
     void Render()
     {
         // Power switches are authoritative even if a shortcut was removed
         // from an older saved Items list.
         SyncPowerButtons();
+        mediaTitleTimer.Stop();
+        mediaTrackTitle.Visible = false;
         panel.SuspendLayout();
         endCluster.SuspendLayout();
         clockArea.SuspendLayout();
@@ -840,16 +897,18 @@ public class Dock : Form, IMessageFilter
         {
             var media = new MediaTransportControl(Horizontal)
             {
-                Height = Horizontal ? Math.Max(32, settings.HorizontalHeight - 8) : 118,
-                Width = Horizontal ? 108 : Math.Max(60, settings.Width - 12),
+                Height = Horizontal ? 34 : 96,
+                Width = Horizontal ? 96 : Math.Max(34, settings.Width - 12),
                 Margin = Horizontal
-                    ? new Padding(3, 4, 4, 0) : new Padding(3, 5, 3, 5),
+                    ? new Padding(3, Math.Max(0, (settings.HorizontalHeight - 34) / 2), 4, 0)
+                    : new Padding(3, 5, 3, 5),
                 BackColor = BackColor,
                 ForeColor = ForeColor
             };
             var mediaMenu = DockMenuStyle.Create(light, Color.FromArgb(58, 173, 201));
             mediaMenu.Items.Add("Opciones multimedia...", null, (_, _) => ShowOptions("General"));
             media.ContextMenuStrip = mediaMenu;
+            media.TrackStarted += (_, track) => ShowMediaTitle(track);
             panel.Controls.Add(media);
         }
         if (settings.ShowNetworkTraffic)
@@ -939,6 +998,7 @@ public class Dock : Form, IMessageFilter
         clockArea.ResumeLayout();
         endCluster.ResumeLayout();
         panel.ResumeLayout();
+        PositionMediaTitle();
         AlignFooter();
         if (IsHandleCreated && !resizeActive) Position();
     }
