@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-<PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net8.0-windows10.0.19041.0</TargetFramework><SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion><UseWindowsForms>true</UseWindowsForms><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><PublishSingleFile>true</PublishSingleFile><ApplicationIcon Condition="Exists('janus-dock.ico')">janus-dock.ico</ApplicationIcon><SelfContained>false</SelfContained><Version>6.4.87</Version><AssemblyVersion>6.4.87.0</AssemblyVersion><FileVersion>6.4.87.0</FileVersion></PropertyGroup>
+<PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net8.0-windows10.0.19041.0</TargetFramework><SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion><UseWindowsForms>true</UseWindowsForms><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><PublishSingleFile>true</PublishSingleFile><EnableCompressionInSingleFile>true</EnableCompressionInSingleFile><ApplicationIcon Condition="Exists('janus-dock.ico')">janus-dock.ico</ApplicationIcon><SelfContained>false</SelfContained><Version>6.4.87</Version><AssemblyVersion>6.4.87.0</AssemblyVersion><FileVersion>6.4.87.0</FileVersion></PropertyGroup>
 <ItemGroup>
   <EmbeddedResource Include="Assets/CasioWhite.png" LogicalName="JanusDock.CasioWhite.png" />
 </ItemGroup>

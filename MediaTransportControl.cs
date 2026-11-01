@@ -16,7 +16,7 @@ namespace JanusDock;
 /// </summary>
 public sealed class MediaTransportControl : Control
 {
-    const byte MediaPrevious = 0xB1, MediaPlayPause = 0xB3, MediaNext = 0xB0;
+    const byte MediaPrevious = 0xB1, MediaPlayPause = 0xB3, MediaStop = 0xB2, MediaNext = 0xB0;
     const uint KeyUp = 0x0002;
 
     [DllImport("user32.dll", SetLastError = true)]
@@ -43,8 +43,8 @@ public sealed class MediaTransportControl : Control
         SetStyle(ControlStyles.Selectable | ControlStyles.ResizeRedraw, true);
         Cursor = Cursors.Hand;
         AccessibleName = "Controles multimedia de Windows";
-        Size = horizontal ? new Size(98, 33) : new Size(36, 99);
-        tooltip.SetToolTip(this, "Anterior  |  Reproducir/Pausar  |  Siguiente");
+        Size = horizontal ? new Size(128, 33) : new Size(36, 128);
+        tooltip.SetToolTip(this, "Anterior  |  Reproducir/Pausar  |  Detener  |  Siguiente");
         refreshTimer.Tick += async (_, _) => await RefreshSessionAsync();
         refreshTimer.Start();
     }
@@ -109,8 +109,8 @@ public sealed class MediaTransportControl : Control
             isPlaying = nowPlaying;
             AccessibleDescription = nowPlaying ? "Pausar reproducción" : "Reanudar reproducción";
             tooltip.SetToolTip(this,
-                nowPlaying ? "Anterior  |  Pausar  |  Siguiente" :
-                             "Anterior  |  Reproducir  |  Siguiente");
+                nowPlaying ? "Anterior  |  Pausar  |  Detener  |  Siguiente" :
+                             "Anterior  |  Reproducir  |  Detener  |  Siguiente");
             Invalidate();
             if (startOrChange) TrackStarted?.Invoke(this, title);
         }
@@ -138,21 +138,39 @@ public sealed class MediaTransportControl : Control
             {
                 try
                 {
-                    if (index == 0) accepted = await session.TrySkipPreviousAsync();
-                    else if (index == 2) accepted = await session.TrySkipNextAsync();
-                    else if (isPlaying) accepted = await session.TryPauseAsync();
-                    else accepted = await session.TryPlayAsync();
+                    switch (index)
+                    {
+                        case 0:
+                            accepted = await session.TrySkipPreviousAsync();
+                            break;
+                        case 1:
+                            accepted = isPlaying ? await session.TryPauseAsync()
+                                                 : await session.TryPlayAsync();
+                            break;
+                        case 2:
+                            accepted = await session.TryStopAsync();
+                            // Streaming clients may not implement Stop.
+                            if (!accepted) accepted = await session.TryPauseAsync();
+                            break;
+                        case 3:
+                            accepted = await session.TrySkipNextAsync();
+                            break;
+                    }
                 }
                 catch { accepted = false; }
             }
             if (!accepted)
-                SendMediaKey(index == 0 ? MediaPrevious :
-                    index == 2 ? MediaNext : MediaPlayPause);
-            if (index == 1)
+                SendMediaKey(index switch
+                {
+                    0 => MediaPrevious,
+                    1 => MediaPlayPause,
+                    2 => MediaStop,
+                    _ => MediaNext
+                });
+            if (index == 1 || index == 2)
             {
-                // Offer immediate button feedback; the next session poll will
-                // reconcile the state with the actual playback application.
-                isPlaying = !isPlaying;
+                // Immediate feedback, then synchronize with the player.
+                isPlaying = index == 1 ? !isPlaying : false;
                 Invalidate();
             }
             await RefreshSessionAsync();
@@ -164,8 +182,9 @@ public sealed class MediaTransportControl : Control
     {
         base.OnMouseClick(e);
         if (e.Button != MouseButtons.Left) return;
-        int cell = Math.Max(1, (horizontal ? Width : Height) / 3);
-        int index = Math.Clamp((horizontal ? e.X : e.Y) / cell, 0, 2);
+        int index = Math.Clamp(
+            (int)((horizontal ? e.X / (float)Math.Max(1, Width)
+                               : e.Y / (float)Math.Max(1, Height)) * 4), 0, 3);
         try { await PressAsync(index); }
         catch { /* A player can stop or disappear between click and dispatch. */ }
     }
@@ -197,16 +216,16 @@ public sealed class MediaTransportControl : Control
         };
         using var brush = new SolidBrush(ink);
         float length = horizontal ? Width : Height;
-        float step = length / 3f;
+        float step = length / 4f;
         using (var housing = Rounded(new RectangleF(1, 1, Width - 2, Height - 2), 7))
             g.DrawPath(outline, housing);
-        for (int i = 1; i < 3; i++)
+        for (int i = 1; i < 4; i++)
         {
             float cut = i * step;
             if (horizontal) g.DrawLine(outline, cut, 7, cut, Height - 7);
             else g.DrawLine(outline, 7, cut, Width - 7, cut);
         }
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < 4; i++)
         {
             float x = horizontal ? (i + .5f) * step : Width / 2f;
             float y = horizontal ? Height / 2f : (i + .5f) * step;
@@ -224,14 +243,28 @@ public sealed class MediaTransportControl : Control
                         new(x - 4, y - 7), new(x + 6, y), new(x - 4, y + 7)
                     });
             }
-            else
+            else if (i == 2)
             {
-                float d = i == 2 ? 1 : -1;
-                g.DrawLine(icon, x + 7 * d, y - 6, x + 7 * d, y + 6);
+                // Stop: a square, not two Pause bars.
+                g.DrawRectangle(icon, x - 5, y - 5, 10, 10);
+            }
+            else if (i == 0)
+            {
+                // Previous faces LEFT; its stop bar is at the LEFT.
+                g.DrawLine(icon, x - 8, y - 6, x - 8, y + 6);
                 g.DrawPolygon(icon, new PointF[]
                 {
-                    new(x + 4 * d, y - 6), new(x - 6 * d, y), new(x + 4 * d, y + 6)
+                    new(x + 5, y - 6), new(x - 5, y), new(x + 5, y + 6)
                 });
+            }
+            else
+            {
+                // Next faces RIGHT; its stop bar is at the RIGHT.
+                g.DrawPolygon(icon, new PointF[]
+                {
+                    new(x - 5, y - 6), new(x + 5, y), new(x - 5, y + 6)
+                });
+                g.DrawLine(icon, x + 8, y - 6, x + 8, y + 6);
             }
         }
     }

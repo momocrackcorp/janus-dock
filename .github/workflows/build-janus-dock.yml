@@ -21,6 +21,13 @@ jobs:
         run: dotnet publish JanusDock.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o dist-compact
       - name: Build standalone version (includes .NET runtime)
         run: dotnet publish JanusDock.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o dist-standalone
+      - name: Report executable sizes
+        shell: pwsh
+        run: |
+          foreach ($entry in @(@("Liviana", "dist-compact/JanusDock.exe"), @("Autonoma", "dist-standalone/JanusDock.exe"))) {
+            $file = Get-Item $entry[1]
+            Write-Host ("{0}: {1:N2} MB ({2:N0} bytes)" -f $entry[0], ($file.Length / 1MB), $file.Length)
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: JANUS-Dock-Liviano-Windows-x64

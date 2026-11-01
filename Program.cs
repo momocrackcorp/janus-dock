@@ -897,8 +897,8 @@ public class Dock : Form, IMessageFilter
         {
             var media = new MediaTransportControl(Horizontal)
             {
-                Height = Horizontal ? 34 : 96,
-                Width = Horizontal ? 96 : Math.Max(34, settings.Width - 12),
+                Height = Horizontal ? 34 : 128,
+                Width = Horizontal ? 128 : Math.Max(34, settings.Width - 12),
                 Margin = Horizontal
                     ? new Padding(3, Math.Max(0, (settings.HorizontalHeight - 34) / 2), 4, 0)
                     : new Padding(3, 5, 3, 5),
