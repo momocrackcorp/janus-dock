@@ -20,7 +20,7 @@ jobs:
       - name: Build compact version (requires .NET Desktop Runtime 8)
         run: dotnet publish JanusDock.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o dist-compact
       - name: Build standalone version (includes .NET runtime)
-        run: dotnet publish JanusDock.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o dist-standalone
+        run: dotnet publish JanusDock.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -o dist-standalone
       - name: Report executable sizes
         shell: pwsh
         run: |

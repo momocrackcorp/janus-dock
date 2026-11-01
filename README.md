@@ -68,7 +68,7 @@ Haz **clic derecho sobre el fondo del Dock** para agregar elementos, organizar a
 
 En **Acerca de → Buscar actualizaciones en GitHub** se abre la última versión pública. JANUS Dock todavía no descarga ni instala actualizaciones automáticamente.
 
-> **Tamaño:** la lectura de los metadatos musicales depende de Windows Runtime y de bibliotecas adicionales del SDK. La aplicación comprime los ensamblados integrados al publicar un único ejecutable; esto reduce el archivo, con un posible pequeño coste al iniciar. La edición autónoma sigue incluyendo .NET.
+> **Tamaño:** la lectura de los metadatos musicales depende de Windows Runtime y de bibliotecas adicionales del SDK. La compresión interna se aplica **solo a la edición Autónoma**, que incluye .NET. La edición Liviana depende del Runtime instalado y conserva las bibliotecas multimedia, aunque GitHub comprime la descarga ZIP. La compresión de la Autónoma puede aumentar ligeramente el tiempo de inicio.
 
 ## Requisitos
 
