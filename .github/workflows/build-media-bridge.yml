@@ -1,0 +1,44 @@
+name: Build optional JANUS Media Bridge
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'MediaBridge/**'
+      - '.github/workflows/build-media-bridge.yml'
+permissions:
+  contents: write
+jobs:
+  publish-media:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build optional multimedia component
+        shell: pwsh
+        run: dotnet publish MediaBridge/JanusMediaBridge.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o dist-media
+      - name: Create ZIP and SHA-256 checksum
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "dist-media/JanusMediaBridge.exe" -DestinationPath "JANUS-MediaBridge-v1.zip" -Force
+          $checksum = (Get-FileHash "JANUS-MediaBridge-v1.zip" -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$checksum  JANUS-MediaBridge-v1.zip" | Set-Content "SHA256SUMS.txt" -Encoding ascii
+          $f = Get-Item "dist-media/JanusMediaBridge.exe"
+          Write-Host ("Bridge EXE: {0:N2} MB" -f ($f.Length / 1MB))
+      - uses: actions/upload-artifact@v4
+        with:
+          name: JANUS-MediaBridge-v1
+          path: JANUS-MediaBridge-v1.zip
+      - name: Publish optional release, keep JANUS main release unchanged
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = 'media-support-v1'
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag --target $env:GITHUB_SHA --title "JANUS Media Bridge v1 (opcional)" --notes "Componente multimedia opcional de JANUS Dock. Se instala una sola vez desde Opciones y no requiere instalar el SDK de Windows."
+          }
+          gh release upload $tag "JANUS-MediaBridge-v1.zip" "SHA256SUMS.txt" --clobber

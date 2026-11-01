@@ -1,270 +1,226 @@
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
+using System.Text;
 using System.Windows.Forms;
-using Windows.Media.Control;
 
 namespace JanusDock;
 
 /// <summary>
-/// A compact Windows media-session controller. It reads the OS playback state
-/// and track title (Spotify and any compatible player) without Spotify login.
-/// Falls back to the system media keys if a session does not accept a command.
+/// Lightweight UI with six actions. Optional metadata/state arrives from the
+/// separately downloaded MediaBridge executable over stdin/stdout.
 /// </summary>
 public sealed class MediaTransportControl : Control
 {
-    const byte MediaPrevious = 0xB1, MediaPlayPause = 0xB3, MediaStop = 0xB2, MediaNext = 0xB0;
-    const uint KeyUp = 0x0002;
-
+    const byte VkPrev = 0xB1, VkPlayPause = 0xB3, VkStop = 0xB2,
+        VkNext = 0xB0, VkVolumeDown = 0xAE, VkVolumeUp = 0xAF;
+    const uint KeyReleased = 0x0002;
     [DllImport("user32.dll", SetLastError = true)]
-    static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extraInfo);
+    static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
 
     readonly bool horizontal;
-    readonly ToolTip tooltip = new();
-    readonly System.Windows.Forms.Timer refreshTimer = new() { Interval = 850 };
-    GlobalSystemMediaTransportControlsSessionManager? manager;
-    GlobalSystemMediaTransportControlsSession? activeSession;
-    GlobalSystemMediaTransportControlsSessionPlaybackStatus? lastStatus;
-    string lastTitle = "";
-    bool refreshing;
-    bool commanding;
-    bool isPlaying;
-
-    /// <summary>Raised when Windows reports a new playing track or paused track resumes.</summary>
+    readonly ToolTip tips = new();
+    Process? helper;
+    bool playing;
+    string title = "";
+    bool hadState;
     public event EventHandler<string>? TrackStarted;
 
     public MediaTransportControl(bool horizontalBar)
     {
         horizontal = horizontalBar;
+        Size = horizontalBar ? new Size(174, 32) : new Size(35, 174);
         DoubleBuffered = true;
-        SetStyle(ControlStyles.Selectable | ControlStyles.ResizeRedraw, true);
         Cursor = Cursors.Hand;
-        AccessibleName = "Controles multimedia de Windows";
-        Size = horizontal ? new Size(128, 33) : new Size(36, 128);
-        tooltip.SetToolTip(this, "Anterior  |  Reproducir/Pausar  |  Detener  |  Siguiente");
-        refreshTimer.Tick += async (_, _) => await RefreshSessionAsync();
-        refreshTimer.Start();
+        AccessibleName = "Controles de reproducción y volumen";
+        tips.SetToolTip(this,
+            "Anterior | Reproducir/Pausar | Detener | Siguiente | Bajar volumen | Subir volumen");
     }
 
-    static void SendMediaKey(byte key)
+    static void Key(byte code)
     {
-        keybd_event(key, 0, 0, UIntPtr.Zero);
-        keybd_event(key, 0, KeyUp, UIntPtr.Zero);
+        keybd_event(code, 0, 0, UIntPtr.Zero);
+        keybd_event(code, 0, KeyReleased, UIntPtr.Zero);
     }
 
-    static bool Playing(GlobalSystemMediaTransportControlsSession session)
+    protected override void OnHandleCreated(EventArgs e)
     {
+        base.OnHandleCreated(e);
+        StartHelper();
+    }
+
+    void StartHelper()
+    {
+        if (!MediaBridgeInstaller.IsInstalled || helper != null) return;
         try
         {
-            return session.GetPlaybackInfo().PlaybackStatus ==
-                GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing;
-        }
-        catch { return false; }
-    }
-
-    async Task RefreshSessionAsync()
-    {
-        if (refreshing || IsDisposed || Disposing) return;
-        refreshing = true;
-        try
-        {
-            manager ??= await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
-            var sessions = manager.GetSessions();
-            // Pick a playing session; when paused retain the previous source,
-            // so Play targets the same player rather than a random application.
-            var selected = sessions.FirstOrDefault(Playing)
-                ?? sessions.FirstOrDefault(s => activeSession != null &&
-                    s.SourceAppUserModelId == activeSession.SourceAppUserModelId)
-                ?? manager.GetCurrentSession()
-                ?? sessions.FirstOrDefault();
-            activeSession = selected;
-            if (selected == null)
+            var process = new Process
             {
-                lastStatus = null;
-                lastTitle = "";
-                isPlaying = false;
-                Invalidate();
-                return;
-            }
+                StartInfo = new ProcessStartInfo(MediaBridgeInstaller.ExePath)
+                {
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardInput = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    StandardInputEncoding = Encoding.UTF8,
+                    StandardOutputEncoding = Encoding.UTF8
+                },
+                EnableRaisingEvents = true
+            };
+            process.OutputDataReceived += (_, args) =>
+            {
+                if (args.Data == null || IsDisposed || !IsHandleCreated) return;
+                try { BeginInvoke(new Action(() => HandleLine(args.Data))); }
+                catch (InvalidOperationException) { }
+            };
+            if (!process.Start()) { process.Dispose(); return; }
+            process.BeginOutputReadLine();
+            // Drain stderr to prevent any pipe deadlock.
+            process.BeginErrorReadLine();
+            helper = process;
+        }
+        catch { helper?.Dispose(); helper = null; }
+    }
 
-            var status = selected.GetPlaybackInfo().PlaybackStatus;
-            bool nowPlaying = status == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing;
-            string title = "";
+    void HandleLine(string message)
+    {
+        if (IsDisposed) return;
+        if (message.StartsWith("FALLBACK", StringComparison.Ordinal))
+        {
+            string command = message.Contains('\t') ? message[(message.IndexOf('\t') + 1)..] : "";
+            Key(command switch
+            {
+                "PREV" => VkPrev, "PLAY" or "PAUSE" => VkPlayPause,
+                "STOP" => VkStop, "NEXT" => VkNext, _ => VkPlayPause
+            });
+            return;
+        }
+        if (!message.StartsWith("STATE\t", StringComparison.Ordinal)) return;
+        var sections = message.Split('\t', 3);
+        if (sections.Length != 3) return;
+        bool nextPlaying = sections[1] == "1";
+        string nextTitle = "";
+        try { nextTitle = Encoding.UTF8.GetString(Convert.FromBase64String(sections[2])); }
+        catch { }
+        bool shouldShow = nextPlaying && !string.IsNullOrWhiteSpace(nextTitle) &&
+            (!hadState || !playing || nextTitle != title);
+        playing = nextPlaying;
+        title = nextTitle;
+        hadState = true;
+        Invalidate();
+        if (shouldShow) TrackStarted?.Invoke(this, nextTitle);
+    }
+
+    void SendCommand(string command, byte fallback)
+    {
+        if (helper?.HasExited == false)
+        {
             try
             {
-                var properties = await selected.TryGetMediaPropertiesAsync();
-                title = properties?.Title?.Trim() ?? "";
+                helper.StandardInput.WriteLine(command);
+                helper.StandardInput.Flush();
+                return;
             }
-            catch { /* Players may temporarily withhold metadata. */ }
-
-            if (IsDisposed || Disposing) return;
-            bool startOrChange = nowPlaying && title.Length > 0 &&
-                (title != lastTitle || lastStatus !=
-                    GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing);
-            lastTitle = title;
-            lastStatus = status;
-            isPlaying = nowPlaying;
-            AccessibleDescription = nowPlaying ? "Pausar reproducción" : "Reanudar reproducción";
-            tooltip.SetToolTip(this,
-                nowPlaying ? "Anterior  |  Pausar  |  Detener  |  Siguiente" :
-                             "Anterior  |  Reproducir  |  Detener  |  Siguiente");
-            Invalidate();
-            if (startOrChange) TrackStarted?.Invoke(this, title);
+            catch { /* If helper exits, Windows keys remain operational. */ }
         }
-        catch
-        {
-            // Windows may not have a current media session. Keep media keys
-            // usable even if querying metadata or session access fails.
-            activeSession = null;
-            isPlaying = false;
-            lastStatus = null;
-            Invalidate();
-        }
-        finally { refreshing = false; }
+        Key(fallback);
     }
 
-    async Task PressAsync(int index)
-    {
-        if (commanding) return;
-        commanding = true;
-        try
-        {
-            bool accepted = false;
-            var session = activeSession;
-            if (session != null)
-            {
-                try
-                {
-                    switch (index)
-                    {
-                        case 0:
-                            accepted = await session.TrySkipPreviousAsync();
-                            break;
-                        case 1:
-                            accepted = isPlaying ? await session.TryPauseAsync()
-                                                 : await session.TryPlayAsync();
-                            break;
-                        case 2:
-                            accepted = await session.TryStopAsync();
-                            // Streaming clients may not implement Stop.
-                            if (!accepted) accepted = await session.TryPauseAsync();
-                            break;
-                        case 3:
-                            accepted = await session.TrySkipNextAsync();
-                            break;
-                    }
-                }
-                catch { accepted = false; }
-            }
-            if (!accepted)
-                SendMediaKey(index switch
-                {
-                    0 => MediaPrevious,
-                    1 => MediaPlayPause,
-                    2 => MediaStop,
-                    _ => MediaNext
-                });
-            if (index == 1 || index == 2)
-            {
-                // Immediate feedback, then synchronize with the player.
-                isPlaying = index == 1 ? !isPlaying : false;
-                Invalidate();
-            }
-            await RefreshSessionAsync();
-        }
-        finally { commanding = false; }
-    }
-
-    protected override async void OnMouseClick(MouseEventArgs e)
+    protected override void OnMouseClick(MouseEventArgs e)
     {
         base.OnMouseClick(e);
         if (e.Button != MouseButtons.Left) return;
         int index = Math.Clamp(
             (int)((horizontal ? e.X / (float)Math.Max(1, Width)
-                               : e.Y / (float)Math.Max(1, Height)) * 4), 0, 3);
-        try { await PressAsync(index); }
-        catch { /* A player can stop or disappear between click and dispatch. */ }
-    }
-
-    static GraphicsPath Rounded(RectangleF rect, float radius)
-    {
-        float d = radius * 2;
-        var path = new GraphicsPath();
-        path.AddArc(rect.Left, rect.Top, d, d, 180, 90);
-        path.AddArc(rect.Right - d, rect.Top, d, d, 270, 90);
-        path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
-        path.AddArc(rect.Left, rect.Bottom - d, d, d, 90, 90);
-        path.CloseFigure();
-        return path;
+                               : e.Y / (float)Math.Max(1, Height)) * 6), 0, 5);
+        switch (index)
+        {
+            case 0: SendCommand("PREV", VkPrev); break;
+            case 1: SendCommand(playing ? "PAUSE" : "PLAY", VkPlayPause); break;
+            case 2: SendCommand("STOP", VkStop); break;
+            case 3: SendCommand("NEXT", VkNext); break;
+            case 4: Key(VkVolumeDown); break; // OS volume, no SDK dependency
+            case 5: Key(VkVolumeUp); break;
+        }
+        if (index == 1 || index == 2)
+        {
+            playing = index == 1 ? !playing : false;
+            Invalidate();
+        }
     }
 
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
         var g = e.Graphics;
-        g.SmoothingMode = SmoothingMode.AntiAlias;
         g.Clear(BackColor);
-        var ink = BackColor.GetBrightness() > .55f
-            ? Color.FromArgb(38, 58, 82) : Color.FromArgb(219, 229, 242);
-        using var outline = new Pen(Color.FromArgb(88, 111, 133), 1.15f);
-        using var icon = new Pen(ink, 1.9f)
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        var tint = BackColor.GetBrightness() > .55f
+            ? Color.FromArgb(38, 58, 82) : Color.FromArgb(215, 225, 239);
+        using var stroke = new Pen(tint, 1.8f)
+            { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round };
+        using var ring = new Pen(Color.FromArgb(84, 110, 136), 1.1f);
+        using var ink = new SolidBrush(tint);
+        float distance = horizontal ? Width : Height, step = distance / 6f;
+        var bounds = new RectangleF(1, 1, Width - 2, Height - 2);
+        using (var path = new GraphicsPath())
         {
-            StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round
-        };
-        using var brush = new SolidBrush(ink);
-        float length = horizontal ? Width : Height;
-        float step = length / 4f;
-        using (var housing = Rounded(new RectangleF(1, 1, Width - 2, Height - 2), 7))
-            g.DrawPath(outline, housing);
-        for (int i = 1; i < 4; i++)
-        {
-            float cut = i * step;
-            if (horizontal) g.DrawLine(outline, cut, 7, cut, Height - 7);
-            else g.DrawLine(outline, 7, cut, Width - 7, cut);
+            float r = 7, d = 14;
+            path.AddArc(bounds.X, bounds.Y, d, d, 180, 90);
+            path.AddArc(bounds.Right - d, bounds.Y, d, d, 270, 90);
+            path.AddArc(bounds.Right - d, bounds.Bottom - d, d, d, 0, 90);
+            path.AddArc(bounds.X, bounds.Bottom - d, d, d, 90, 90);
+            path.CloseFigure();
+            g.DrawPath(ring, path);
         }
-        for (int i = 0; i < 4; i++)
+        for (int i = 1; i < 6; i++)
+        {
+            float pos = i * step;
+            if (horizontal) g.DrawLine(ring, pos, 6, pos, Height - 6);
+            else g.DrawLine(ring, 6, pos, Width - 6, pos);
+        }
+        for (int i = 0; i < 6; i++)
         {
             float x = horizontal ? (i + .5f) * step : Width / 2f;
             float y = horizontal ? Height / 2f : (i + .5f) * step;
-            if (i == 1)
+            switch (i)
             {
-                if (isPlaying)
-                {
-                    // The actual Windows playback state controls Pause vs Play.
-                    g.FillRectangle(brush, x - 5, y - 7, 3, 14);
-                    g.FillRectangle(brush, x + 2, y - 7, 3, 14);
-                }
-                else
-                    g.DrawPolygon(icon, new PointF[]
+                case 0:
+                    g.DrawLine(stroke, x - 7, y - 6, x - 7, y + 6);
+                    g.DrawPolygon(stroke, new PointF[]
+                    { new(x + 5, y - 6), new(x - 5, y), new(x + 5, y + 6) });
+                    break;
+                case 1:
+                    if (playing)
                     {
-                        new(x - 4, y - 7), new(x + 6, y), new(x - 4, y + 7)
-                    });
-            }
-            else if (i == 2)
-            {
-                // Stop: a square, not two Pause bars.
-                g.DrawRectangle(icon, x - 5, y - 5, 10, 10);
-            }
-            else if (i == 0)
-            {
-                // Previous faces LEFT; its stop bar is at the LEFT.
-                g.DrawLine(icon, x - 8, y - 6, x - 8, y + 6);
-                g.DrawPolygon(icon, new PointF[]
-                {
-                    new(x + 5, y - 6), new(x - 5, y), new(x + 5, y + 6)
-                });
-            }
-            else
-            {
-                // Next faces RIGHT; its stop bar is at the RIGHT.
-                g.DrawPolygon(icon, new PointF[]
-                {
-                    new(x - 5, y - 6), new(x + 5, y), new(x - 5, y + 6)
-                });
-                g.DrawLine(icon, x + 8, y - 6, x + 8, y + 6);
+                        g.FillRectangle(ink, x - 5, y - 6, 3, 12);
+                        g.FillRectangle(ink, x + 2, y - 6, 3, 12);
+                    }
+                    else
+                        g.DrawPolygon(stroke, new PointF[]
+                        { new(x - 4, y - 6), new(x + 6, y), new(x - 4, y + 6) });
+                    break;
+                case 2: g.DrawRectangle(stroke, x - 5, y - 5, 10, 10); break;
+                case 3:
+                    g.DrawPolygon(stroke, new PointF[]
+                    { new(x - 5, y - 6), new(x + 5, y), new(x - 5, y + 6) });
+                    g.DrawLine(stroke, x + 7, y - 6, x + 7, y + 6);
+                    break;
+                case 4:
+                case 5:
+                    g.DrawPolygon(stroke, new PointF[]
+                    { new(x - 7, y - 3), new(x - 4, y - 3), new(x, y - 7),
+                      new(x, y + 7), new(x - 4, y + 3), new(x - 7, y + 3) });
+                    if (i == 4) g.DrawLine(stroke, x + 4, y, x + 9, y);
+                    else
+                    {
+                        g.DrawLine(stroke, x + 4, y, x + 9, y);
+                        g.DrawLine(stroke, x + 6.5f, y - 3, x + 6.5f, y + 3);
+                    }
+                    break;
             }
         }
     }
@@ -273,9 +229,17 @@ public sealed class MediaTransportControl : Control
     {
         if (disposing)
         {
-            refreshTimer.Stop();
-            refreshTimer.Dispose();
-            tooltip.Dispose();
+            try
+            {
+                if (helper?.HasExited == false)
+                {
+                    helper.StandardInput.WriteLine("QUIT");
+                    if (!helper.WaitForExit(1000)) helper.Kill(entireProcessTree: true);
+                }
+            }
+            catch { }
+            helper?.Dispose();
+            tips.Dispose();
         }
         base.Dispose(disposing);
     }

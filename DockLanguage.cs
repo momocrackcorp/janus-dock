@@ -31,6 +31,7 @@ internal static class DockLanguage
         ["Mismo color de la barra"] = ("Match dock color", "Mesma cor da barra"),
         ["Fondo oscuro"] = ("Dark background", "Fundo escuro"),
         ["Mostrar controles multimedia"] = ("Show media controls", "Mostrar controles multimédia"),
+        ["Descargar componente multimedia"] = ("Download media component", "Baixar componente multimédia"),
         ["Texto + icono"] = ("Text + icon", "Texto + ícone"),
         ["Mostrar uso de CPU y memoria RAM (cada segundo)"] = ("Show CPU and RAM usage (every second)", "Mostrar uso de CPU e RAM (a cada segundo)"),
         ["Distribución CPU / RAM:"] = ("CPU / RAM layout:", "Disposição CPU / RAM:"),

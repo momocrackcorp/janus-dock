@@ -402,6 +402,71 @@ public sealed class DockOptionsForm : Form
             AutoSize = true, Checked = config.ShowMediaControls
         };
         generalRows.Controls.Add(mediaEnabled);
+        var mediaStatus = new Label
+        {
+            Text = MediaBridgeInstaller.IsInstalled
+                ? "Componente multimedia instalado (una sola descarga)."
+                : "Componente multimedia opcional: no instalado.",
+            AutoSize = true,
+            ForeColor = Color.FromArgb(70, 91, 114)
+        };
+        var installMedia = new Button
+        {
+            Text = "Descargar componente multimedia",
+            AutoSize = true, MinimumSize = new Size(205, 32),
+            Enabled = !MediaBridgeInstaller.IsInstalled
+        };
+        bool busyInstalling = false;
+        async Task<bool> EnsureMediaAsync()
+        {
+            if (MediaBridgeInstaller.IsInstalled) return true;
+            if (busyInstalling) return false;
+            busyInstalling = true;
+            installMedia.Enabled = false;
+            var progress = new Progress<string>(text => mediaStatus.Text = text);
+            try
+            {
+                await MediaBridgeInstaller.InstallAsync(progress);
+                installMedia.Text = "Componente instalado";
+                mediaStatus.Text = "Listo. Se guardará en AppData local y no se descargará otra vez.";
+                return true;
+            }
+            catch (Exception ex)
+            {
+                mediaStatus.Text = "No se pudo descargar el componente multimedia.";
+                MessageBox.Show(this, ex.Message +
+                    "\nPuedes seguir usando JANUS Dock sin el reproductor.",
+                    "JANUS Dock", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                mediaEnabled.Checked = false;
+                return false;
+            }
+            finally
+            {
+                busyInstalling = false;
+                installMedia.Enabled = !MediaBridgeInstaller.IsInstalled;
+            }
+        }
+        installMedia.Click += async (_, _) =>
+        {
+            if (await EnsureMediaAsync()) mediaEnabled.Checked = true;
+        };
+        mediaEnabled.CheckedChanged += async (_, _) =>
+        {
+            if (!mediaEnabled.Checked || MediaBridgeInstaller.IsInstalled || busyInstalling) return;
+            var answer = MessageBox.Show(this,
+                "Para mostrar el estado de reproducción y los títulos, JANUS Dock " +
+                "descargará una sola vez el componente multimedia oficial desde GitHub. " +
+                "No se instalará el Windows SDK. ¿Descargar ahora?",
+                "Habilitar multimedia", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (answer != DialogResult.Yes)
+            {
+                mediaEnabled.Checked = false;
+                return;
+            }
+            await EnsureMediaAsync();
+        };
+        generalRows.Controls.Add(installMedia);
+        generalRows.Controls.Add(mediaStatus);
         generalRows.Controls.Add(new Label { Text = "Al ocultarse queda una franja para recuperar la barra con el mouse.", AutoSize = true });
         generalRows.SizeChanged += (_, _) => FitRows(generalRows);
 
