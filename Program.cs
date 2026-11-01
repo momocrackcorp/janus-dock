@@ -388,7 +388,14 @@ public class Dock : Form, IMessageFilter
     {
         if (!path.StartsWith("janus:", StringComparison.OrdinalIgnoreCase) && path != "shell:MyComputerFolder" && !File.Exists(path) && !Directory.Exists(path) &&
             !(Uri.TryCreate(path, UriKind.Absolute, out var uri) && (uri.Scheme == "https" || uri.Scheme == "http"))) return;
-        string name = path switch { "shell:MyComputerFolder" => "Este equipo", "janus:documents" => "Documentos", "janus:downloads" => "Descargas", "janus:lock" => "Bloquear", "janus:shutdown" => "Apagar", "janus:restart" => "Reiniciar", "janus:settings" => "Configuración", _ => Path.GetFileNameWithoutExtension(path.TrimEnd('\\', '/')) };
+        string name = path switch { "shell:MyComputerFolder" => "Este equipo", "janus:documents" => "Documentos", "janus:downloads" => "Descargas", "janus:lock" => "Bloquear", "janus:shutdown" => "Apagar", "janus:restart" => "Reiniciar", "janus:settings" => "Configuración", "janus:terminal" => "Terminal / CMD", _ => Path.GetFileNameWithoutExtension(path.TrimEnd('\\', '/')) };
+        if (path == "janus:terminal")
+        {
+            settings.ShowTerminalButton = true;
+            SyncTerminalButton();
+            Store(); Render();
+            return;
+        }
         settings.Items.Add(new DockItem { Name = string.IsNullOrWhiteSpace(name) ? path : name, Path = path });
         Store(); Render();
     }
@@ -489,6 +496,10 @@ public class Dock : Form, IMessageFilter
     {
         // Use built-in Windows power glyphs; no third-party PNG assets.
         if (path is "janus:lock" or "janus:shutdown" or "janus:restart") return WindowsPowerGlyph(path);
+        // Terminal always uses its Lucide outline, even in Windows icon mode.
+        // The normal shortcut button inherits the bar's color, with no tile.
+        if (path == "janus:terminal")
+            return LucideDockIcons.Load(path, light) ?? SystemIcons.Application.ToBitmap();
         if (settings.IconStyle == "Lucide")
         {
             var lucide = LucideDockIcons.Load(path, light);
@@ -652,6 +663,7 @@ public class Dock : Form, IMessageFilter
         // Power switches are authoritative even if a shortcut was removed
         // from an older saved Items list.
         SyncPowerButtons();
+        SyncTerminalButton();
         mediaTitleTimer.Stop();
         mediaTrackTitle.Visible = false;
         panel.SuspendLayout();
@@ -799,7 +811,13 @@ public class Dock : Form, IMessageFilter
             context.Items.Add("Abrir", null, (_, _) => Open(item));
             context.Items.Add("Subir", null, (_, _) => Move(item, -1));
             context.Items.Add("Bajar", null, (_, _) => Move(item, 1));
-            context.Items.Add("Quitar acceso", null, (_, _) => { settings.Items.Remove(item); Store(); Render(); });
+            context.Items.Add("Quitar acceso", null, (_, _) =>
+            {
+                if (item.Path == "janus:terminal") settings.ShowTerminalButton = false;
+                settings.Items.Remove(item);
+                Store();
+                Render();
+            });
             context.Items.Add(new ToolStripSeparator());
             context.Items.Add("Opciones de la barra", null, (_, _) => ShowOptions());
             btn.ContextMenuStrip = context;
@@ -846,52 +864,6 @@ public class Dock : Form, IMessageFilter
             usageMenu.Items.Add("Opciones de CPU y RAM...", null, (_, _) => ShowOptions("General"));
             usage.ContextMenuStrip = usageMenu;
             panel.Controls.Add(usage);
-        }
-        if (settings.ShowTerminalButton)
-        {
-            var terminalButton = new Button
-            {
-                Text = "",
-                Width = Horizontal ? 30 : Math.Min(34, Math.Max(28, settings.Width - 16)),
-                Height = 29,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(39, 48, 66),
-                ForeColor = Color.FromArgb(195, 213, 231),
-                Font = new Font("Consolas", 10f, FontStyle.Bold),
-                Margin = Horizontal
-                    ? new Padding(3, Math.Max(0, (settings.HorizontalHeight - 29) / 2), 4, 0)
-                    : new Padding(4, 3, 4, 3),
-                AccessibleName = settings.TerminalMode == "CMD" ? "Abrir CMD" : "Abrir Terminal"
-            };
-            terminalButton.FlatAppearance.BorderColor = Color.FromArgb(72, 86, 109);
-            // Lucide square-terminal outline, scaled to the existing 30x29 cell.
-            using (var vector = LucideDockIcons.Load("janus:terminal", light))
-                if (vector != null)
-                    terminalButton.Image = new Bitmap(vector, new Size(20, 20));
-            terminalButton.ImageAlign = ContentAlignment.MiddleCenter;
-            var terminalTip = new ToolTip();
-            terminalTip.SetToolTip(terminalButton,
-                settings.TerminalMode == "CMD" ? "Abrir Símbolo del sistema" : "Abrir Windows Terminal");
-            terminalButton.Click += (_, _) =>
-            {
-                string target = settings.TerminalMode == "CMD" ? "cmd.exe" : "wt.exe";
-                try { Process.Start(new ProcessStartInfo(target) { UseShellExecute = true }); }
-                catch (Exception ex)
-                {
-                    if (target == "cmd.exe")
-                        MessageBox.Show(ex.Message, "JANUS Dock", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    else
-                    {
-                        try { Process.Start(new ProcessStartInfo("cmd.exe") { UseShellExecute = true }); }
-                        catch (Exception fallback)
-                        {
-                            MessageBox.Show(fallback.Message, "JANUS Dock", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        }
-                    }
-                }
-            };
-            terminalButton.Disposed += (_, _) => terminalTip.Dispose();
-            panel.Controls.Add(terminalButton);
         }
         if (settings.ShowMediaControls)
         {
@@ -1040,6 +1012,7 @@ public class Dock : Form, IMessageFilter
             sys.DropDownItems.Add("Configuración de Windows", null, (_, _) => Add("janus:settings"));
             sys.DropDownItems.Add("Seleccionar otra carpeta...", null, (_, _) => AddFolder());
             addMenu.DropDownItems.Add(sys);
+            addMenu.DropDownItems.Add("Terminal / CMD", null, (_, _) => Add("janus:terminal"));
             addMenu.DropDownItems.Add("Separador", null, (_, _) => { settings.Items.Add(new DockItem { Name = "Separador", IsSeparator = true }); Store(); Render(); });
             menu.Items.Add(addMenu);
             var organize = new ToolStripMenuItem("Organizar barra");
@@ -1150,6 +1123,7 @@ public class Dock : Form, IMessageFilter
         settings.ShowRestart = dlg.ShowRestart;
         settings.Items = dlg.OrderedItems;
         SyncPowerButtons();
+        SyncTerminalButton();
         var currentWidget = settings.Items.FirstOrDefault(i => i.IsDiskWidget);
         if (settings.ShowDiskWidget && currentWidget == null) settings.Items.Add(new DockItem { Name = "Discos", IsDiskWidget = true });
         if (!settings.ShowDiskWidget && currentWidget != null) settings.Items.Remove(currentWidget);
@@ -1199,6 +1173,41 @@ public class Dock : Form, IMessageFilter
         menu.Items.Add("Cerrar JANUS Dock", null, (_, _) => Close());
         menu.Show(this, PointToClient(Cursor.Position));
     }
+    void SyncTerminalButton()
+    {
+        // Migrate an existing enabled standalone Terminal into the ordinary
+        // reorderable shortcut list, without disturbing access order.
+        var entries = settings.Items.Where(x => x.Path == "janus:terminal").ToList();
+        if (!settings.ShowTerminalButton)
+        {
+            foreach (var entry in entries) settings.Items.Remove(entry);
+        }
+        else if (entries.Count == 0)
+            settings.Items.Add(new DockItem { Name = "Terminal / CMD", Path = "janus:terminal" });
+        else
+            foreach (var duplicate in entries.Skip(1)) settings.Items.Remove(duplicate);
+    }
+    void OpenTerminal()
+    {
+        string target = settings.TerminalMode == "CMD" ? "cmd.exe" : "wt.exe";
+        try
+        {
+            Process.Start(new ProcessStartInfo(target) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            if (target == "cmd.exe")
+                MessageBox.Show(ex.Message, "JANUS Dock", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            else
+            {
+                try { Process.Start(new ProcessStartInfo("cmd.exe") { UseShellExecute = true }); }
+                catch (Exception fallback)
+                {
+                    MessageBox.Show(fallback.Message, "JANUS Dock", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            }
+        }
+    }
     void SyncPowerButtons()
     {
         // Old manually inserted power shortcuts are managed by these switches.
@@ -1237,6 +1246,7 @@ public class Dock : Form, IMessageFilter
                 Process.Start(new ProcessStartInfo("shutdown.exe", item.Path == "janus:shutdown" ? "/s /t 0" : "/r /t 0") { UseShellExecute = true });
             }
             else if (item.Path == "janus:lock") { if (MessageBox.Show("¿Bloquear esta sesión?", "JANUS Dock", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) LockWorkStation(); }
+            else if (item.Path == "janus:terminal") OpenTerminal();
             else if (item.Path == "janus:settings") Process.Start(new ProcessStartInfo("ms-settings:") { UseShellExecute = true });
             else if (item.Path == "janus:documents") Process.Start(new ProcessStartInfo("explorer.exe", $"\"{Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)}\"") { UseShellExecute = true });
             else if (item.Path == "janus:downloads") Process.Start(new ProcessStartInfo("explorer.exe", $"\"{Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads")}\"") { UseShellExecute = true });

@@ -157,9 +157,20 @@ public sealed class DockOptionsForm : Form
         appearance.Controls.Add(new Label { Text = "Organizar accesos y separadores", Location = new Point(22, 177), AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold) });
         appearance.Controls.Add(new Label { Text = "Arrastra filas para ordenarlas o utiliza los botones. Guardar aplica los cambios.", Location = new Point(22, 200), AutoSize = true });
         var ordered = config.Items.Select(i => new DockItem { Name = i.Name, Path = i.Path, IsSeparator = i.IsSeparator, IsDiskWidget = i.IsDiskWidget }).ToList();
+        if (config.ShowTerminalButton && !ordered.Any(i => i.Path == "janus:terminal"))
+            ordered.Add(new DockItem { Name = "Terminal / CMD", Path = "janus:terminal" });
         var history = new Stack<List<DockItem>>();
+        CheckBox? terminalEnabledControl = null;
+        bool syncingTerminal = false;
+        void SyncTerminalCheckbox()
+        {
+            if (terminalEnabledControl == null) return;
+            syncingTerminal = true;
+            terminalEnabledControl.Checked = ordered.Any(i => i.Path == "janus:terminal");
+            syncingTerminal = false;
+        }
         var orderList = new ListBox { Name = "AccessOrderList", Location = new Point(22, 226), Size = new Size(365, 350), AllowDrop = true, IntegralHeight = false, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
-        string LabelFor(DockItem i) => i.IsSeparator ? "──────── Separador ────────" : i.IsDiskWidget ? "▣ Indicadores de discos" : i.Path == "janus:shutdown" ? "⏻ Apagar" : i.Path == "janus:restart" ? "↻ Reiniciar" : (string.IsNullOrWhiteSpace(i.Name) ? i.Path : i.Name);
+        string LabelFor(DockItem i) => i.IsSeparator ? "──────── Separador ────────" : i.IsDiskWidget ? "▣ Indicadores de discos" : i.Path == "janus:terminal" ? "▣ Terminal / CMD" : i.Path == "janus:shutdown" ? "⏻ Apagar" : i.Path == "janus:restart" ? "↻ Reiniciar" : (string.IsNullOrWhiteSpace(i.Name) ? i.Path : i.Name);
         void RefreshOrder(int selected)
         {
             orderList.BeginUpdate();
@@ -221,12 +232,14 @@ public sealed class DockOptionsForm : Form
             if (index < 0) return;
             Snapshot();
             ordered.RemoveAt(index);
+            SyncTerminalCheckbox();
             RefreshOrder(index);
         };
         Action("↶ Deshacer").Click += (_, _) =>
         {
             if (history.Count == 0) return;
             ordered = history.Pop();
+            SyncTerminalCheckbox();
             RefreshOrder(0);
         };
         RefreshOrder(0);
@@ -388,13 +401,37 @@ public sealed class DockOptionsForm : Form
         generalRows.Controls.Add(shutdown);
         generalRows.Controls.Add(restart);
         generalRows.Controls.Add(lockButton);
-        var terminalEnabled = new CheckBox { Text = "Mostrar botón Terminal / CMD", AutoSize = true, Checked = config.ShowTerminalButton };
+        var terminalEnabled = new CheckBox
+        {
+            Text = "Mostrar botón Terminal / CMD",
+            AutoSize = true,
+            Checked = ordered.Any(i => i.Path == "janus:terminal")
+        };
+        terminalEnabledControl = terminalEnabled;
+        terminalEnabled.CheckedChanged += (_, _) =>
+        {
+            if (syncingTerminal) return;
+            Snapshot();
+            if (terminalEnabled.Checked)
+            {
+                if (!ordered.Any(i => i.Path == "janus:terminal"))
+                    ordered.Add(new DockItem { Name = "Terminal / CMD", Path = "janus:terminal" });
+            }
+            else
+                ordered.RemoveAll(i => i.Path == "janus:terminal");
+            RefreshOrder(Math.Max(0, ordered.Count - 1));
+        };
         var terminalChoice = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 185 };
         terminalChoice.Items.AddRange(new object[] { "Terminal", "CMD" });
         terminalChoice.SelectedIndex = config.TerminalMode == "CMD" ? 1 : 0;
         terminalEnabled.CheckedChanged += (_, _) => terminalChoice.Enabled = terminalEnabled.Checked;
         terminalChoice.Enabled = terminalEnabled.Checked;
         generalRows.Controls.Add(terminalEnabled);
+        generalRows.Controls.Add(new Label
+        {
+            Text = "Puedes mover Terminal y añadir separadores en Apariencia → Organizar accesos.",
+            AutoSize = true, ForeColor = Color.FromArgb(70, 91, 114)
+        });
         generalRows.Controls.Add(FieldRow(new Label { Text = "Abrir con:", AutoSize = true }, terminalChoice));
         var mediaEnabled = new CheckBox
         {
@@ -813,7 +850,8 @@ public sealed class DockOptionsForm : Form
             ClockFormat = clockFormat.SelectedIndex == 1 ? "24" : "12";
             ShowClockAmPm = clockAmPm.Checked;
             ClockDisplayMode = clockMode.SelectedIndex == 1 ? "Texto" : "LCD";
-            ShowTerminalButton = terminalEnabled.Checked;
+            // Both the checkbox and Organizar accesos edit the same list.
+            ShowTerminalButton = ordered.Any(i => i.Path == "janus:terminal");
             TerminalMode = terminalChoice.SelectedIndex == 1 ? "CMD" : "Terminal";
             UsageStyle = usageStyle.SelectedIndex == 1 ? "Clásico" : "Circular";
             // Horizontal readings are the standard whenever the bar is horizontal.
