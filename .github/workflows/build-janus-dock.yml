@@ -6,6 +6,8 @@ on:
     paths:
       - '**'
       - '.github/workflows/build-janus-dock.yml'
+permissions:
+  contents: read
 jobs:
   build:
     runs-on: windows-latest
@@ -14,25 +16,46 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+      - name: Assign version from build number
+        id: version
+        shell: pwsh
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: ./scripts/version-from-build.ps1 -BuildNumber ([int]$env:BUILD_NUMBER)
       - name: Generate JANUS Dock icon
         shell: pwsh
         run: ./generate-icon.ps1
-      - name: Build compact version (requires .NET Desktop Runtime 8)
-        run: dotnet publish JanusDock.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o dist-compact
-      - name: Build standalone version (includes .NET runtime)
-        run: dotnet publish JanusDock.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -o dist-standalone
-      - name: Report executable sizes
+      - name: Build compact version (.NET Desktop Runtime 8)
         shell: pwsh
         run: |
+          $v = $env:JANUS_VERSION
+          dotnet publish JanusDock.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true "-p:Version=$v" "-p:AssemblyVersion=$v.0" "-p:FileVersion=$v.0" -o dist-compact
+          if ($LASTEXITCODE -ne 0) { throw "Falló la edición Liviana" }
+      - name: Build standalone version (.NET included)
+        shell: pwsh
+        run: |
+          $v = $env:JANUS_VERSION
+          dotnet publish JanusDock.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true "-p:Version=$v" "-p:AssemblyVersion=$v.0" "-p:FileVersion=$v.0" -o dist-standalone
+          if ($LASTEXITCODE -ne 0) { throw "Falló la edición Autónoma" }
+      - name: Verify embedded version and executable sizes
+        shell: pwsh
+        run: |
+          $v = $env:JANUS_VERSION
           foreach ($entry in @(@("Liviana", "dist-compact/JanusDock.exe"), @("Autonoma", "dist-standalone/JanusDock.exe"))) {
-            $file = Get-Item $entry[1]
-            Write-Host ("{0}: {1:N2} MB ({2:N0} bytes)" -f $entry[0], ($file.Length / 1MB), $file.Length)
+            $f = Get-Item $entry[1] -ErrorAction Stop
+            $compiled = $f.VersionInfo.FileVersion
+            if (!$compiled.StartsWith("$v.")) { throw "Versión inesperada: $compiled (esperada $v)" }
+            Write-Host ("{0}: {1:N2} MB, v{2}" -f $entry[0], ($f.Length / 1MB), $compiled)
           }
       - uses: actions/upload-artifact@v4
         with:
           name: JANUS-Dock-Liviano-Windows-x64
           path: dist-compact/JanusDock.exe
+          if-no-files-found: error
+          retention-days: 30
       - uses: actions/upload-artifact@v4
         with:
           name: JANUS-Dock-Autonomo-Windows-x64
           path: dist-standalone/JanusDock.exe
+          if-no-files-found: error
+          retention-days: 30

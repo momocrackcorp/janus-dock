@@ -2,106 +2,100 @@
 
 # JANUS Dock
 
-### Una barra de accesos moderna y personalizable para Windows
+### Barra de accesos, indicadores y controles multimedia para Windows
 
-**Windows 10 / 11 · x64 · C# / .NET 8 · Código abierto**
+**Windows 10 / 11 · x64 · C# · Windows Forms · .NET 8**
 
-[![Descargar versión 6.4.87](https://img.shields.io/badge/Descargar-v6.4.87-2563eb?style=for-the-badge&logo=github)](https://github.com/momocrackcorp/janus-dock/releases/tag/v6.4.87)
+[![Descargar JANUS Dock v6.5.11](https://img.shields.io/badge/Descargar-v6.5.11-2563eb?style=for-the-badge&logo=github)](https://github.com/momocrackcorp/janus-dock/releases/tag/v6.5.11)
 [![Compilación](https://github.com/momocrackcorp/janus-dock/actions/workflows/build-janus-dock.yml/badge.svg)](https://github.com/momocrackcorp/janus-dock/actions/workflows/build-janus-dock.yml)
 
 </div>
 
 ---
 
-**JANUS Dock** es una barra independiente de accesos rápidos para Windows 10 y 11. Permite abrir programas, carpetas y unidades de disco, controlar funciones del sistema y consultar indicadores de rendimiento sin depender de JANUS ni JANUS Plus.
+**JANUS Dock** es una barra independiente para Windows 10 y 11. Nació como una alternativa configurable ante las restricciones de ubicación de la barra de tareas de Windows 11. Permite abrir y ordenar programas y carpetas, acceder a unidades, ver indicadores de rendimiento y controlar música sin dejar el escritorio.
 
-## Descargar JANUS Dock 6.4.87
+## Versión estable: 6.5.11 (compilación #211)
 
-**[Ir a la versión pública 6.4.87](https://github.com/momocrackcorp/janus-dock/releases/tag/v6.4.87)**
+**[Descargar JANUS Dock v6.5.11](https://github.com/momocrackcorp/janus-dock/releases/tag/v6.5.11)**
 
 | Archivo | Uso |
 | --- | --- |
-| **JANUS-Dock-Setup-6.4.87-Autonomo.exe** | **Recomendado.** Instalador para Windows x64 con .NET incluido. Actualiza la instalación anterior. |
-| **JANUS-Dock-Autonomo-Windows-x64.zip** | Versión portátil, incluye .NET. |
-| **JANUS-Dock-Liviano-Windows-x64.zip** | Versión portátil; necesita **.NET 8 Desktop Runtime x64**. |
-| **SHA256SUMS.txt** | Sumas SHA-256 de los tres archivos de descarga. |
+| `JANUS-Dock-Setup-6.5.11-Autonomo.exe` | **Recomendado**: instalador x64, .NET incluido, actualiza conservando ajustes |
+| `JANUS-Dock-Autonomo-Windows-x64.zip` | Portátil, incluye .NET |
+| `JANUS-Dock-Liviano-Windows-x64.zip` | Portátil pequeño, necesita .NET 8 Desktop Runtime x64 instalado |
+| `JANUS-MediaBridge-v2.zip` | **Complemento opcional** para conocer canción, artista y estado multimedia |
+| `SHA256SUMS.txt` | Comprobación SHA-256 de todos los archivos de la Release |
 
-Para actualizar desde 6.3.97 o una versión anterior, **cierra JANUS Dock y ejecuta el instalador 6.4.87**. Se conservan la ubicación de instalación y los ajustes personales de `%APPDATA%\JANUS\Dock\config.json`; no es necesario desinstalar la versión previa. En una instalación nueva, el asistente permite crear acceso directo y configurar el inicio con Windows. Con un ZIP portátil, extrae los archivos a una carpeta estable antes de ejecutar `JanusDock.exe`.
+**Actualizar:** cierra el Dock y ejecuta el instalador. Se preserva `%APPDATA%\JANUS\Dock\config.json`; no tienes que desinstalar la versión anterior. No reemplaces ni borres DLL de Windows. El instalador puede solicitar confirmación de SmartScreen porque el programa no está firmado digitalmente.
 
-> La aplicación no está firmada digitalmente; Windows SmartScreen puede pedir confirmación. Descarga solo desde los archivos oficiales de esta Release.
+## Novedades de la v6.5.11
 
-## Novedades desde 6.3.97
+- **Reproductor en la barra:** anterior, **Play/Pausa**, detener, siguiente, volumen − y volumen +, en un conjunto compacto. Reproducción y volumen mediante controles multimedia de Windows.
+- **Título y artista:** muestra «Canción — Artista» durante **8 segundos** al iniciar, reanudar o cambiar de pista, cuando el reproductor comparte los datos con Windows.
+- **JANUS Media Bridge v2 opcional:** instalación/actualización desde **Opciones → General → Botones del sistema**. El complemento se descarga desde nuestra Release de GitHub, se comprueba con SHA-256 y se almacena en `%LOCALAPPDATA%\JANUS\Dock\MediaBridge\v2`. Se descarga una vez y el Dock principal permanece liviano. Si tienes v1, puedes actualizar a v2 desde la misma opción. El SDK de desarrollo no se instala en tu PC.
+- **Reloj:** digital LCD estilo retro o solo texto; 12/24 h, AM/PM, fecha y calcomanía opcionales. Corregida la aparición del reloj al ocultar o mostrar el tráfico de red.
+- **Round corner:** cápsula redondeada de energía y reloj en el extremo derecho, integrada al alto de la barra; tráfico de red independiente a su izquierda.
+- **Tráfico de red:** modo «Texto + icono Lucide» o «Gráfico», velocidad de subida/bajada, fondo oscuro o mismo color de barra.
+- **CPU y RAM:** medidores circulares o clásicos, independientes y compactos.
+- **Terminal/CMD:** icono Lucide integrado al color de la barra, movible en **Apariencia → Organizar accesos**, admite separadores antes y después.
+- **Accesos y discos:** organización, separadores, iconos Windows/Lucide, consumo y colores por unidad, apertura desde el indicador.
 
-- **Opciones reorganizadas:** navegación lateral por **General, Apariencia, Accesos, Sistema y Acerca de**, tarjetas redondeadas y distribución adaptable de una o dos columnas. Los ajustes se previsualizan; **Cancelar** restaura los valores anteriores.
-- **Barra e iconos:** celdas más compactas, separación configurable de **0 a 24 px**, resolución mejorada de iconos originales de Windows y accesos a Office/navegadores.
-- **Efectos de puntero:** **Ninguno, Foco o Lupa**, junto con estilos de color **Windows, personalizado y clásico**; se evita reservar espacio adicional para la ampliación.
-- **Botones del sistema:** **Bloquear, Reiniciar y Apagar**, con símbolos uniformes de Windows y cápsula redondeada independiente al extremo del Dock. Apagar y Reiniciar solicitan confirmación.
-- **CPU y RAM:** mostrar por separado, con disposición **horizontal (lado a lado)** o **vertical (apilada)** y porcentajes actualizados cada segundo. Su opción está en **General → Información del sistema** o en el menú contextual del indicador.
-- **Red:** monitor de tráfico con promedio móvil de 60 segundos; puede colocarse junto a los botones de energía **sin integrarse dentro de la cápsula**.
-- **Discos:** indicadores por unidad, colores individuales, barra de uso y acceso a la unidad desde el icono. Configurables en **Sistema**.
-- **Acerca de:** presentación en dos columnas, imagen monocromática integrada, ficha del proyecto y acceso a las actualizaciones.
-- **Nombres de accesos:** se muestran al pasar el puntero, sin rótulos permanentes ocupando espacio en la barra.
+## Personalización
 
-## Características
+Elige barra horizontal (arriba/abajo), vertical (izquierda/derecha), acoplada o flotante. Configura iconos de 16 a 96 px, espaciado, fondo, modo de nombres, efectos Ninguno / Foco / Lupa, visibilidad, inicio con Windows y botones de energía. Las opciones tienen páginas **General, Apariencia, Accesos, Sistema y Acerca de**.
 
-- **Posición:** arriba, abajo, izquierda o derecha, en modo acoplado o flotante; puede reservar espacio para las ventanas mediante AppBar.
-- **Accesos:** programas, archivos, carpetas, unidades, separadores y accesos habituales de Windows, navegadores y Office. Admite arrastrar archivos.
-- **Organización:** cambiar el orden de los accesos y modificar el tamaño de iconos entre **16 y 96 px**; también con **Ctrl + rueda** sobre el Dock.
-- **Discos:** iconos Windows o Lucide, colores configurables, ocupación y detalle de capacidad en el tooltip.
-- **Indicadores:** tráfico de red configurable entre **Texto + icono Lucide** (flechas y velocidades, sin barras) o **Gráfico**, con fondo oscuro o el mismo fondo del Dock; CPU/RAM con medidores circulares o vista clásica y actualización cada segundo. La red queda a la izquierda del módulo negro situado en el extremo derecho. El conjunto final utiliza posiciones fijas para evitar que el monitor de red aparezca a la derecha del round.
-- **Terminal/CMD opcional:** acceso directo con icono Lucide `square-terminal` sin recuadro oscuro: adopta el color de la barra. Aparece en **Apariencia → Organizar accesos** para arrastrarlo, subirlo/bajarlo y colocar separadores antes o después, igual que cualquier acceso. En **General → Botones del sistema** se habilita y se escoge Windows Terminal o CMD. Si Terminal no está disponible se usa CMD.
-- **Multimedia y volumen opcionales:** seis controles compactos: Anterior, Play/Pausa, Detener, Siguiente, Volumen − y Volumen +. Los controles básicos usan las teclas multimedia de Windows. Para mostrar estado real, reanudar correctamente y enseñar el título de canción durante ocho segundos, JANUS descarga **JANUS Media Bridge v1** una única vez desde GitHub, al habilitar la opción. El componente se verifica por SHA-256 y se guarda en `%LOCALAPPDATA%\\JANUS\\Dock\\MediaBridge\\v1`. El programa principal no incluye ni instala el Windows SDK ni bibliotecas de WinRT; el SDK solo se usa para compilar el puente descargable.
-- **Reloj configurable:** estilo LCD integrado en la cápsula negra o **solo texto**, seleccionable en General; formato de 12/24 horas, AM/PM y fecha opcional. En barras verticales se muestra siempre en texto, sin calcomanía.
-- **Round corner:** cápsula negra integrada exactamente al alto configurado de la barra horizontal, sin separación inferior ni expansión de la reserva de pantalla.
-- **Reloj vertical:** cuando el Dock está a la izquierda o a la derecha, presenta la hora en texto y, opcionalmente, la fecha, sin pantalla LCD ni calcomanía.
-- **Calcomanía:** el logotipo CASIO transparente se presenta en blanco hueso tenue y con desgaste sutil.
-- **Controles:** el botón Terminal/CMD mantiene una escala compacta. **Disposición** pasó a **Apariencia** (columna izquierda inferior). CPU/RAM usa disposición horizontal automática cuando la barra está horizontal, sin selector redundante.
-- **Reloj LCD opcional:** reloj digital estilo retro con hora real en formato de 12 horas (hh:mm AM/PM), integrado en la cápsula negra de los botones de energía. **Fecha dd-MM** en relieve bajo el reloj y **calcomanía CASIO blanca** (convertida desde el archivo proporcionado, sin fondo) opcionales e independientes. Ambas opciones solo se habilitan si el reloj está activo, en **General → Información del sistema**. El reloj también puede ocultarse con clic derecho.
-- **Personalización:** barra según los colores de Windows o con color propio; selectores, interruptores y tarjetas modernos.
-- **Idiomas:** español de Chile, inglés y portugués de Brasil (algunas traducciones siguen en desarrollo).
-- **Inicio y visibilidad:** mantener encima, ocultar automáticamente e iniciar con Windows.
-- **Configuración local:** guardada en `%APPDATA%\JANUS\Dock\config.json`.
+Los cambios de la barra pueden previsualizarse y Cancelar restaura la configuración anterior. Para mover Terminal, otros accesos o separadores usa **Apariencia → Organizar accesos**.
 
-## Uso y actualizaciones
+### Cómo habilitar el reproductor
 
-Haz **clic derecho sobre el fondo del Dock** para agregar elementos, organizar accesos, actualizar la barra o entrar a Opciones. En **General → Información del sistema** se configuran CPU, RAM, red y su posición; en **Sistema** se encuentran las unidades y sus colores.
+1. Abre **Opciones → General → Botones del sistema**.
+2. Activa **Mostrar controles multimedia**.
+3. Acepta la descarga opcional del componente desde GitHub (o pulsa **Descargar / Actualizar componente multimedia**).
+4. Utiliza los seis controles. Spotify y otros reproductores compatibles pueden informar canción, artista y estado. Si no proporcionan artista, se muestra solo la canción.
 
-En **Acerca de → Buscar actualizaciones en GitHub** se abre la última versión pública. JANUS Dock todavía no descarga ni instala actualizaciones automáticamente.
+Si no activas el reproductor, **no se descarga el complemento**. No es necesario ingresar credenciales de Spotify. Puedes encontrar el mismo archivo en la Release v6.5.11 o en la Release independiente [JANUS Media Bridge v2](https://github.com/momocrackcorp/janus-dock/releases/tag/media-support-v2).
 
-> **Tamaño:** desde esta revisión el proyecto principal vuelve a `net8.0-windows`, sin incluir las bibliotecas WinRT grandes. El componente externo Media Bridge utiliza las APIs Windows.Media.Control; se obtiene una vez mediante una Release separada de GitHub. La edición Autónoma sigue siendo mayor por contener el runtime de .NET.
+## Versiones automáticas y publicaciones
 
-### Artista en el monitor multimedia
+**La versión se deriva del número de compilación de GitHub Actions**, no se asigna manualmente en cada cambio. Ejemplos:
 
-Media Bridge v2 consulta `Title` y `Artist` de las sesiones de Windows y muestra **«Canción — Artista»** durante ocho segundos al comenzar, reanudar o cambiar de pista. Si el reproductor no expone el artista, muestra solo el título. El puente v1 sigue funcionando hasta que el usuario pulse **General → Botones del sistema → Actualizar componente multimedia**. La actualización v2 se descarga una sola vez en `%LOCALAPPDATA%\\JANUS\\Dock\\MediaBridge\\v2`.
+| Compilación | Versión |
+| ---: | --- |
+| #187 | 6.4.87 |
+| #208 | 6.5.08 |
+| #211 | 6.5.11 |
+| #300 | 6.6.00 |
+| #1000 | 7.0.00 |
 
-## Requisitos
+Las compilaciones ordinarias generan artefactos de prueba. **Solo un commit marcado `[publish-release]`**, después de pasar ambas compilaciones de Windows, publica automáticamente una Release con instalador, las dos variantes portátiles, complemento multimedia opcional y SHA-256. Esto evita publicar versiones de prueba por accidente. La Release más reciente se consulta desde «Acerca de → Buscar actualizaciones en GitHub». **El Dock no realiza todavía actualizaciones automáticas del ejecutable.**
 
-- Windows **10 u 11, 64 bits**.
-- La edición autónoma y el instalador incluyen .NET.
-- La edición liviana necesita [Microsoft .NET 8 Desktop Runtime x64](https://dotnet.microsoft.com/download/dotnet/8.0).
-- Normalmente no requiere privilegios de administrador para ejecutarse.
+La regla completa se documenta en [VERSIONING.md](docs/VERSIONING.md).
 
-> .NET 8 finaliza su soporte en noviembre de 2026. Está prevista la evaluación de migración a una versión LTS posterior.
+## Requisitos y desarrollo
 
-## Desarrollo
+- Windows 10/11 de 64 bits.
+- Instalador y edición Autónoma: incluyen .NET 8.
+- Edición Liviana: requiere [Microsoft .NET 8 Desktop Runtime x64](https://dotnet.microsoft.com/download/dotnet/8.0).
+- El complemento Media Bridge es opcional; se utiliza con reproductores que publiquen una sesión multimedia en Windows.
+- .NET 8 termina su soporte en noviembre de 2026; se estudiará migrar a una LTS posterior.
 
-Proyecto en **C#**, **Windows Forms** y **.NET 8**. Para compilar en Windows con el SDK de .NET 8:
+Para compilar en Windows con el SDK de .NET 8:
 
 ```powershell
-dotnet restore
+dotnet restore JanusDock.csproj
 dotnet build JanusDock.csproj -c Release
 ```
 
-Las compilaciones están en [GitHub Actions](https://github.com/momocrackcorp/janus-dock/actions). Los símbolos de Bloquear, Reiniciar y Apagar proceden de la fuente Windows **Segoe MDL2 Assets**; no se incluyen antiguos PNG de Flaticon.
+Los binarios generados se distribuyen en **GitHub Releases**, no se guardan en el repositorio de código. Se conservaron el instalador Inno Setup, los recursos gráficos y la fotografía de «Acerca de». Se retiraron workflows de publicación antiguos para impedir versiones duplicadas.
 
-- [Versiones y descargas](https://github.com/momocrackcorp/janus-dock/releases)
-- [Código fuente](https://github.com/momocrackcorp/janus-dock)
-- [Reportar un problema](https://github.com/momocrackcorp/janus-dock/issues)
+[Releases](https://github.com/momocrackcorp/janus-dock/releases) · [Código fuente](https://github.com/momocrackcorp/janus-dock) · [Problemas y sugerencias](https://github.com/momocrackcorp/janus-dock/issues)
 
 ---
 
 <div align="center">
 
-**Desarrollado por Momocrackcorp · Ñuble, Chile 🇨🇱**
+**Momocrackcorp · Ñuble, Chile 🇨🇱**  
+Autoría: Omar Aguila
 
 </div>

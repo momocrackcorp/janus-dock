@@ -1,0 +1,121 @@
+name: Publicar JANUS Dock (compilación validada)
+on:
+  workflow_run:
+    workflows: ["Build JANUS Dock"]
+    types: [completed]
+permissions:
+  actions: read
+  contents: write
+jobs:
+  publish:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
+    runs-on: windows-latest
+    steps:
+      - name: Promote only intentional release commits
+        id: gate
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_NUMBER: ${{ github.event.workflow_run.run_number }}
+        run: |
+          $message = gh api "repos/${{ github.repository }}/commits/$env:COMMIT_SHA" --jq '.commit.message'
+          if ($LASTEXITCODE -ne 0) { throw "No se pudo consultar el commit" }
+          $promote = $message -match '\[publish-release\]'
+          if ($promote -and [int]$env:RUN_NUMBER -lt 211) { throw "La versión estable debe partir desde Build #211" }
+          "publish=$($promote.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          Write-Host "Build #$env:RUN_NUMBER. Publicar: $promote"
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.publish == 'true'
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/setup-dotnet@v4
+        if: steps.gate.outputs.publish == 'true'
+        with:
+          dotnet-version: '8.0.x'
+      - name: Set release version (same number as successful build)
+        if: steps.gate.outputs.publish == 'true'
+        shell: pwsh
+        env:
+          BUILD_NUMBER: ${{ github.event.workflow_run.run_number }}
+        run: ./scripts/version-from-build.ps1 -BuildNumber ([int]$env:BUILD_NUMBER)
+      - name: Download verified Liviana build
+        if: steps.gate.outputs.publish == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: JANUS-Dock-Liviano-Windows-x64
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: dist-compact
+      - name: Download verified Autónoma build
+        if: steps.gate.outputs.publish == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: JANUS-Dock-Autonomo-Windows-x64
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: dist-standalone
+      - name: Validate version and install Inno Setup
+        if: steps.gate.outputs.publish == 'true'
+        shell: pwsh
+        run: |
+          foreach ($file in @("dist-compact/JanusDock.exe", "dist-standalone/JanusDock.exe")) {
+            $ver = (Get-Item $file -ErrorAction Stop).VersionInfo.FileVersion
+            if (!$ver.StartsWith("$env:JANUS_VERSION.")) { throw "$file tiene versión incorrecta: $ver" }
+          }
+          choco install innosetup -y --no-progress
+          if ($LASTEXITCODE -ne 0) { throw "Fallo instalación de Inno Setup" }
+      - name: Create versioned installer
+        if: steps.gate.outputs.publish == 'true'
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (!(Test-Path $iscc)) { throw "Inno Setup no está disponible" }
+          $v = $env:JANUS_VERSION
+          & $iscc "/DMyAppVersion=$v" "/DMyOutputBase=JANUS-Dock-Setup-$v-Autonomo" "installer\JanusDock.iss"
+          if ($LASTEXITCODE -ne 0) { throw "No se pudo crear el instalador" }
+      - name: Download official Media Bridge v2 and verify its SHA-256
+        if: steps.gate.outputs.publish == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          New-Item -Type Directory -Path components -Force | Out-Null
+          gh release download media-support-v2 --repo "${{ github.repository }}" -p "JANUS-MediaBridge-v2.zip" -p "SHA256SUMS.txt" -D components
+          if ($LASTEXITCODE -ne 0) { throw "No se pudo descargar Media Bridge v2" }
+          $checkLine = (Get-Content "components/SHA256SUMS.txt" | Where-Object { $_ -match 'JANUS-MediaBridge-v2.zip' } | Select-Object -First 1)
+          if (!$checkLine) { throw "No se encontró el hash del complemento" }
+          $hashExpected = ($checkLine.Trim() -split '\s+')[0].ToLowerInvariant()
+          $hashActual = (Get-FileHash "components/JANUS-MediaBridge-v2.zip" -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($hashExpected -ne $hashActual) { throw "Media Bridge no superó la verificación SHA-256" }
+      - name: Prepare release archives, notes and checksums
+        if: steps.gate.outputs.publish == 'true'
+        shell: pwsh
+        run: |
+          $v = $env:JANUS_VERSION
+          Compress-Archive -Path "dist-compact/JanusDock.exe" -DestinationPath "JANUS-Dock-Liviano-Windows-x64.zip" -Force
+          Compress-Archive -Path "dist-standalone/JanusDock.exe" -DestinationPath "JANUS-Dock-Autonomo-Windows-x64.zip" -Force
+          Copy-Item "components/JANUS-MediaBridge-v2.zip" "JANUS-MediaBridge-v2.zip"
+          Copy-Item "installer-output/JANUS-Dock-Setup-$v-Autonomo.exe" "JANUS-Dock-Setup-$v-Autonomo.exe"
+          $files = @("JANUS-Dock-Liviano-Windows-x64.zip", "JANUS-Dock-Autonomo-Windows-x64.zip", "JANUS-Dock-Setup-$v-Autonomo.exe", "JANUS-MediaBridge-v2.zip")
+          foreach ($file in $files) { if (!(Test-Path $file)) { throw "Falta archivo: $file" } }
+          $files | ForEach-Object {
+            $h = (Get-FileHash $_ -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$h  $_"
+          } | Set-Content "SHA256SUMS.txt" -Encoding ascii
+          (Get-Content "docs/release-notes-template.md" -Raw).Replace("{{VERSION}}", $v) | Set-Content "release-notes.md" -Encoding utf8
+      - name: Publish final GitHub release with installer and media add-on
+        if: steps.gate.outputs.publish == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          $tag = $env:JANUS_RELEASE_TAG
+          $v = $env:JANUS_VERSION
+          gh release view $tag --repo "${{ github.repository }}" *> $null
+          if ($LASTEXITCODE -eq 0) { throw "La Release $tag ya existe: no se sobrescribirá" }
+          gh release create $tag --repo "${{ github.repository }}" --target $env:SHA --title "JANUS Dock v$v" --notes-file "release-notes.md" --latest "JANUS-Dock-Setup-$v-Autonomo.exe" "JANUS-Dock-Liviano-Windows-x64.zip" "JANUS-Dock-Autonomo-Windows-x64.zip" "JANUS-MediaBridge-v2.zip" "SHA256SUMS.txt"
+          if ($LASTEXITCODE -ne 0) { throw "Falló la publicación de la Release" }

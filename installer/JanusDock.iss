@@ -1,12 +1,12 @@
 #define MyAppName "JANUS Dock"
 #ifndef MyAppVersion
-  #define MyAppVersion "6.4.87"
+  #define MyAppVersion "6.5.11"
 #endif
 #ifndef MyBuildFolder
   #define MyBuildFolder "dist-standalone"
 #endif
 #ifndef MyOutputBase
-  #define MyOutputBase "JANUS-Dock-Setup-6.4.87-Autonomo"
+  #define MyOutputBase "JANUS-Dock-Setup-{#MyAppVersion}-Autonomo"
 #endif
 
 [Setup]
@@ -14,7 +14,7 @@ AppId={{F65CE0CF-0D45-4AB0-A960-ED5FA44A9153}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher=Momocrackcorp
-AppComments=JANUS Dock 6.4.87: accesos, discos, CPU/RAM, red y barra configurable
+AppComments=JANUS Dock {#MyAppVersion}: accesos, reloj, indicadores, control multimedia y volumen
 AppCopyright=Copyright 2026 Momocrackcorp
 VersionInfoDescription=JANUS Dock - Barra de accesos para Windows
 VersionInfoProductName=JANUS Dock
@@ -34,8 +34,8 @@ CloseApplications=yes
 RestartApplications=no
 
 [Messages]
-WelcomeLabel1=Bienvenido a JANUS Dock 6.4.87
-WelcomeLabel2=Instala o actualiza JANUS Dock 6.4.87: panel de opciones moderno, controles de energía, indicadores CPU/RAM y red configurables, discos y efectos de iconos. Conserva tus preferencias personales y puedes iniciarlo con Windows.
+WelcomeLabel1=Bienvenido a JANUS Dock {#MyAppVersion}
+WelcomeLabel2=Instala o actualiza JANUS Dock {#MyAppVersion}: accesos y separadores, reloj LCD, indicadores de sistema, controles multimedia y volumen. El complemento de música es opcional y se descarga desde GitHub al activarlo. Conserva tus ajustes personales y puedes iniciar el Dock con Windows.
 
 [Files]
 Source: "..\{#MyBuildFolder}\JanusDock.exe"; DestDir: "{app}"; Flags: ignoreversion

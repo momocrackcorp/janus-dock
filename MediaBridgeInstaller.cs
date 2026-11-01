@@ -45,7 +45,8 @@ public static class MediaBridgeInstaller
         Directory.CreateDirectory(DirectoryPath);
         progress?.Report("Descargando componente multimedia desde GitHub...");
         using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(3) };
-        http.DefaultRequestHeaders.UserAgent.ParseAdd("JANUS-Dock/6.4.87");
+        var version = typeof(MediaBridgeInstaller).Assembly.GetName().Version?.ToString(3) ?? "6.5.11";
+        http.DefaultRequestHeaders.UserAgent.ParseAdd("JANUS-Dock/" + version);
         var manifest = await http.GetStringAsync(ReleaseUrl + "SHA256SUMS.txt");
         var checksumLine = manifest.Split('\n', StringSplitOptions.RemoveEmptyEntries)
             .Select(x => x.Trim()).FirstOrDefault(x => x.EndsWith(PackageName, StringComparison.Ordinal));
