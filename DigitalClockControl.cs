@@ -7,9 +7,9 @@ using System.Windows.Forms;
 namespace JanusDock;
 
 /// <summary>
-/// LCD inset, engraved day-month and the user's actual transparent white logo.
-/// The horizontal layout is based on the approved 500 x 120 reference crop;
-/// its virtual drawing coordinates scale to the configured dock thickness.
+/// Compact retro digital watch inset. DD-MM lives inside the top row of the
+/// LCD (like the user's F-91W reference) and never overlaps the wordmark.
+/// The 244 x 104 virtual layout scales with the configured Dock height.
 /// </summary>
 public sealed class DigitalClockControl : Control
 {
@@ -157,20 +157,32 @@ public sealed class DigitalClockControl : Control
         using var divider = new Pen(Color.FromArgb(154, 158, 158), 2.1f);
         g.DrawLine(divider, 3.5f, 18, 3.5f, 86);
 
-        // Light gray-green LCD embedded in the same black housing.
-        // Compact inset: keep a black border above and below the display.
-        var shadow = new RectangleF(19, 19, 213, 44);
-        using (var shadowShape = RoundedRectangle(shadow, 15))
-        using (var darkBorder = new Pen(Color.FromArgb(40, 44, 42), 4.1f))
+        // F-91W style: nested muted watch bezel, a broad gray-green LCD,
+        // date at the top right, and a larger time on the lower row. All
+        // content stays inside the existing clock control and Dock height.
+        var outerBezel = new RectangleF(13.5f, 4.5f, 221f, 73f);
+        using (var path = RoundedRectangle(outerBezel, 18f))
+        using (var bezelFill = new SolidBrush(Color.FromArgb(24, 29, 33)))
+        using (var blueRim = new Pen(Color.FromArgb(48, 91, 131), 2.3f))
         {
-            g.DrawPath(darkBorder, shadowShape);
+            g.FillPath(bezelFill, path);
+            g.DrawPath(blueRim, path);
         }
-        var lcdRect = new RectangleF(20.5f, 20.5f, 210, 41);
-        using (var lcdShape = RoundedRectangle(lcdRect, 14))
+        var redBorder = new RectangleF(17f, 8f, 214f, 67f);
+        using (var path = RoundedRectangle(redBorder, 16f))
+        using (var redRim = new Pen(Color.FromArgb(120, 55, 58), 1.6f))
+            g.DrawPath(redRim, path);
+        var shadow = new RectangleF(19.5f, 10.5f, 209f, 62.5f);
+        using (var shadowPath = RoundedRectangle(shadow, 14f))
+        using (var darkRim = new Pen(Color.FromArgb(76, 84, 81), 4.3f))
+            g.DrawPath(darkRim, shadowPath);
+
+        var lcdRect = new RectangleF(22f, 13f, 204f, 57f);
+        using (var lcdShape = RoundedRectangle(lcdRect, 12.5f))
         using (var lcdFill = new LinearGradientBrush(lcdRect,
-                   Color.FromArgb(200, 206, 191), Color.FromArgb(174, 183, 167),
+                   Color.FromArgb(199, 207, 193), Color.FromArgb(174, 185, 170),
                    LinearGradientMode.Vertical))
-        using (var frame = new Pen(Color.FromArgb(98, 106, 103), 1.5f))
+        using (var frame = new Pen(Color.FromArgb(103, 111, 106), 1.35f))
         {
             g.FillPath(lcdFill, lcdShape);
             g.DrawPath(frame, lcdShape);
@@ -178,27 +190,31 @@ public sealed class DigitalClockControl : Control
 
         DateTime now = DateTime.Now;
         string digits = now.ToString(Hour24 ? "HHmm" : "hhmm", CultureInfo.InvariantCulture);
-        string suffix = !Hour24 && ShowAmPm ? now.ToString("tt", CultureInfo.InvariantCulture) : "";
-        float[] digitX = { 52, 81, 122, 151 };
-        for (int i = 0; i < 4; i++) DrawDigit(g, digits[i], digitX[i], 28, 24, 25);
+        string suffix = !Hour24 && ShowAmPm
+            ? now.ToString("tt", CultureInfo.InvariantCulture) : "";
+
+        // Lower row: four clear seven-segment digits, the colon and AM/PM.
+        float[] digitX = { 37f, 67f, 119f, 149f };
+        for (int i = 0; i < 4; i++)
+            DrawDigit(g, digits[i], digitX[i], 36f, 26f, 31f);
         using var ink = new SolidBrush(Color.FromArgb(24, 29, 25));
-        g.FillEllipse(ink, 111, 34, 3.4f, 3.4f);
-        g.FillEllipse(ink, 111, 45, 3.4f, 3.4f);
+        g.FillEllipse(ink, 106.5f, 46f, 4f, 4f);
+        g.FillEllipse(ink, 106.5f, 56f, 4f, 4f);
         if (suffix.Length > 0)
-            using (var suffixFont = new Font("Segoe UI", 14, FontStyle.Bold, GraphicsUnit.Pixel))
-                g.DrawString(suffix, suffixFont, ink, 185, 38);
+            using (var suffixFont = new Font("Segoe UI", 11f,
+                       FontStyle.Bold, GraphicsUnit.Pixel))
+                g.DrawString(suffix, suffixFont, ink, 194f, 51f);
 
         if (ShowDate)
         {
-            // The white engraved date uses the same seven-segment design as
-            // the approved screenshot, not a separate pill or text label.
+            // TOP RIGHT LCD: DD-MM, replacing the reference's weekday/day.
+            // Keeping date INSIDE the display leaves CASIO fully unobstructed.
             string date = now.ToString("dd-MM", CultureInfo.InvariantCulture);
-            float[] x = { 33f, 49f, 73f, 89f };
-            int[] k = { 0, 1, 3, 4 };
+            float[] dateX = { 132f, 150f, 184f, 202f };
+            int[] dateCharIndex = { 0, 1, 3, 4 };
             for (int i = 0; i < 4; i++)
-                DrawDigit(g, date[k[i]], x[i], 74, 12, 19, engraved: true);
-            using var dash = new SolidBrush(Color.FromArgb(226, 229, 228));
-            g.FillRectangle(dash, 63, 82, 8, 2.5f);
+                DrawDigit(g, date[dateCharIndex[i]], dateX[i], 17f, 14f, 16f);
+            g.FillRectangle(ink, 169f, 25f, 11f, 2.7f);
         }
         if (ShowSticker)
         {
