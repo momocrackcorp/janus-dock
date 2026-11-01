@@ -457,6 +457,10 @@ public sealed class DockOptionsForm : Form
             Enabled = !MediaBridgeInstaller.IsCurrentInstalled
         };
         bool busyInstalling = false;
+        // Assigned after CaptureSettings is declared (all form inputs exist).
+        // Calling the delegate avoids capturing unassigned local variables
+        // from the async install handler during constructor initialization.
+        Action? applyMediaUpgrade = null;
         async Task<bool> EnsureMediaAsync()
         {
             if (MediaBridgeInstaller.IsCurrentInstalled) return true;
@@ -469,10 +473,9 @@ public sealed class DockOptionsForm : Form
                 await MediaBridgeInstaller.InstallAsync(progress);
                 installMedia.Text = "Componente instalado";
                 mediaStatus.Text = "Listo: ahora se mostrará canción y artista.";
-                // Apply once after the download so the Dock's media control
-                // restarts with the new bridge without requiring an app restart.
-                CaptureSettings();
-                ApplyRequested?.Invoke(this);
+                // Restart the Dock's media control after installation using
+                // the fully initialized form state.
+                applyMediaUpgrade?.Invoke();
                 return true;
             }
             catch (Exception ex)
@@ -913,6 +916,11 @@ public sealed class DockOptionsForm : Form
             }
         }
         liveChange = SchedulePreview;
+        applyMediaUpgrade = () =>
+        {
+            CaptureSettings();
+            ApplyRequested?.Invoke(this);
+        };
         WatchControls(this);
         FormClosed += (_, _) => liveTimer.Dispose();
         DockLanguage.TranslateControls(this, config.Language);

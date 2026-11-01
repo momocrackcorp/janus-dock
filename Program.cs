@@ -357,7 +357,8 @@ public class Dock : Form, IMessageFilter
         mediaTrackTitle.BackColor = BackColor;
         mediaTrackTitle.ForeColor = ForeColor;
         energyPanel.HorizontalBar = Horizontal;
-        energyPanel.IntegratedClockStyle = Horizontal && settings.ShowDigitalClock;
+        energyPanel.IntegratedClockStyle =
+            Horizontal && settings.ShowDigitalClock && settings.ClockDisplayMode == "LCD";
         energyPanel.CapsuleColor = energyPanel.IntegratedClockStyle
             ? Color.FromArgb(9, 10, 11)
             : settings.IconStyle == "Lucide"
@@ -941,7 +942,12 @@ public class Dock : Form, IMessageFilter
         }
         bool networkPinned = networkArea.Controls.Count > 0;
         bool textClock = settings.ShowDigitalClock && !lcdEmbedded;
-        energyPanel.Visible = energyPanel.Controls.Count > 0;
+        // Control.Visible returns false when an ancestor is hidden, even if
+        // the control itself is enabled. endCluster starts hidden and must
+        // NOT be sized based on a child's effective Visible property.
+        bool showEnergy = energyPanel.Controls.Count > 0;
+        bool showEndCluster = showEnergy || networkPinned || textClock;
+        energyPanel.Visible = showEnergy;
         networkArea.Visible = networkPinned;
         clockArea.Visible = textClock;
 
@@ -949,7 +955,7 @@ public class Dock : Form, IMessageFilter
         int networkLength = networkPinned ? Horizontal ? 194 : 184 : 0;
         int clockLength = textClock ? Horizontal ? 100
             : settings.ShowClockDate ? 77 : 52 : 0;
-        int powerLength = energyPanel.Visible
+        int powerLength = showEnergy
             ? Horizontal ? energyPanel.Width : energyPanel.Height : 0;
         endCluster.Width = Horizontal ? networkLength + clockLength + powerLength : settings.Width;
         endCluster.Height = Horizontal ? settings.HorizontalHeight
@@ -963,13 +969,18 @@ public class Dock : Form, IMessageFilter
         energyPanel.Bounds = Horizontal
             ? new Rectangle(networkLength + clockLength, 0, powerLength, settings.HorizontalHeight)
             : new Rectangle(0, networkLength + clockLength, settings.Width, powerLength);
-        endCluster.Visible = energyPanel.Visible || networkPinned || textClock;
+        endCluster.Visible = showEndCluster;
         endCluster.BringToFront();
         energyPanel.ResumeLayout();
         networkArea.ResumeLayout();
         clockArea.ResumeLayout();
         endCluster.ResumeLayout();
         panel.ResumeLayout();
+        // Changing only clock visibility must relayout the end cluster,
+        // without relying on a later network toggle to force another pass.
+        endCluster.PerformLayout();
+        PerformLayout();
+        endCluster.Invalidate(true);
         PositionMediaTitle();
         AlignFooter();
         if (IsHandleCreated && !resizeActive) Position();
