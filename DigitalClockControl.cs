@@ -115,8 +115,7 @@ public sealed class DigitalClockControl : Control
             string time = nowText.ToString(Hour24 ? "HH:mm" : "hh:mm", CultureInfo.InvariantCulture);
             string suffixText = !Hour24 && ShowAmPm
                 ? nowText.ToString("tt", CultureInfo.InvariantCulture) : "";
-            Color inkText = BackColor.GetBrightness() > .55f
-                ? Color.FromArgb(26, 35, 48) : Color.FromArgb(232, 237, 243);
+            Color inkText = DockContrast.Foreground(BackColor);
             var flags = TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter |
                 TextFormatFlags.NoPadding | TextFormatFlags.SingleLine;
             int clockHeight = HorizontalBar
@@ -207,14 +206,16 @@ public sealed class DigitalClockControl : Control
             {
                 var old = g.InterpolationMode;
                 g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                g.DrawImage(CasioWordmark, new RectangleF(124, 78, 106, 19));
+                // 3% smaller, shifted right 2 virtual pixels: keep the C
+                // clear of the engraved date without changing the round size.
+                g.DrawImage(CasioWordmark, new RectangleF(126f, 78.3f, 102.82f, 18.43f));
                 g.InterpolationMode = old;
             }
             else
             {
-                using var brandFont = new Font("Arial Black", 19, FontStyle.Bold, GraphicsUnit.Pixel);
+                using var brandFont = new Font("Arial Black", 18.43f, FontStyle.Bold, GraphicsUnit.Pixel);
                 using var white = new SolidBrush(Color.FromArgb(174, 231, 225, 208));
-                g.DrawString("CASIO", brandFont, white, 124, 75);
+                g.DrawString("CASIO", brandFont, white, 126, 75.3f);
             }
         }
     }

@@ -82,15 +82,17 @@ public sealed class SystemUsageControl : Control
         if (factor <= 0) return;
         g.TranslateTransform((Width - vw * factor) / 2, (Height - vh * factor) / 2);
         g.ScaleTransform(factor, factor);
-        using var baseRing = new Pen(Color.FromArgb(64, 79, 105), 5.3f)
+        using var baseRing = new Pen(DockContrast.IsLight(BackColor)
+            ? Color.FromArgb(174, 186, 199) : Color.FromArgb(64, 79, 105), 5.3f)
         { StartCap = System.Drawing.Drawing2D.LineCap.Round, EndCap = System.Drawing.Drawing2D.LineCap.Round };
         using var cpuRing = new Pen(Color.FromArgb(255, 120, 53), 5.3f)
         { StartCap = System.Drawing.Drawing2D.LineCap.Round, EndCap = System.Drawing.Drawing2D.LineCap.Round };
         using var ramRing = new Pen(Color.FromArgb(67, 146, 255), 5.3f)
         { StartCap = System.Drawing.Drawing2D.LineCap.Round, EndCap = System.Drawing.Drawing2D.LineCap.Round };
         using var labelFont = new Font("Segoe UI", 12f, FontStyle.Bold, GraphicsUnit.Pixel);
-        using var glyph = new Pen(Color.FromArgb(219, 226, 240), 1.7f);
-        using var textBrush = new SolidBrush(Color.FromArgb(221, 229, 239));
+        // The fixed pale glyphs and percentages vanished on light custom bars.
+        using var glyph = new Pen(DockContrast.Foreground(BackColor), 1.7f);
+        using var textBrush = new SolidBrush(DockContrast.Foreground(BackColor));
         using var centered = new StringFormat
         { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
         void Meter(float x, float y, double percent, bool cpu)
@@ -148,8 +150,8 @@ public sealed class SystemUsageControl : Control
         if (scale <= 0) return;
         g.TranslateTransform((Width - virtualWidth * scale) / 2f, (Height - virtualHeight * scale) / 2f);
         g.ScaleTransform(scale, scale);
-        Color cpu = Color.FromArgb(248, 181, 91);
-        Color ram = Color.FromArgb(121, 185, 245);
+        Color cpu = DockContrast.Orange(BackColor);
+        Color ram = DockContrast.Blue(BackColor);
         using var cpuPen = new Pen(cpu, 2.2f);
         using var ramPen = new Pen(ram, 2.2f);
         using var cpuBrush = new SolidBrush(cpu);

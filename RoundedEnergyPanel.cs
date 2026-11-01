@@ -79,10 +79,8 @@ public sealed class RoundedEnergyPanel : FlowLayoutPanel
         // Match WinForms clipping to the curved surface so no rectangular
         // background can leak out near the round's upper-left corner.
         e.Graphics.FillPath(fill, path);
-        if (IntegratedClockStyle)
-        {
-            using var rim = new Pen(Color.FromArgb(133, 141, 141), 1.15f);
-            e.Graphics.DrawPath(rim, path);
-        }
+        // No pale outline: on dark/purple bars the old fixed-gray rim
+        // looked like a white halo around the round's anti-aliased edge.
+        // Clipping and capsule fill already define the rounded silhouette.
     }
 }

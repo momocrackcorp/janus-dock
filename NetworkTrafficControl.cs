@@ -17,7 +17,8 @@ public sealed class NetworkTrafficControl : Control
     public bool Horizontal { get; }
     public string DisplayMode { get; set; } = "Texto";
     public string BackgroundMode { get; set; } = "Barra";
-    static readonly Image? NetworkIcon = LucideDockIcons.Load("janus:network-status", false);
+    static readonly Image? DarkNetworkIcon = LucideDockIcons.Load("janus:network-status", false);
+    static readonly Image? LightNetworkIcon = LucideDockIcons.Load("janus:network-status", true);
     public NetworkTrafficControl(bool horizontal)
     {
         Horizontal = horizontal;
@@ -108,6 +109,13 @@ public sealed class NetworkTrafficControl : Control
         var g = e.Graphics;
         g.Clear(BackColor);
         g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        // Text is based on the actual painted surface, not Windows theme.
+        Color textSurface = BackgroundMode == "Oscuro" && Horizontal
+            ? Color.FromArgb(26, 32, 45) : BackColor;
+        Color sendInk = DockContrast.Blue(textSurface);
+        Color receiveInk = DockContrast.Green(textSurface);
+        var networkIcon = DockContrast.IsLight(textSurface)
+            ? LightNetworkIcon : DarkNetworkIcon;
         if (DisplayMode == "Texto")
         {
             // Minimal network readout: true Lucide network symbol, plus
@@ -126,32 +134,32 @@ public sealed class NetworkTrafficControl : Control
                     using var background = new SolidBrush(Color.FromArgb(26, 32, 45));
                     g.FillPath(background, surfacePath);
                 }
-                if (NetworkIcon != null)
-                    g.DrawImage(NetworkIcon, new Rectangle(9, (Height - 25) / 2, 25, 25));
+                if (networkIcon != null)
+                    g.DrawImage(networkIcon, new Rectangle(9, (Height - 25) / 2, 25, 25));
                 using var textFont = new Font("Segoe UI", 11.5f, FontStyle.Bold, GraphicsUnit.Point);
                 var flags = TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding |
                     TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis;
                 int mid = Height / 2;
                 TextRenderer.DrawText(g, "↑ " + Format(up), textFont,
                     new Rectangle(42, 1, Math.Max(25, Width - 46), mid - 1),
-                    Color.FromArgb(48, 204, 239), flags);
+                    sendInk, flags);
                 TextRenderer.DrawText(g, "↓ " + Format(down), textFont,
                     new Rectangle(42, mid, Math.Max(25, Width - 46), Height - mid - 1),
-                    Color.FromArgb(78, 227, 126), flags);
+                    receiveInk, flags);
             }
             else
             {
-                if (NetworkIcon != null)
-                    g.DrawImage(NetworkIcon, new Rectangle((Width - 26) / 2, 6, 26, 26));
+                if (networkIcon != null)
+                    g.DrawImage(networkIcon, new Rectangle((Width - 26) / 2, 6, 26, 26));
                 using var textFont = new Font("Segoe UI", 9f, FontStyle.Bold);
                 var flags = TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding |
                     TextFormatFlags.WordBreak;
                 TextRenderer.DrawText(g, "↑ " + Format(up), textFont,
                     new Rectangle(2, 45, Width - 4, 52),
-                    Color.FromArgb(48, 204, 239), flags);
+                    sendInk, flags);
                 TextRenderer.DrawText(g, "↓ " + Format(down), textFont,
                     new Rectangle(2, 110, Width - 4, 52),
-                    Color.FromArgb(78, 227, 126), flags);
+                    receiveInk, flags);
             }
             return;
         }
@@ -187,15 +195,15 @@ public sealed class NetworkTrafficControl : Control
             int ySplit = Height / 2;
             TextRenderer.DrawText(g, "↑ " + Format(up), networkFont,
                 new Rectangle(45, 2, Math.Max(28, Width - 51), Math.Max(16, ySplit - 2)),
-                Color.FromArgb(39, 202, 233), flag);
+                sendInk, flag);
             TextRenderer.DrawText(g, "↓ " + Format(down), networkFont,
                 new Rectangle(45, ySplit, Math.Max(28, Width - 51), Math.Max(16, Height - ySplit - 2)),
-                Color.FromArgb(75, 233, 134), flag);
+                receiveInk, flag);
             return;
         }
-        var downColor = Color.FromArgb(63, 215, 138);
-        var upColor = Color.FromArgb(105, 177, 245);
-        var labelColor = ForeColor;
+        var downColor = DockContrast.Green(BackColor);
+        var upColor = DockContrast.Blue(BackColor);
+        var labelColor = DockContrast.Foreground(BackColor);
         using var legacyFont = new Font("Segoe UI", Horizontal ? 9f : 9.5f, FontStyle.Bold);
         using var smallFont = new Font("Segoe UI", 8f);
         using var signalPen = new Pen(Color.FromArgb(236, 191, 82), 2.8f);

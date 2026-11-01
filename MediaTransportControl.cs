@@ -168,11 +168,12 @@ public sealed class MediaTransportControl : Control
         var g = e.Graphics;
         g.Clear(BackColor);
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        var tint = BackColor.GetBrightness() > .55f
-            ? Color.FromArgb(38, 58, 82) : Color.FromArgb(215, 225, 239);
+        // Match custom light/dark Dock colors rather than Windows theme.
+        var tint = DockContrast.Foreground(BackColor);
         using var stroke = new Pen(tint, 1.8f)
             { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round };
-        using var ring = new Pen(Color.FromArgb(84, 110, 136), 1.1f);
+        using var ring = new Pen(DockContrast.IsLight(BackColor)
+            ? Color.FromArgb(120, 137, 155) : Color.FromArgb(84, 110, 136), 1.1f);
         using var ink = new SolidBrush(tint);
         float distance = horizontal ? Width : Height, step = distance / 6f;
         var bounds = new RectangleF(1, 1, Width - 2, Height - 2);

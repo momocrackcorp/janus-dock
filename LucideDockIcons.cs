@@ -60,7 +60,8 @@ internal static class LucideDockIcons
             "download" => Color.FromArgb(110, 183, 247),
             "settings" => light ? Color.FromArgb(42, 78, 109) : Color.FromArgb(203, 211, 224),
             "network" => Color.FromArgb(242, 199, 79),
-            "network-status" => Color.FromArgb(135, 205, 240),
+            "network-status" => light ? Color.FromArgb(21, 99, 165)
+                                      : Color.FromArgb(135, 205, 240),
             "square-terminal" => light ? Color.FromArgb(34, 55, 82)
                                        : Color.FromArgb(195, 213, 231),
             "browser" => Color.FromArgb(93, 188, 241),

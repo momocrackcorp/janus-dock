@@ -75,6 +75,10 @@ internal static class Program
 public class Dock : Form, IMessageFilter
 {
     const int ABM_NEW = 0, ABM_REMOVE = 1, ABM_QUERYPOS = 2, ABM_SETPOS = 3;
+    const int ABM_ACTIVATE = 6, ABM_WINDOWPOSCHANGED = 9;
+    const int ABN_POSCHANGED = 1;
+    const int WM_ACTIVATE = 0x0006, WM_WINDOWPOSCHANGED = 0x0047;
+    const int WM_DISPLAYCHANGE = 0x007E;
     const int ABE_LEFT = 0, ABE_TOP = 1, ABE_RIGHT = 2, ABE_BOTTOM = 3;
     const int CallbackMessage = 0x8000 + 417;
     [StructLayout(LayoutKind.Sequential)]
@@ -89,6 +93,8 @@ public class Dock : Form, IMessageFilter
         public IntPtr lParam;
     }
     [DllImport("shell32.dll")] static extern IntPtr SHAppBarMessage(int cmd, ref AppBar data);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    static extern int RegisterWindowMessage(string message);
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     struct SHFILEINFO
     {
@@ -171,6 +177,9 @@ public class Dock : Form, IMessageFilter
     readonly Button options = new() { Text = "⚙", Width = 32, Height = 30, FlatStyle = FlatStyle.Flat };
     DockSettings settings = new();
     bool registered, repositioning, resizeActive, light;
+    // Explorer may restart, losing its AppBar registrations. Recover when
+    // the shell broadcasts the registered "TaskbarCreated" message.
+    readonly int taskbarCreatedMessage = RegisterWindowMessage("TaskbarCreated");
     int dragX, dragWidth;
     readonly System.Windows.Forms.Timer themeTimer = new() { Interval = 3000 };
     readonly System.Windows.Forms.Timer hideTimer = new() { Interval = 400 };
@@ -285,6 +294,10 @@ public class Dock : Form, IMessageFilter
         Render();
         themeTimer.Tick += (_, _) =>
         {
+            // If the shell was late to start or Explorer lost our reservation,
+            // retry registration without requiring a theme or option change.
+            if (settings.DockMode != "Flotante" && IsHandleCreated && !registered)
+                RegisterBar();
             bool next = IsLightTheme();
             Color nextBarColor = settings.BarColorMode switch
             {
@@ -347,7 +360,7 @@ public class Dock : Form, IMessageFilter
             "Classic" => Color.FromArgb(192, 192, 192),
             _ => TaskbarColor()
         };
-        ForeColor = BackColor.GetBrightness() > .54f ? Color.FromArgb(28, 30, 35) : Color.FromArgb(241, 241, 244);
+        ForeColor = DockContrast.Foreground(BackColor);
         footer.BackColor = BackColor;
         panel.BackColor = BackColor;
         endCluster.BackColor = BackColor;
@@ -365,10 +378,12 @@ public class Dock : Form, IMessageFilter
                 ? Color.FromArgb(225, 236, 243)
                 : (BackColor.GetBrightness() > .54f ? ControlPaint.Dark(BackColor, .08f) : ControlPaint.Light(BackColor, .16f));
         energyPanel.Invalidate();
-        grip.BackColor = light ? Color.FromArgb(210, 216, 226) : Color.FromArgb(66, 71, 82);
+        grip.BackColor = DockContrast.IsLight(BackColor)
+            ? Color.FromArgb(192, 202, 216) : Color.FromArgb(66, 71, 82);
         foreach (var button in new[] { add, options })
         {
-            button.BackColor = light ? Color.FromArgb(228, 233, 242) : Color.FromArgb(58, 62, 72);
+            button.BackColor = DockContrast.IsLight(BackColor)
+                ? Color.FromArgb(228, 233, 242) : Color.FromArgb(58, 62, 72);
             button.ForeColor = ForeColor;
         }
     }
@@ -500,10 +515,11 @@ public class Dock : Form, IMessageFilter
         // Terminal always uses its Lucide outline, even in Windows icon mode.
         // The normal shortcut button inherits the bar's color, with no tile.
         if (path == "janus:terminal")
-            return LucideDockIcons.Load(path, light) ?? SystemIcons.Application.ToBitmap();
+            return LucideDockIcons.Load(path, DockContrast.IsLight(BackColor))
+                ?? SystemIcons.Application.ToBitmap();
         if (settings.IconStyle == "Lucide")
         {
-            var lucide = LucideDockIcons.Load(path, light);
+            var lucide = LucideDockIcons.Load(path, DockContrast.IsLight(BackColor));
             if (lucide != null) return lucide;
         }
         if (path == "janus:documents") return ShellFolderIcon(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments));
@@ -1322,11 +1338,19 @@ public class Dock : Form, IMessageFilter
     void RegisterBar()
     {
         if (!IsHandleCreated) return;
-        // Register every docked orientation, including bottom. Without ABM_SETPOS
-        // Windows cannot reserve working-area space above a horizontal dock.
-        if (settings.DockMode == "Flotante") { registered = false; Position(); return; }
-        var d = Data();
-        registered = SHAppBarMessage(ABM_NEW, ref d) != IntPtr.Zero;
+        if (settings.DockMode == "Flotante")
+        {
+            if (registered) UnregisterBar();
+            Position();
+            return;
+        }
+        // Do not repeatedly ABM_NEW an already registered window. The shell
+        // reserves the desktop work area only after ABM_QUERYPOS/ABM_SETPOS.
+        if (!registered)
+        {
+            var data = Data();
+            registered = SHAppBarMessage(ABM_NEW, ref data) != IntPtr.Zero;
+        }
         Position();
     }
     void UpdateAutoHide()
@@ -1346,7 +1370,9 @@ public class Dock : Form, IMessageFilter
                 "Derecha" => mouse.X >= screen.Right - 12,
                 "Izquierda" => mouse.X <= screen.Left + 12,
                 "Arriba" => mouse.Y <= screen.Top + 12,
-                _ => mouse.Y >= (Screen.PrimaryScreen?.WorkingArea.Bottom ?? screen.Bottom) - 12 && mouse.Y < (Screen.PrimaryScreen?.WorkingArea.Bottom ?? screen.Bottom)
+                // The Windows taskbar may occupy the physical bottom edge:
+                // use the actual negotiated AppBar edge, not screen.Bottom.
+                _ => mouse.Y >= Bounds.Bottom - 12 && mouse.Y < Bounds.Bottom
             };
         }
         if (shouldExpand == collapsed) { collapsed = !collapsed; Position(); }
@@ -1390,6 +1416,14 @@ public class Dock : Form, IMessageFilter
                 SHAppBarMessage(ABM_SETPOS, ref d);
             }
             Bounds = Rectangle.FromLTRB(d.rc.left, d.rc.top, d.rc.right, d.rc.bottom);
+            if (registered)
+            {
+                // Required by Windows for native AppBars. Without notifying
+                // the shell when our window moves/resizes, other windows may
+                // retain an obsolete working area and overlap the Dock.
+                var changed = Data();
+                SHAppBarMessage(ABM_WINDOWPOSCHANGED, ref changed);
+            }
             // Undo the earlier protruding-window mask. The dock always
             // touches the screen edge across its full configured thickness.
             if (Region != null)
@@ -1441,8 +1475,42 @@ public class Dock : Form, IMessageFilter
     }
     protected override void WndProc(ref Message m)
     {
+        int message = m.Msg;
+        if (taskbarCreatedMessage != 0 && message == taskbarCreatedMessage)
+        {
+            // Explorer restart invalidates its previous AppBar registry.
+            registered = false;
+            base.WndProc(ref m);
+            if (settings.DockMode != "Flotante") RegisterBar();
+            return;
+        }
         base.WndProc(ref m);
-        if (registered && !resizeActive && (m.Msg == CallbackMessage || m.Msg == 0x007e)) Position();
+        if (!IsHandleCreated || IsDisposed || settings.DockMode == "Flotante")
+            return;
+        if (message == WM_ACTIVATE && registered)
+        {
+            var data = Data();
+            data.lParam = m.WParam != IntPtr.Zero ? new IntPtr(1) : IntPtr.Zero;
+            SHAppBarMessage(ABM_ACTIVATE, ref data);
+        }
+        else if (message == WM_WINDOWPOSCHANGED && registered && !repositioning)
+        {
+            var data = Data();
+            SHAppBarMessage(ABM_WINDOWPOSCHANGED, ref data);
+        }
+        else if (message == CallbackMessage && registered &&
+            m.WParam.ToInt64() == ABN_POSCHANGED && !resizeActive)
+            Position();
+        else if (message == WM_DISPLAYCHANGE && registered && !resizeActive)
+            Position();
+    }
+
+    protected override void OnHandleDestroyed(EventArgs e)
+    {
+        // Handles may be recreated during DPI/display changes; unregister
+        // the old handle so the shell never retains a phantom reservation.
+        if (registered) UnregisterBar();
+        base.OnHandleDestroyed(e);
     }
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
