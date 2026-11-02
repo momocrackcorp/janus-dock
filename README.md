@@ -39,7 +39,7 @@
 - **Tráfico de red:** modo «Texto + icono Lucide» o «Gráfico», velocidad de subida/bajada, fondo oscuro o mismo color de barra.
 - **CPU y RAM:** medidores circulares o clásicos, independientes y compactos.
 - **Terminal/CMD:** icono Lucide integrado al color de la barra, movible en **Apariencia → Organizar accesos**, admite separadores antes y después.
-- **Accesos, discos y exploración:** organización, separadores, iconos Windows/Lucide, consumo y colores por unidad. Nuevo árbol de carpetas en cascada: clic en «Este equipo» → «C:» → «Program Files» → otra carpeta. Funciona también con los accesos a carpetas y los indicadores de unidades. Las subcarpetas se cargan al abrir cada nivel, sin bloquear la barra; para entrar en la carpeta elegida, pulsa «Abrir esta carpeta en el Explorador». Los archivos aparecen al final y pueden abrirse con su aplicación predeterminada. El clic derecho conserva «Abrir» con su comportamiento anterior.
+- **Accesos, discos y exploración:** árbol de carpetas en cascada disponible desde **cualquier carpeta fijada al Dock**, «Este equipo», «Mis documentos», «Descargas» y los discos. También reconoce accesos directos `.lnk` que apuntan a carpetas (incluso dentro de Documentos) sin ejecutarlos para resolver la ruta. Las carpetas grandes se cargan por páginas de hasta 18 subcarpetas y 10 archivos; «Más carpetas y archivos…» permite seguir navegando sin llenar la pantalla ni bloquear el Dock. Los discos muestran nombres claros («Disco local (C:)») y no etiquetas técnicas como «Fixed». El clic derecho mantiene «Abrir» para el Explorador y «Explorar carpetas…» para desplegar el árbol.
 
 ## Personalización
 

@@ -3,47 +3,103 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace JanusDock;
 
 /// <summary>
-/// A cascading folder/drive browser launched from any folder or "Este equipo"
-/// Dock shortcut. Children are loaded only when opened, off the UI thread:
-/// protected/slow folders cannot freeze the Dock while being enumerated.
+/// On-demand, paged cascading folder browser for every folder/drive on the Dock.
+/// No recursive traversal or unbounded ToolStrip menus. Slow folders are
+/// enumerated off the UI thread, and closing a menu cancels pending updates.
 /// </summary>
 internal static class DockFolderTreeMenu
 {
-    private const int MaxFolders = 90;
-    private const int MaxFiles = 35;
+    private const int FolderPageSize = 18;
+    private const int FilePageSize = 10;
 
-    private sealed record Entry(string FullPath, string Name, bool IsDirectory);
-    private sealed record Listing(
-        List<Entry> Folders, List<Entry> Files, bool Truncated, string? Error);
+    private sealed record Entry(string Path, string Name, bool Folder, bool Link = false);
+    private sealed record Page(
+        List<Entry> Folders, List<Entry> Files, bool More, string? Error);
 
-    public static bool CanBrowse(string path) =>
-        path is "shell:MyComputerFolder" or "janus:documents" or "janus:downloads"
-        || Directory.Exists(path);
+    private sealed class MenuSession
+    {
+        readonly CancellationTokenSource cancellation = new();
+        public CancellationToken Token => cancellation.Token;
+        public bool Closed => cancellation.IsCancellationRequested;
+        public void Close()
+        {
+            if (!Closed) cancellation.Cancel();
+        }
+    }
+
+    public static bool CanBrowse(string path)
+    {
+        if (path is "shell:MyComputerFolder" or "janus:documents" or "janus:downloads")
+            return true;
+        if (Directory.Exists(path)) return true;
+        return TryShortcutFolder(path) != null;
+    }
 
     private static string Resolve(string path) => path switch
     {
         "janus:documents" => Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
         "janus:downloads" => Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"),
-        _ => path
+        _ => TryShortcutFolder(path) ?? path
     };
+
+    // WScript.Shell is part of Windows: it resolves .lnk targets without
+    // executing any shortcuts, installing packages or calling PowerShell.
+    private static string? TryShortcutFolder(string path)
+    {
+        if (!path.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase)
+            || !File.Exists(path)) return null;
+        object? shell = null, shortcut = null;
+        try
+        {
+            var progId = Type.GetTypeFromProgID("WScript.Shell");
+            if (progId == null) return null;
+            shell = Activator.CreateInstance(progId);
+            if (shell == null) return null;
+            shortcut = shell.GetType().InvokeMember("CreateShortcut",
+                System.Reflection.BindingFlags.InvokeMethod,
+                null, shell, new object[] { path });
+            if (shortcut == null) return null;
+            string? target = shortcut.GetType().InvokeMember("TargetPath",
+                System.Reflection.BindingFlags.GetProperty,
+                null, shortcut, null) as string;
+            return target != null && Directory.Exists(target) ? target : null;
+        }
+        catch { return null; }
+        finally
+        {
+            // Even COM cleanup can fail for broken shell extensions.
+            try
+            {
+                if (shortcut != null && Marshal.IsComObject(shortcut))
+                    Marshal.FinalReleaseComObject(shortcut);
+            }
+            catch (Exception ex) { Debug.WriteLine("JANUS shell link cleanup: " + ex); }
+            try
+            {
+                if (shell != null && Marshal.IsComObject(shell))
+                    Marshal.FinalReleaseComObject(shell);
+            }
+            catch (Exception ex) { Debug.WriteLine("JANUS shell cleanup: " + ex); }
+        }
+    }
 
     public static void OpenExplorer(string path)
     {
         try
         {
-            if (path == "shell:MyComputerFolder")
-                Process.Start(new ProcessStartInfo("explorer.exe", "shell:MyComputerFolder")
-                { UseShellExecute = true });
-            else
-                Process.Start(new ProcessStartInfo("explorer.exe")
-                { UseShellExecute = true, ArgumentList = { path } });
+            var info = new ProcessStartInfo("explorer.exe") { UseShellExecute = true };
+            info.ArgumentList.Add(path == "shell:MyComputerFolder"
+                ? "shell:MyComputerFolder" : Resolve(path));
+            Process.Start(info);
         }
         catch (Exception ex)
         {
@@ -54,10 +110,7 @@ internal static class DockFolderTreeMenu
 
     private static void OpenFile(string path)
     {
-        try
-        {
-            Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
-        }
+        try { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); }
         catch (Exception ex)
         {
             MessageBox.Show(ex.Message, "JANUS Dock - Archivo",
@@ -65,200 +118,275 @@ internal static class DockFolderTreeMenu
         }
     }
 
-    private static Listing Enumerate(string path)
+    private static Page ReadPage(string path, int pageIndex, CancellationToken token)
     {
         try
         {
-            // Limit enumeration to prevent unexpectedly huge folders and
-            // keep the menu responsive even inside Program Files or AppData.
-            var folders = Directory.EnumerateDirectories(path)
-                .Take(MaxFolders + 1).ToArray();
-            var files = Directory.EnumerateFiles(path)
-                .Take(MaxFiles + 1).ToArray();
-            bool more = folders.Length > MaxFolders || files.Length > MaxFiles;
-            return new Listing(
-                folders.Take(MaxFolders)
-                    .Select(p => new Entry(p, Path.GetFileName(p), true))
-                    .OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase)
-                    .ToList(),
-                files.Take(MaxFiles)
-                    .Select(p => new Entry(p, Path.GetFileName(p), false))
-                    .OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase)
-                    .ToList(),
-                more, null);
+            token.ThrowIfCancellationRequested();
+            int folderOffset = checked(pageIndex * FolderPageSize);
+            int fileOffset = checked(pageIndex * FilePageSize);
+            var enumeration = new EnumerationOptions
+            {
+                IgnoreInaccessible = true,
+                ReturnSpecialDirectories = false,
+                AttributesToSkip = 0
+            };
+            // Only 18 folders + 10 files on screen, even for folders
+            // containing thousands of entries. Further pages are submenus.
+            var folderPaths = Directory.EnumerateDirectories(path, "*", enumeration)
+                .Skip(folderOffset).Take(FolderPageSize + 1).ToArray();
+            token.ThrowIfCancellationRequested();
+            var filePaths = Directory.EnumerateFiles(path, "*", enumeration)
+                .Skip(fileOffset).Take(FilePageSize + 1).ToArray();
+            token.ThrowIfCancellationRequested();
+
+            var folders = folderPaths.Take(FolderPageSize)
+                .Select(p => new Entry(p, System.IO.Path.GetFileName(p), true))
+                .OrderBy(e => e.Name, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+            var files = new List<Entry>();
+            foreach (string file in filePaths.Take(FilePageSize))
+            {
+                token.ThrowIfCancellationRequested();
+                var target = TryShortcutFolder(file);
+                files.Add(target == null
+                    ? new Entry(file, System.IO.Path.GetFileName(file), false)
+                    : new Entry(target, System.IO.Path.GetFileNameWithoutExtension(file), true, true));
+            }
+            files.Sort((a, b) => StringComparer.CurrentCultureIgnoreCase.Compare(a.Name, b.Name));
+            return new Page(folders, files,
+                folderPaths.Length > FolderPageSize || filePaths.Length > FilePageSize,
+                null);
         }
-        catch (Exception ex) when (ex is UnauthorizedAccessException
-            or IOException or System.Security.SecurityException
-            or ArgumentException or NotSupportedException)
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
         {
-            return new Listing(new(), new(), false,
-                "No se puede leer esta carpeta: " + ex.Message);
+            // Permission, intermittent network drives, inaccessible folders or
+            // broken reparse points must never terminate the Dock.
+            return new Page(new(), new(), false,
+                "No se pudo leer esta carpeta: " + ex.Message);
         }
     }
 
-    private static ToolStripMenuItem Loading() =>
+    private static ToolStripMenuItem WaitItem() =>
         new("Cargando carpetas...") { Enabled = false };
 
-    private static ToolStripMenuItem Folder(string path, string name)
+    private static ToolStripMenuItem FolderItem(
+        string path, string label, MenuSession session)
     {
-        var item = new ToolStripMenuItem("📁  " + name)
+        var item = new ToolStripMenuItem("📁  " + label) { ToolTipText = path };
+        item.DropDownItems.Add(WaitItem());
+        bool loaded = false, loading = false;
+        item.DropDownOpening += (_, _) =>
         {
-            ToolTipText = path
+            if (loaded || loading || session.Closed || item.IsDisposed) return;
+            loading = true;
+            _ = Load();
         };
-        // Ensure a submenu arrow exists even before disk enumeration.
-        item.DropDownItems.Add(Loading());
-        bool loaded = false;
-        item.DropDownOpening += async (_, _) =>
+
+        async Task Load()
         {
-            if (loaded) return;
-            loaded = true;
-            await PopulateAsync(item.DropDownItems, path, () => item.IsDisposed);
-        };
+            try
+            {
+                // A closed submenu is allowed to try again when reopened.
+                bool result = await FillAsync(item.DropDownItems, path, 0, false,
+                    session, () => !item.IsDisposed && item.DropDown.Visible);
+                loaded = result;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("JANUS folder submenu: " + ex);
+            }
+            finally { loading = false; }
+        }
         return item;
     }
 
-    private static async Task PopulateAsync(
-        ToolStripItemCollection output, string path, Func<bool> disposed)
+    private static ToolStripMenuItem NextPage(
+        string path, int page, MenuSession session)
     {
-        Listing listing = await Task.Run(() => Enumerate(path));
-        if (disposed()) return;
+        var item = new ToolStripMenuItem("Más carpetas y archivos…  ▶")
+        { ToolTipText = "Página " + (page + 1) };
+        item.DropDownItems.Add(WaitItem());
+        bool loaded = false, loading = false;
+        item.DropDownOpening += (_, _) =>
+        {
+            if (loaded || loading || session.Closed || item.IsDisposed) return;
+            loading = true;
+            _ = Load();
+        };
+        async Task Load()
+        {
+            try
+            {
+                loaded = await FillAsync(item.DropDownItems, path, page, false,
+                    session, () => !item.IsDisposed && item.DropDown.Visible);
+            }
+            catch (Exception ex) { Debug.WriteLine("JANUS folder page: " + ex); }
+            finally { loading = false; }
+        }
+        return item;
+    }
 
-        // Parent item or menu may be closed while an inaccessible drive loads.
+    private static void FillItems(
+        ToolStripItemCollection output, string path, Page page,
+        int pageIndex, bool root, MenuSession session)
+    {
+        // Root keeps its fixed "Open in Explorer" + separator at positions 0/1.
+        int keep = root ? 2 : 0;
+        while (output.Count > keep) output.RemoveAt(keep);
+        if (!root)
+        {
+            output.Add("Abrir esta carpeta en el Explorador", null,
+                (_, _) => OpenExplorer(path));
+            output.Add(new ToolStripSeparator());
+        }
+        if (page.Error != null)
+        {
+            output.Add(new ToolStripMenuItem(page.Error) { Enabled = false });
+            return;
+        }
+        foreach (Entry entry in page.Folders)
+            output.Add(FolderItem(entry.Path, entry.Name, session));
+        if (page.Files.Count > 0 && page.Folders.Count > 0)
+            output.Add(new ToolStripSeparator());
+        foreach (Entry entry in page.Files)
+        {
+            if (entry.Folder)
+                output.Add(FolderItem(entry.Path, "🔗  " + entry.Name, session));
+            else
+            {
+                var file = new ToolStripMenuItem("📄  " + entry.Name)
+                { ToolTipText = entry.Path };
+                file.Click += (_, _) => OpenFile(entry.Path);
+                output.Add(file);
+            }
+        }
+        if (page.Folders.Count == 0 && page.Files.Count == 0)
+            output.Add(new ToolStripMenuItem("(Carpeta vacía)") { Enabled = false });
+        if (page.More)
+            output.Add(NextPage(path, pageIndex + 1, session));
+    }
+
+    private static async Task<bool> FillAsync(
+        ToolStripItemCollection target, string path, int pageIndex, bool root,
+        MenuSession session, Func<bool> stillVisible)
+    {
         try
         {
-            output.Clear();
-            var open = new ToolStripMenuItem("Abrir esta carpeta en el Explorador");
-            open.Click += (_, _) => OpenExplorer(path);
-            output.Add(open);
-            output.Add(new ToolStripSeparator());
-
-            if (listing.Error != null)
-            {
-                output.Add(new ToolStripMenuItem(listing.Error) { Enabled = false });
-                return;
-            }
-
-            foreach (Entry folder in listing.Folders)
-                output.Add(Folder(folder.FullPath, folder.Name));
-
-            if (listing.Files.Count > 0 && listing.Folders.Count > 0)
-                output.Add(new ToolStripSeparator());
-
-            foreach (Entry file in listing.Files)
-            {
-                var fileItem = new ToolStripMenuItem("📄  " + file.Name)
-                { ToolTipText = file.FullPath };
-                fileItem.Click += (_, _) => OpenFile(file.FullPath);
-                output.Add(fileItem);
-            }
-
-            if (listing.Folders.Count == 0 && listing.Files.Count == 0)
-                output.Add(new ToolStripMenuItem("(Carpeta vacía)") { Enabled = false });
-
-            if (listing.Truncated)
-            {
-                output.Add(new ToolStripSeparator());
-                var more = new ToolStripMenuItem("Ver más en el Explorador...");
-                more.Click += (_, _) => OpenExplorer(path);
-                output.Add(more);
-            }
+            Page data = await Task.Run(
+                () => ReadPage(path, pageIndex, session.Token), session.Token);
+            if (session.Closed || !stillVisible()) return false;
+            // WinForms synchronization context is captured at the menu event,
+            // so ToolStrip item changes happen only on the UI thread.
+            FillItems(target, path, data, pageIndex, root, session);
+            return true;
         }
-        catch (ObjectDisposedException)
+        catch (OperationCanceledException) { return false; }
+        catch (Exception ex)
         {
-            // Menus can be dismissed before a slow drive finishes loading.
+            // ToolStrip may be disposed mid-load, or a Windows shell extension
+            // may throw when opening a dropdown. Log, never crash the Dock.
+            Debug.WriteLine("JANUS folder menu: " + ex);
+            return false;
         }
+    }
+
+    private static string DriveName(DriveInfo drive)
+    {
+        string letter = drive.Name.TrimEnd('\\');
+        try
+        {
+            if (drive.IsReady && !string.IsNullOrWhiteSpace(drive.VolumeLabel))
+                return drive.VolumeLabel + " (" + letter + ")";
+        }
+        catch { }
+        string type = drive.DriveType switch
+        {
+            DriveType.Fixed => "Disco local",
+            DriveType.Removable => "Unidad extraíble",
+            DriveType.CDRom => "Unidad de CD/DVD",
+            DriveType.Network => "Unidad de red",
+            _ => "Unidad"
+        };
+        return type + " (" + letter + ")";
     }
 
     public static void Show(Control anchor, string path, string dockEdge)
     {
-        string folder = Resolve(path);
-        var menu = DockMenuStyle.Create(
-            DockContrast.IsLight(anchor.BackColor),
-            System.Drawing.Color.FromArgb(58, 173, 201));
-        menu.ShowImageMargin = false;
-        menu.AutoClose = true;
-
-        if (path == "shell:MyComputerFolder")
-        {
-            menu.Items.Add("Abrir Este equipo en el Explorador", null,
-                (_, _) => OpenExplorer("shell:MyComputerFolder"));
-            menu.Items.Add(new ToolStripSeparator());
-
-            try
-            {
-                foreach (DriveInfo drive in DriveInfo.GetDrives()
-                    .OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase))
-                {
-                    var d = drive;
-                    var entry = Folder(d.RootDirectory.FullName,
-                        d.Name.TrimEnd('\\') + "  " + d.DriveType);
-                    menu.Items.Add(entry);
-                }
-            }
-            catch (Exception ex) when (ex is IOException
-                or UnauthorizedAccessException or System.Security.SecurityException)
-            {
-                menu.Items.Add(new ToolStripMenuItem("No se pueden enumerar las unidades")
-                { Enabled = false });
-            }
-        }
-        else
-        {
-            menu.Items.Add("Abrir esta carpeta en el Explorador", null,
-                (_, _) => OpenExplorer(folder));
-            menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add(Loading());
-        }
-
-        menu.Closed += (_, _) => menu.Dispose();
-        var direction = dockEdge switch
-        {
-            "Abajo" => ToolStripDropDownDirection.AboveRight,
-            "Arriba" => ToolStripDropDownDirection.BelowRight,
-            "Derecha" => ToolStripDropDownDirection.Left,
-            _ => ToolStripDropDownDirection.Right
-        };
-        menu.Show(anchor, new System.Drawing.Point(0, 0), direction);
-
-        if (path != "shell:MyComputerFolder")
-            _ = PopulateRootAsync(menu, folder);
-    }
-
-    private static async Task PopulateRootAsync(ContextMenuStrip menu, string folder)
-    {
-        Listing listing = await Task.Run(() => Enumerate(folder));
-        if (menu.IsDisposed || !menu.Visible) return;
         try
         {
-            // Keep the direct "Open in Explorer" entry at the top.
-            while (menu.Items.Count > 2)
-                menu.Items.RemoveAt(2);
-
-            if (listing.Error != null)
+            string folder = Resolve(path);
+            var session = new MenuSession();
+            var menu = DockMenuStyle.Create(
+                DockContrast.IsLight(anchor.BackColor),
+                System.Drawing.Color.FromArgb(58, 173, 201));
+            menu.AutoClose = true;
+            menu.MaximumSize = new System.Drawing.Size(520, 660);
+            menu.Closed += (_, _) =>
             {
-                menu.Items.Add(new ToolStripMenuItem(listing.Error) { Enabled = false });
-                return;
-            }
-            foreach (Entry entry in listing.Folders)
-                menu.Items.Add(Folder(entry.FullPath, entry.Name));
-            if (listing.Files.Count > 0 && listing.Folders.Count > 0)
+                session.Close();
+                // Do not dispose a ToolStrip in the middle of its own Closed
+                // event. Defer disposal until WinForms finishes menu layout.
+                try
+                {
+                    if (anchor.IsHandleCreated && !anchor.IsDisposed)
+                        anchor.BeginInvoke(new Action(() =>
+                        {
+                            try { menu.Dispose(); }
+                            catch (ObjectDisposedException) { }
+                        }));
+                    else
+                        menu.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("JANUS menu close: " + ex);
+                }
+            };
+            if (path == "shell:MyComputerFolder")
+            {
+                menu.Items.Add("Abrir Este equipo en el Explorador", null,
+                    (_, _) => OpenExplorer("shell:MyComputerFolder"));
                 menu.Items.Add(new ToolStripSeparator());
-            foreach (Entry entry in listing.Files)
-            {
-                var file = new ToolStripMenuItem("📄  " + entry.Name)
-                { ToolTipText = entry.FullPath };
-                file.Click += (_, _) => OpenFile(entry.FullPath);
-                menu.Items.Add(file);
+                try
+                {
+                    foreach (DriveInfo drive in DriveInfo.GetDrives()
+                        .OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase))
+                        menu.Items.Add(FolderItem(drive.RootDirectory.FullName,
+                            DriveName(drive), session));
+                }
+                catch (Exception ex)
+                {
+                    menu.Items.Add(new ToolStripMenuItem(
+                        "No se pueden listar las unidades: " + ex.Message)
+                    { Enabled = false });
+                }
             }
-            if (listing.Folders.Count == 0 && listing.Files.Count == 0)
-                menu.Items.Add(new ToolStripMenuItem("(Carpeta vacía)") { Enabled = false });
-            if (listing.Truncated)
+            else
             {
-                menu.Items.Add(new ToolStripSeparator());
-                menu.Items.Add("Ver más en el Explorador...", null,
+                menu.Items.Add("Abrir esta carpeta en el Explorador", null,
                     (_, _) => OpenExplorer(folder));
+                menu.Items.Add(new ToolStripSeparator());
+                menu.Items.Add(WaitItem());
             }
+
+            var direction = dockEdge switch
+            {
+                "Abajo" => ToolStripDropDownDirection.AboveRight,
+                "Arriba" => ToolStripDropDownDirection.BelowRight,
+                "Derecha" => ToolStripDropDownDirection.Left,
+                _ => ToolStripDropDownDirection.Right
+            };
+            menu.Show(anchor, new System.Drawing.Point(0, 0), direction);
+            if (path != "shell:MyComputerFolder")
+                _ = FillAsync(menu.Items, folder, 0, true, session,
+                    () => !menu.IsDisposed && menu.Visible);
         }
-        catch (ObjectDisposedException) { }
+        catch (Exception ex)
+        {
+            Debug.WriteLine("JANUS folder menu could not open: " + ex);
+            // Errors in optional browsing must never terminate the main bar.
+        }
     }
 }
