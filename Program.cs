@@ -759,6 +759,13 @@ public class Dock : Form, IMessageFilter
                             Margin = Horizontal ? new Padding(2, Math.Max(0, (settings.HorizontalHeight - Math.Max(34, Math.Min(settings.IconSize + 18, settings.HorizontalHeight - 4))) / 2), 2, 0) : new Padding(0, 1, 0, 1)
                         };
                         var diskMenu = DockMenuStyle.Create(light, Color.FromArgb(58, 173, 201));
+                        string diskRoot = drive.RootDirectory.FullName;
+                        view.Click += (_, _) => DockFolderTreeMenu.Show(view, diskRoot, settings.Edge);
+                        diskMenu.Items.Add("Explorar carpetas...", null,
+                            (_, _) => DockFolderTreeMenu.Show(view, diskRoot, settings.Edge));
+                        diskMenu.Items.Add("Abrir en el Explorador", null,
+                            (_, _) => DockFolderTreeMenu.OpenExplorer(diskRoot));
+                        diskMenu.Items.Add(new ToolStripSeparator());
                         diskMenu.Items.Add("Mover bloque de discos hacia arriba", null, (_, _) => Move(item, -1));
                         diskMenu.Items.Add("Mover bloque de discos hacia abajo", null, (_, _) => Move(item, 1));
                         diskMenu.Items.Add("Opciones...", null, (_, _) => ShowOptions());
@@ -820,12 +827,21 @@ public class Dock : Form, IMessageFilter
             btn.FlatAppearance.BorderSize = 0;
             btn.FlatAppearance.MouseOverBackColor = light ? Color.FromArgb(225, 233, 244) : Color.FromArgb(62, 67, 77);
             btn.FlatAppearance.MouseDownBackColor = light ? Color.FromArgb(210, 222, 239) : Color.FromArgb(78, 83, 97);
-            btn.Click += (_, _) => Open(item);
+            btn.Click += (_, _) =>
+            {
+                if (DockFolderTreeMenu.CanBrowse(item.Path))
+                    DockFolderTreeMenu.Show(btn, item.Path, settings.Edge);
+                else
+                    Open(item);
+            };
 
             var tips = new ToolTip { ShowAlways = true };
             if (settings.NameMode != "None") tips.SetToolTip(btn, item.Name + "\n" + item.Path);
             var context = DockMenuStyle.Create(light, Color.FromArgb(58, 173, 201));
             context.Items.Add("Abrir", null, (_, _) => Open(item));
+            if (DockFolderTreeMenu.CanBrowse(item.Path))
+                context.Items.Add("Explorar carpetas...", null,
+                    (_, _) => DockFolderTreeMenu.Show(btn, item.Path, settings.Edge));
             context.Items.Add("Subir", null, (_, _) => Move(item, -1));
             context.Items.Add("Bajar", null, (_, _) => Move(item, 1));
             context.Items.Add("Quitar acceso", null, (_, _) =>
